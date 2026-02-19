@@ -9,7 +9,7 @@ import {
   NavigationMenuList,
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
-
+// use ModeToggle in appropriate position
 export const NavMenu = (props: ComponentProps<typeof NavigationMenu>) => (
   <NavigationMenu {...props}>
     <NavigationMenuList className="space-x-0 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-start data-[orientation=vertical]:justify-start">
