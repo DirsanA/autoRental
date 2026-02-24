@@ -1,17 +1,14 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
 import { ThemeProvider } from "@/components/theme-provider";
-import "./globals.css";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
-export default function RootLayout({
+export default function DashboardLayout({
   children,
-}: Readonly<{
+}: {
   children: React.ReactNode;
-}>) {
+}) {
   return (
-    <html lang="en" suppressHydrationWarning>
-      <head />
-      <body>
+    <>
+      <SidebarProvider>
         <ThemeProvider
           attribute="class"
           defaultTheme="light"
@@ -20,7 +17,7 @@ export default function RootLayout({
         >
           {children}
         </ThemeProvider>
-      </body>
-    </html>
+      </SidebarProvider>
+    </>
   );
 }
