@@ -5,20 +5,19 @@ import { Search } from "@/components/dashboard/search";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ConfigDrawer } from "@/components/dashboard/config-drawer";
 import { ProfileDropdown } from "@/components/dashboard/profile-dropdown";
-import { Button } from "@/components/ui/button";
+// import { Button } from "@/components/ui/button";
 
 export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-white/95 dark:bg-black/95 px-4 backdrop-blur md:px-8">
       <div className="flex items-center space-x-4">
-        <SidebarTrigger />
-        <Button variant="ghost" size="icon">
+        {/* <SidebarTrigger /> */}
+        {/* <Button variant="ghost" size="icon">
           <LayoutGrid className="h-5 w-5" />
-        </Button>
+        </Button> */}
         <TopNav links={topNavLinks} className="hidden md:flex" />
       </div>
       <div className="ml-auto flex items-center space-x-4">
-        <Search />
         <ModeToggle />
         <ConfigDrawer />
         <ProfileDropdown />
