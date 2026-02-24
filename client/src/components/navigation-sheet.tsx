@@ -8,14 +8,10 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Logo } from "@/components/logo";
-import { NavMenu } from "@/components/nav-menu";
 
 export const NavigationSheet = () => {
   return (
     <Sheet>
-      <VisuallyHidden>
-        <SheetTitle>Navigation Menu</SheetTitle>
-      </VisuallyHidden>
 
       <SheetTrigger asChild>
         <Button className="rounded-full" size="icon" variant="outline">
@@ -24,7 +20,6 @@ export const NavigationSheet = () => {
       </SheetTrigger>
       <SheetContent className="px-6 py-3">
         <Logo />
-        <NavMenu className="mt-6 [&>div]:h-full" orientation="vertical" />
       </SheetContent>
     </Sheet>
   );
