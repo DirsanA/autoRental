@@ -1,7 +1,5 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { LayoutGrid } from "lucide-react";
 import { TopNav } from "@/components/layout/top-nav";
-import { Search } from "@/components/dashboard/search";
 import { ModeToggle } from "@/components/mode-toggle";
 import { ConfigDrawer } from "@/components/dashboard/config-drawer";
 import { ProfileDropdown } from "@/components/dashboard/profile-dropdown";
@@ -11,6 +9,11 @@ export function Header() {
   return (
     <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-white/95 dark:bg-black/95 px-4 backdrop-blur md:px-8">
       <div className="flex items-center space-x-4">
+        {/** display the sidebarTrigger here only in mobile screen */}
+        <div className="md:hidden">
+          <SidebarTrigger />
+        </div>
+
         {/* <SidebarTrigger /> */}
         {/* <Button variant="ghost" size="icon">
           <LayoutGrid className="h-5 w-5" />

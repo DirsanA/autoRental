@@ -15,7 +15,8 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "AutoRental",
-  description: "Advanced Car Rental System",
+  description:
+    " Car Rental Ecosystem that provides platform for hosts and guests to make car rental transactions conveniently",
 };
 
 export default function RootLayout({
@@ -27,7 +28,7 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <head />
       <body
-        className={`${geistSans.className} ${geistMono.variable} antialiased`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <ThemeProvider
           attribute="class"

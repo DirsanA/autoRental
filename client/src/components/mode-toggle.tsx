@@ -43,7 +43,7 @@ export function ModeToggle() {
       <DropdownMenuContent
         align="end"
         sideOffset={5}
-        className="z-[9999] bg-white dark:bg-black "
+        className="z-[9999] bg-white dark:bg-background "
       >
         <DropdownMenuItem
           onSelect={() => setTheme("light")}
