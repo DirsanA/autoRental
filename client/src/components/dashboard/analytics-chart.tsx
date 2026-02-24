@@ -46,18 +46,16 @@ export function AnalyticsChart() {
       <AreaChart data={data}>
         <XAxis
           dataKey="name"
-          stroke="currentColor"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          className="text-muted-foreground"
         />
         <YAxis
-          stroke="currentColor"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          className="text-muted-foreground"
         />
         <Area
           type="monotone"

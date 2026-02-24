@@ -31,7 +31,7 @@ export function Analytics() {
               strokeLinecap="round"
               strokeLinejoin="round"
               strokeWidth="2"
-              className="h-4 w-4 text-muted-foreground"
+              className="h-4 w-4 text-primary "
             >
               <path d="M3 3v18h18" />
               <path d="M7 15l4-4 4 4 4-6" />

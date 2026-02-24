@@ -132,7 +132,7 @@ export function Dashboard() {
               </Card>
             </div>
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
-              <Card className="col-span-4 bg-muted/5 border-muted/20 text-white">
+              <Card className="col-span-4 bg-muted/5 border-muted/20 text-black dark:text-white">
                 <CardHeader>
                   <CardTitle>Overview</CardTitle>
                 </CardHeader>
@@ -140,7 +140,7 @@ export function Dashboard() {
                   <Overview />
                 </CardContent>
               </Card>
-              <Card className="col-span-3 bg-muted/5 border-muted/20 text-white">
+              <Card className="col-span-3 bg-muted/5 border-muted/20 text-black dark:text-white">
                 <CardHeader>
                   <CardTitle>Recent Sales</CardTitle>
                   <CardDescription className="text-muted-foreground">

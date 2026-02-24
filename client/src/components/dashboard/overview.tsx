@@ -1,7 +1,7 @@
 "use client";
 
 import { Bar, BarChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
-
+//ensure proper light theme implementation
 const data = [
   { name: "Jan", total: 4500 },
   { name: "Feb", total: 3000 },
@@ -23,26 +23,19 @@ export function Overview() {
       <BarChart data={data}>
         <XAxis
           dataKey="name"
-          stroke="currentColor"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
-          className="text-muted-foreground"
         />
         <YAxis
-          stroke="currentColor"
+          stroke="hsl(var(--muted-foreground))"
           fontSize={12}
           tickLine={false}
           axisLine={false}
           tickFormatter={(value) => `$${value}`}
-          className="text-muted-foreground"
         />
-        <Bar
-          dataKey="total"
-          fill="currentColor"
-          radius={[4, 4, 0, 0]}
-          className="fill-primary"
-        />
+        <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   );
