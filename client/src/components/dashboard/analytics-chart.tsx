@@ -1,75 +1,68 @@
 "use client";
 
-import { Area, AreaChart, ResponsiveContainer, XAxis, YAxis } from "recharts";
+import {
+  Area,
+  AreaChart,
+  ResponsiveContainer,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
 
 const data = [
-  {
-    name: "Mon",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Tue",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Wed",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Thu",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Fri",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Sat",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
-  {
-    name: "Sun",
-    clicks: Math.floor(Math.random() * 900) + 100,
-    uniques: Math.floor(Math.random() * 700) + 80,
-  },
+  { name: "Mon", clicks: 800, uniques: 600 },
+  { name: "Tue", clicks: 650, uniques: 500 },
+  { name: "Wed", clicks: 900, uniques: 700 },
+  { name: "Thu", clicks: 700, uniques: 550 },
+  { name: "Fri", clicks: 850, uniques: 620 },
+  { name: "Sat", clicks: 500, uniques: 400 },
+  { name: "Sun", clicks: 600, uniques: 450 },
 ];
 
 export function AnalyticsChart() {
   return (
     <ResponsiveContainer width="100%" height={300}>
       <AreaChart data={data}>
+        {/* Subtle grid */}
+        <CartesianGrid
+          stroke="var(--border)"
+          strokeOpacity={0.4}
+          vertical={false}
+        />
+
+        {/* X Axis */}
         <XAxis
           dataKey="name"
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}
         />
+
+        {/* Y Axis */}
         <YAxis
-          stroke="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
           fontSize={12}
           tickLine={false}
           axisLine={false}
         />
+
+        {/* Primary Data - Clicks */}
         <Area
           type="monotone"
           dataKey="clicks"
-          stroke="hsl(var(--primary))"
-          fill="hsl(var(--primary))"
+          stroke="var(--foreground)"
+          fill="var(--foreground)"
           fillOpacity={0.15}
           strokeWidth={2}
         />
+
+        {/* Secondary Data - Uniques */}
         <Area
           type="monotone"
           dataKey="uniques"
-          stroke="hsl(var(--muted-foreground))"
-          fill="hsl(var(--muted-foreground))"
+          stroke="var(--muted-foreground)"
+          fill="var(--muted-foreground)"
           fillOpacity={0.1}
           strokeWidth={2}
         />
