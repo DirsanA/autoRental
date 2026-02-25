@@ -10,27 +10,31 @@ import {
   navigationMenuTriggerStyle,
 } from "@/components/ui/navigation-menu";
 // use ModeToggle in appropriate position
-export const NavMenu = (props: ComponentProps<typeof NavigationMenu>) => (
+// i want the navigation links to be dynamic to make it easier to modify and enhance reuseability
+type NavMenuProps = ComponentProps<typeof NavigationMenu> & {
+  links: string[];
+};
+export const NavMenu = ({ links, ...props }: NavMenuProps) => (
   <NavigationMenu {...props}>
     <NavigationMenuList className="space-x-0 data-[orientation=vertical]:flex-col data-[orientation=vertical]:items-start data-[orientation=vertical]:justify-start">
       <NavigationMenuItem>
         <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-          <Link href="#">Home</Link>
+          <Link href="#">{links[0]}</Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
       <NavigationMenuItem>
         <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-          <Link href="#">Blog</Link>
+          <Link href="#">{links[1]}</Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
       <NavigationMenuItem>
         <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-          <Link href="#">About</Link>
+          <Link href="#">{links[2]}</Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
       <NavigationMenuItem>
         <NavigationMenuLink asChild className={navigationMenuTriggerStyle()}>
-          <Link href="#">Contact Us</Link>
+          <Link href="#">{links[3]}</Link>
         </NavigationMenuLink>
       </NavigationMenuItem>
     </NavigationMenuList>
