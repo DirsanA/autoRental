@@ -14,19 +14,19 @@ import { Download } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 
-export function Dashboard() {
+export function PeerHostDashboard() {
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden">
       <Header />
       <Main>
-        <div className="flex items-center justify-between space-y-2">
-          <h2 className="text-3xl font-bold tracking-tight">Dashboard</h2>
+        <div className="flex justify-between items-center space-y-2">
+          <h2 className="font-bold text-3xl tracking-tight">Dashboard</h2>
           <div className="flex items-center space-x-2">
             <Button
               variant="secondary"
-              className="bg-white text-black hover:bg-gray-200"
+              className="bg-white hover:bg-gray-200 text-black"
             >
-              <Download className="mr-2 h-4 w-4" /> Download
+              <Download className="mr-2 w-4 h-4" /> Download
             </Button>
           </div>
         </div>
@@ -39,24 +39,24 @@ export function Dashboard() {
             <TabsTrigger value="notifications">Notifications</TabsTrigger>
           </TabsList>
           <TabsContent value="overview" className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-              <Card className="bg-card text-card-foreground border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
+            <div className="gap-4 grid md:grid-cols-2 lg:grid-cols-4">
+              <Card className="bg-card border-border/50 text-card-foreground">
+                <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
+                  <CardTitle className="font-medium text-sm">
                     Total Revenue
                   </CardTitle>
                   <span className="text-muted-foreground">$</span>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">$45,231.89</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="font-bold text-2xl">$45,231.89</div>
+                  <p className="text-muted-foreground text-xs">
                     +20.1% from last month
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-card text-card-foreground border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
+              <Card className="bg-card border-border/50 text-card-foreground">
+                <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
+                  <CardTitle className="font-medium text-sm">
                     Subscriptions
                   </CardTitle>
                   <svg
@@ -67,7 +67,7 @@ export function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
+                    className="w-4 h-4 text-muted-foreground"
                   >
                     <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
                     <circle cx="9" cy="7" r="4" />
@@ -75,15 +75,15 @@ export function Dashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+2350</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="font-bold text-2xl">+2350</div>
+                  <p className="text-muted-foreground text-xs">
                     +180.1% from last month
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-card text-card-foreground border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">Sales</CardTitle>
+              <Card className="bg-card border-border/50 text-card-foreground">
+                <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
+                  <CardTitle className="font-medium text-sm">Sales</CardTitle>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -92,22 +92,22 @@ export function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
+                    className="w-4 h-4 text-muted-foreground"
                   >
                     <rect width="20" height="14" x="2" y="5" rx="2" />
                     <path d="M2 10h20" />
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+12,234</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="font-bold text-2xl">+12,234</div>
+                  <p className="text-muted-foreground text-xs">
                     +19% from last month
                   </p>
                 </CardContent>
               </Card>
-              <Card className="bg-card text-card-foreground border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-sm font-medium">
+              <Card className="bg-card border-border/50 text-card-foreground">
+                <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
+                  <CardTitle className="font-medium text-sm">
                     Active Now
                   </CardTitle>
                   <svg
@@ -118,20 +118,20 @@ export function Dashboard() {
                     strokeLinecap="round"
                     strokeLinejoin="round"
                     strokeWidth="2"
-                    className="h-4 w-4 text-muted-foreground"
+                    className="w-4 h-4 text-muted-foreground"
                   >
                     <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">+573</div>
-                  <p className="text-xs text-muted-foreground">
+                  <div className="font-bold text-2xl">+573</div>
+                  <p className="text-muted-foreground text-xs">
                     +201 since last hour
                   </p>
                 </CardContent>
               </Card>
             </div>
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
+            <div className="gap-4 grid md:grid-cols-2 lg:grid-cols-7">
               <Card className="col-span-4 bg-muted/5 border-muted/20 text-black dark:text-white">
                 <CardHeader>
                   <CardTitle>Overview</CardTitle>

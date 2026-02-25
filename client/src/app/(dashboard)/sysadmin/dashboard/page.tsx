@@ -1,10 +1,9 @@
-import { Dashboard } from "@/components/dashboard";
-// import { DashboardSidebar } from "@/components/dashboard/sidebar-02/app-sidebar";
+import { PeerHostDashboard } from "@/components/peerdashboard";
 
 export default function SystemAdminDashboard() {
   return (
-    <div className="relative flex h-dvh w-full">
-      <Dashboard />
+    <div className="relative flex w-full h-dvh">
+      <PeerHostDashboard />
     </div>
   );
 }
