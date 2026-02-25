@@ -43,7 +43,7 @@ export function PeerHostDashboard() {
               <Card className="bg-card border-border/50 text-card-foreground">
                 <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
                   <CardTitle className="font-medium text-sm">
-                    Total Revenue
+                    Total Earnings
                   </CardTitle>
                   <span className="text-muted-foreground">$</span>
                 </CardHeader>
@@ -57,7 +57,7 @@ export function PeerHostDashboard() {
               <Card className="bg-card border-border/50 text-card-foreground">
                 <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
                   <CardTitle className="font-medium text-sm">
-                    Subscriptions
+                    Active listings
                   </CardTitle>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -75,15 +75,15 @@ export function PeerHostDashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-bold text-2xl">+2350</div>
+                  <div className="font-bold text-2xl">+3</div>
                   <p className="text-muted-foreground text-xs">
-                    +180.1% from last month
+                    All listings are active and performing well.
                   </p>
                 </CardContent>
               </Card>
               <Card className="bg-card border-border/50 text-card-foreground">
                 <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
-                  <CardTitle className="font-medium text-sm">Sales</CardTitle>
+                  <CardTitle className="font-medium text-sm">Pending</CardTitle>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     viewBox="0 0 24 24"
@@ -99,16 +99,16 @@ export function PeerHostDashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-bold text-2xl">+12,234</div>
+                  <div className="font-bold text-2xl">5</div>
                   <p className="text-muted-foreground text-xs">
-                    +19% from last month
+                    Waiting for action from you.
                   </p>
                 </CardContent>
               </Card>
               <Card className="bg-card border-border/50 text-card-foreground">
                 <CardHeader className="flex flex-row justify-between items-center space-y-0 pb-2">
                   <CardTitle className="font-medium text-sm">
-                    Active Now
+                    Average Rating
                   </CardTitle>
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -124,9 +124,9 @@ export function PeerHostDashboard() {
                   </svg>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-bold text-2xl">+573</div>
+                  <div className="font-bold text-2xl">4.9 stars</div>
                   <p className="text-muted-foreground text-xs">
-                    +201 since last hour
+                    User reviews are overwhelmingly positive.
                   </p>
                 </CardContent>
               </Card>
