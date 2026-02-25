@@ -7,9 +7,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Analytics } from "@/components/dashboard/analytics";
-import { Overview } from "@/components/dashboard/overview";
-import { RecentSales } from "@/components/dashboard/recent-sales";
+import { Analytics } from "@/components/peer-host/analytics";
+import { Overview } from "@/components/peer-host/overview";
+import { RecentSales } from "@/components/peer-host/recent-sales";
 import { Download } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";

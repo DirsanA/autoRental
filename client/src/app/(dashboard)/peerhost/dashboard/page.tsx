@@ -1,9 +1,9 @@
-import { Dashboard } from "@/components/dashboard";
+import { PeerHostDashboard } from "@/components/peer-host";
 
-export default function peerToPeerHostDashboard() {
+export default function peerT() {
   return (
     <div className="relative flex w-full h-dvh">
-      <Dashboard />
+      <PeerHostDashboard />
     </div>
   );
 }
