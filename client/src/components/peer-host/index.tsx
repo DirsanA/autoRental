@@ -144,7 +144,7 @@ export function PeerHostDashboard() {
                 <CardHeader>
                   <CardTitle>Recent Bookings</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    You made 265 bookings this month.
+                    You have got  10 bookings this month.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
