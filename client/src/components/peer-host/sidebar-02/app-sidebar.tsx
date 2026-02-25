@@ -21,7 +21,6 @@ import {
   LogOut,
   Plus,
   Users,
-  BarChart3,
   Menu,
   Wrench,
 } from "lucide-react";
@@ -168,34 +167,11 @@ export function PeerToPeerSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="gap-4 px-2 py-4">
-        {!isCollapsed && (
-          <div className="mb-2 px-2">
-            <div className="bg-gradient-to-br from-gray-900 to-gray-800 p-4 rounded-xl text-white">
-              <p className="opacity-90 text-sm">Total Earnings</p>
-              <p className="mt-1 font-bold text-3xl">$1,250</p>
-              <p className="opacity-75 mt-2 text-xs">This month</p>
-            </div>
-          </div>
-        )}
-        
         <DashboardNavigation routes={dashboardRoutes} />
-        
-        {!isCollapsed && (
-          <div className="mt-4 px-2">
-            <button className="flex items-center gap-2 bg-black dark:bg-white hover:opacity-90 px-4 py-2 rounded-lg w-full font-medium text-white dark:text-black text-sm transition-opacity">
-              <Plus className="size-4" />
-              Add New Car
-            </button>
-          </div>
-        )}
       </SidebarContent>
       
       <SidebarFooter className="px-2">
         <TeamSwitcher teams={teams} />
-        <button className="flex items-center gap-2 mt-2 px-2 py-2 w-full text-gray-600 hover:text-gray-900 dark:hover:text-gray-200 dark:text-gray-400 text-sm transition-colors">
-          <LogOut className="size-4" />
-          {!isCollapsed && <span>Logout</span>}
-        </button>
       </SidebarFooter>
     </Sidebar>
   );

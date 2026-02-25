@@ -1,6 +1,5 @@
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
-import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar"; 
-
+import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";  
 export default function Sidebar02() {
   return (
     <SidebarProvider>

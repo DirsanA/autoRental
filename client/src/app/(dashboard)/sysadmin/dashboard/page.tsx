@@ -1,10 +1,5 @@
-// import { Dashboard } from "@/components/dashboard";
-// // import { DashboardSidebar } from "@/components/dashboard/sidebar-02/app-sidebar";
+import { Dashboard } from "@/components/dashboard";
 
-// export default function SystemAdminDashboard() {
-//   return (
-//     <div className="relative flex w-full h-dvh">
-//       <Dashboard />
-//     </div>
-//   );
-// }
+export default function SystemAdminDashboard() {
+  return <Dashboard />;
+}
