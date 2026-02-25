@@ -19,10 +19,9 @@ import {
   Star,
   MessageSquare,
   LogOut,
-  Plus,
   Users,
-  Menu,
-  Wrench,
+  Shield,
+  ClipboardCheck,
 } from "lucide-react";
 import { Logo } from "@/components/peer-host/sidebar-02/logo";
 import type { Route } from "./nav-main";
@@ -42,14 +41,14 @@ const sampleNotifications = [
     id: "2",
     avatar: "/avatars/02.png",
     fallback: "JD",
-    text: "BMW X5 maintenance completed",
+    text: "Booking accepted: BMW X5",
     time: "2h ago",
   },
   {
     id: "3",
     avatar: "/avatars/03.png",
     fallback: "MK",
-    text: "Payment received: $1,250",
+    text: "Document verification pending",
     time: "5h ago",
   },
 ];
@@ -62,38 +61,15 @@ const dashboardRoutes: Route[] = [
     link: "#",
   },
   {
-    id: "my-cars",
-    title: "My Cars",
+    id: "my-vehicles",
+    title: "My Vehicles",
     icon: <Car className="size-4" />,
     link: "#",
-    subs: [
-      {
-        title: "Available",
-        link: "#",
-        icon: <Car className="size-4" />,
-      },
-      {
-        title: "Rented Out",
-        link: "#",
-        icon: <Users className="size-4" />,
-      },
-      {
-        title: "Under Maintenance",
-        link: "#",
-        icon: <Wrench className="size-4" />,
-      },
-    ],
   },
   {
-    id: "manage-listings",
-    title: "Manage Listings",
-    icon: <Menu className="size-4" />,
-    link: "#",
-  },
-  {
-    id: "bookings",
-    title: "Bookings",
-    icon: <Calendar className="size-4" />,
+    id: "booking-requests",
+    title: "Booking Requests",
+    icon: <ClipboardCheck className="size-4" />,
     link: "#",
   },
   {
@@ -109,23 +85,29 @@ const dashboardRoutes: Route[] = [
     link: "#",
   },
   {
+    id: "profile-verification",
+    title: "Profile & Verification",
+    icon: <Shield className="size-4" />,
+    link: "#",
+  },
+  {
     id: "messages",
     title: "Messages",
     icon: <MessageSquare className="size-4" />,
     link: "#",
   },
   {
-    id: "profile-settings",
-    title: "Profile & Settings",
+    id: "settings",
+    title: "Settings",
     icon: <Settings className="size-4" />,
     link: "#",
   },
 ];
 
 const teams = [
-  { id: "1", name: "AutoRent", logo: Logo, plan: "Pro" },
-  { id: "2", name: "Premium Fleet", logo: Logo, plan: "Business" },
-  { id: "3", name: "Economy Cars", logo: Logo, plan: "Basic" },
+  { id: "1", name: "My Host Account", logo: Logo, plan: "Verified Host" },
+  { id: "2", name: "Business Profile", logo: Logo, plan: "Pending" },
+  { id: "3", name: "Premium Vehicles", logo: Logo, plan: "Basic" },
 ];
 
 export function PeerToPeerSidebar() {
@@ -146,7 +128,7 @@ export function PeerToPeerSidebar() {
           <Logo className="w-8 h-8" />
           {!isCollapsed && (
             <span className="font-semibold text-black dark:text-white">
-              AutoRent
+              AutoRent Host
             </span>
           )}
         </a>
