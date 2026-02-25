@@ -91,8 +91,8 @@ const dashboardRoutes: Route[] = [
     link: "#",
   },
   {
-    id: "messages",
-    title: "Messages",
+    id: "become-a-host",
+    title: "Become a Host",
     icon: <MessageSquare className="size-4" />,
     link: "#",
   },
