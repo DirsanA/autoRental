@@ -5,13 +5,14 @@ import { NavigationSheet } from "@/components/navigation-sheet";
 import { ModeToggle } from "./mode-toggle";
 
 const Navbar = () => {
+  const links = ["Home", "Blog", "About", "Contact Us"];
   return (
     <nav className="fixed inset-x-4 top-6 z-50 mx-auto h-16 max-w-(--breakpoint-xl) rounded-full border bg-card/90 shadow-md backdrop-blur supports-[backdrop-filter]:bg-card/80">
       <div className="mx-auto flex h-full items-center justify-between px-4">
         <Logo />
 
         {/* Desktop Menu */}
-        <NavMenu className="hidden md:block" />
+        <NavMenu className="hidden md:block" links={links} />
 
         <div className="flex items-center gap-3">
           {" "}
