@@ -128,7 +128,7 @@ export function PeerToPeerSidebar() {
           <Logo className="w-8 h-8" />
           {!isCollapsed && (
             <span className="font-semibold text-black dark:text-white">
-              AutoRent Host
+              AutoRent 
             </span>
           )}
         </a>

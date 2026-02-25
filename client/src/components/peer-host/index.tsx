@@ -9,7 +9,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Analytics } from "@/components/peer-host/analytics";
 import { Overview } from "@/components/peer-host/overview";
-import { RecentSales } from "@/components/peer-host/recent-sales";
+import { RecentBooking } from "@/components/peer-host/recent-sales";
 import { Download } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
@@ -142,13 +142,13 @@ export function PeerHostDashboard() {
               </Card>
               <Card className="col-span-3 bg-muted/5 border-muted/20 text-black dark:text-white">
                 <CardHeader>
-                  <CardTitle>Recent Sales</CardTitle>
+                  <CardTitle>Recent Bookings</CardTitle>
                   <CardDescription className="text-muted-foreground">
-                    You made 265 sales this month.
+                    You made 265 bookings this month.
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <RecentSales />
+                  <RecentBooking />
                 </CardContent>
               </Card>
             </div>
