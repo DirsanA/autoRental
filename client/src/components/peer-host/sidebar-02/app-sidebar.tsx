@@ -73,12 +73,6 @@ const dashboardRoutes: Route[] = [
     link: "/peerhost/booking-history",
   },
   {
-    id: "earnings",
-    title: "Earnings",
-    icon: <DollarSign className="size-4" />,
-    link: "#",
-  },
-  {
     id: "reviews",
     title: "Reviews",
     icon: <Star className="size-4" />,
@@ -94,12 +88,6 @@ const dashboardRoutes: Route[] = [
     id: "become-a-host",
     title: "Become a Host",
     icon: <MessageSquare className="size-4" />,
-    link: "#",
-  },
-  {
-    id: "settings",
-    title: "Settings",
-    icon: <Settings className="size-4" />,
     link: "#",
   },
 ];
