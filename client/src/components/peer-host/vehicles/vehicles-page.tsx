@@ -7,7 +7,9 @@ import { cn } from "@/lib/utils";
 import { sampleVehicles } from "./data";
 import type { VehicleStatus } from "./types";
 
-function statusBadgeVariant(status: VehicleStatus): "default" | "secondary" | "destructive" | "outline" {
+function statusBadgeVariant(
+  status: VehicleStatus
+): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "available":
       return "default";
@@ -29,76 +31,178 @@ function formatStatus(status: VehicleStatus) {
   }
 }
 
-export function PeerHostVehiclesPage({ filter }: { filter?: VehicleStatus }) {
-  // "Smart structure": keep filtering logic close to data usage.
-  // When you switch to real backend data, move this into a server action or route handler.
+export function PeerHostVehiclesPage({
+  filter,
+}: {
+  filter?: VehicleStatus;
+}) {
   const vehicles = filter
     ? sampleVehicles.filter((v) => v.status === filter)
     : sampleVehicles;
 
   const title = filter ? `My Vehicles · ${formatStatus(filter)}` : "My Vehicles";
 
+  // Smart Stats (later replace with backend aggregation)
+  const availableCount = sampleVehicles.filter(
+    (v) => v.status === "available"
+  ).length;
+
+  const rentedCount = sampleVehicles.filter(
+    (v) => v.status === "rented"
+  ).length;
+
+  const maintenanceCount = sampleVehicles.filter(
+    (v) => v.status === "maintenance"
+  ).length;
+
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-col flex-1 overflow-hidden">
       <Header />
+
       <Main>
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* ===== PAGE HEADER ===== */}
+        <div className="flex flex-wrap justify-between items-center gap-4">
           <div>
-            <h2 className="text-3xl font-bold tracking-tight">{title}</h2>
-            <p className="text-sm text-muted-foreground">
+            <h2 className="font-bold text-3xl tracking-tight">{title}</h2>
+            <p className="mt-1 text-muted-foreground text-sm">
               Manage listings, pricing, and availability for your cars.
             </p>
           </div>
 
-          <Button className="bg-black text-white hover:opacity-90 dark:bg-white dark:text-black">
-            Add vehicle
+          <Button className="bg-black dark:bg-white shadow-lg text-white dark:text-black hover:scale-105 transition-transform duration-200">
+            + Add Vehicle
           </Button>
         </div>
 
-        <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {/* ===== MINI DASHBOARD STATS ===== */}
+    {/* ===== SMART STATUS DASHBOARD ===== */}
+<div className="gap-6 grid grid-cols-1 sm:grid-cols-3 mt-10">
+
+  {/* Available Card */}
+  <Card className="group relative bg-gradient-to-br from-emerald-500/10 to-emerald-400/5 shadow-lg hover:shadow-emerald-500/20 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+    <div className="top-0 right-0 absolute bg-emerald-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+    <CardContent className="z-10 relative p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-medium text-emerald-600 text-sm">
+            Available Vehicles
+          </p>
+          <p className="mt-2 font-bold text-emerald-700 text-3xl">
+            {availableCount}
+          </p>
+        </div>
+        <div className="opacity-20 text-4xl">🚗</div>
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Rented Card */}
+  <Card className="group relative bg-gradient-to-br from-blue-500/10 to-blue-400/5 shadow-lg hover:shadow-blue-500/20 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+    <div className="top-0 right-0 absolute bg-blue-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+    <CardContent className="z-10 relative p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-medium text-blue-600 text-sm">
+            Rented Vehicles
+          </p>
+          <p className="mt-2 font-bold text-blue-700 text-3xl">
+            {rentedCount}
+          </p>
+        </div>
+        <div className="opacity-20 text-4xl">📅</div>
+      </div>
+    </CardContent>
+  </Card>
+
+  {/* Maintenance Card */}
+  <Card className="group relative bg-gradient-to-br from-amber-500/10 to-amber-400/5 shadow-lg hover:shadow-amber-500/20 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+    <div className="top-0 right-0 absolute bg-amber-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+    <CardContent className="z-10 relative p-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <p className="font-medium text-amber-600 text-sm">
+            In Maintenance
+          </p>
+          <p className="mt-2 font-bold text-amber-700 text-3xl">
+            {maintenanceCount}
+          </p>
+        </div>
+        <div className="opacity-20 text-4xl">🛠️</div>
+      </div>
+    </CardContent>
+  </Card>
+
+</div>
+
+        {/* ===== VEHICLE GRID ===== */}
+        <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-3 mt-10">
+          {vehicles.length === 0 && (
+            <div className="col-span-full py-20 text-center">
+              <p className="text-muted-foreground text-lg">
+                No vehicles found for this filter.
+              </p>
+              <Button className="mt-6">Add your first vehicle</Button>
+            </div>
+          )}
+
           {vehicles.map((v) => (
-            <Card key={v.id} className="overflow-hidden border-border/50">
-              <div className="relative h-44 w-full bg-muted">
-                {v.imageUrl ? (
-                  // Using a plain <img> avoids Next Image domain configuration
-                  // while you’re still on mocked/remote image URLs.
+            <Card
+              key={v.id}
+              className="group hover:shadow-2xl border-border/40 overflow-hidden transition-all duration-300"
+            >
+              {/* IMAGE SECTION */}
+              <div className="relative bg-muted w-full h-52 overflow-hidden">
+                {v.imageUrl && (
                   <img
                     src={v.imageUrl}
                     alt={`${v.make} ${v.model}`}
-                    className="h-full w-full object-cover"
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                     loading="lazy"
                   />
-                ) : null}
-              </div>
+                )}
 
-              <CardHeader className="space-y-2">
-                <div className="flex items-start justify-between gap-3">
-                  <CardTitle className="text-base">
-                    {v.year} {v.make} {v.model}
-                  </CardTitle>
+                {/* STATUS BADGE */}
+                <div className="top-3 right-3 absolute">
                   <Badge variant={statusBadgeVariant(v.status)}>
                     {formatStatus(v.status)}
                   </Badge>
                 </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>{v.location}</span>
-                  <span className={cn("font-medium text-foreground")}>
-                    ${v.dailyRate}/day
-                  </span>
-                </div>
-              </CardHeader>
 
-              <CardContent className="flex items-center justify-between gap-3">
-                <div className="text-sm text-muted-foreground">
-                  Rating{" "}
-                  <span className="font-medium text-foreground">
-                    {v.ratingAvg.toFixed(1)}
-                  </span>{" "}
-                  ({v.ratingCount})
+                {/* PRICE OVERLAY */}
+                <div className="bottom-3 left-3 absolute bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm">
+                  ${v.dailyRate}/day
                 </div>
-                <Button variant="secondary" className="bg-muted/40">
-                  View details
-                </Button>
+              </div>
+
+              {/* CONTENT SECTION */}
+              <CardContent className="space-y-4 p-5">
+                <div>
+                  <h3 className="font-semibold text-lg leading-tight">
+                    {v.year} {v.make} {v.model}
+                  </h3>
+                  <p className="mt-1 text-muted-foreground text-sm">
+                    {v.location}
+                  </p>
+                </div>
+
+                <div className="flex justify-between items-center">
+                  <div className="text-muted-foreground text-sm">
+                    ⭐{" "}
+                    <span className="font-medium text-foreground">
+                      {v.ratingAvg.toFixed(1)}
+                    </span>{" "}
+                    ({v.ratingCount})
+                  </div>
+
+                  <Button
+                    variant="secondary"
+                    className={cn(
+                      "bg-muted/50 hover:bg-muted transition-colors"
+                    )}
+                  >
+                    View details
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           ))}
@@ -107,4 +211,3 @@ export function PeerHostVehiclesPage({ filter }: { filter?: VehicleStatus }) {
     </div>
   );
 }
-
