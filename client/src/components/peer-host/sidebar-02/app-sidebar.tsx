@@ -88,7 +88,7 @@ const dashboardRoutes: Route[] = [
     id: "become-a-host",
     title: "Become a Host",
     icon: <MessageSquare className="size-4" />,
-    link: "#",
+    link: "/peerhost/become-host",
   },
 ];
 
