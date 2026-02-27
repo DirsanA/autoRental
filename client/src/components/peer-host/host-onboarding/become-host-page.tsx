@@ -9,330 +9,753 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { 
+  Camera, 
+  CheckCircle2, 
+  ChevronRight, 
+  ChevronLeft,
+  Car,
+  Shield,
+  DollarSign,
+  FileText,
+  Upload,
+  X,
+  IdCard,
+  FileCheck,
+  Clock,
+  AlertCircle,
+  Eye,
+  Bell,
+  Fuel,
+  Gauge,
+  Settings
+} from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type HostStep = "car" | "protection" | "pricing" | "terms";
+type HostStep = "car" | "documents" | "protection" | "pricing" | "terms";
 type PhotoKey = "front" | "back" | "side" | "interior";
+type DocumentKey = "nationalId" | "ownership" | "insurance" | "license";
+
+interface UploadedFile {
+  file: File;
+  preview: string;
+  name: string;
+  size: string;
+  type: string;
+}
 
 export function PeerHostBecomeHostPage() {
   const [step, setStep] = useState<HostStep>("car");
-  const [photos, setPhotos] = useState<Record<PhotoKey, string | null>>({
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [photos, setPhotos] = useState<Record<PhotoKey, UploadedFile | null>>({
     front: null,
     back: null,
     side: null,
     interior: null,
   });
+  
+  const [documents, setDocuments] = useState<Record<DocumentKey, UploadedFile | null>>({
+    nationalId: null,
+    ownership: null,
+    insurance: null,
+    license: null,
+  });
 
-  function nextStep() {
-    setStep((current) => {
-      if (current === "car") return "protection";
-      if (current === "protection") return "pricing";
-      if (current === "pricing") return "terms";
-      return "terms";
-    });
+  const [selectedProtection, setSelectedProtection] = useState<string | null>(null);
+  
+  const [formData, setFormData] = useState({
+    make: "",
+    model: "",
+    year: "",
+    vin: "",
+    plate: "",
+    mileage: "",
+    fuel: "",
+    transmission: "",
+    features: "",
+    condition: "",
+    price: "",
+    weeklyDiscount: "",
+    monthlyDiscount: "",
+    availability: "",
+    delivery: "",
+  });
+
+  const steps = [
+    { id: "car", label: "Car Details", icon: Car },
+    { id: "documents", label: "Documents", icon: FileCheck },
+    { id: "protection", label: "Protection", icon: Shield },
+    { id: "pricing", label: "Pricing", icon: DollarSign },
+    { id: "terms", label: "Submit", icon: FileText },
+  ] as const;
+
+  const currentStepIndex = steps.findIndex(s => s.id === step);
+
+  // If already submitted, show pending approval screen
+  if (isSubmitted) {
+    return (
+      <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 to-white overflow-hidden">
+        <Header />
+        <Main className="mx-auto px-4 py-8 sm:py-12 max-w-3xl container">
+          <Card className="shadow-xl border-0 overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2" />
+            <CardContent className="p-4 sm:p-8 text-center">
+              <div className="flex justify-center items-center bg-amber-100 mx-auto mb-4 sm:mb-6 rounded-full w-16 sm:w-20 h-16 sm:h-20">
+                <Clock className="w-8 sm:w-10 h-8 sm:h-10 text-amber-600" />
+              </div>
+              
+              <h2 className="mb-2 font-bold text-xl sm:text-2xl">Application Under Review</h2>
+              <p className="mb-4 sm:mb-6 text-muted-foreground text-sm sm:text-base">
+                Your documents are being verified by our admin team. This usually takes 24-48 hours.
+              </p>
+
+              <div className="bg-slate-50 mb-4 sm:mb-6 p-4 sm:p-6 rounded-xl text-left">
+                <h3 className="flex items-center gap-2 mb-3 sm:mb-4 font-semibold text-sm sm:text-base">
+                  <FileCheck className="w-4 h-4" />
+                  Submitted Documents
+                </h3>
+                <div className="space-y-2 sm:space-y-3">
+                  {Object.entries(documents).map(([key, file]) => (
+                    file && (
+                      <div key={key} className="flex sm:flex-row flex-col justify-between sm:items-center gap-2 bg-white p-3 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="bg-blue-50 p-2 rounded-lg shrink-0">
+                            <IdCard className="w-4 h-4 text-blue-600" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate">
+                              {key === 'nationalId' && 'National ID'}
+                              {key === 'ownership' && 'Ownership Certificate'}
+                              {key === 'insurance' && 'Insurance'}
+                              {key === 'license' && "Driver's License"}
+                            </p>
+                            <p className="text-muted-foreground text-xs truncate">{file.name}</p>
+                          </div>
+                        </div>
+                        <Badge variant="outline" className="self-start sm:self-center bg-amber-50 border-amber-200 text-amber-600">
+                          Pending
+                        </Badge>
+                      </div>
+                    )
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex sm:flex-row flex-col justify-center gap-3">
+                <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                  <Eye className="w-4 h-4" />
+                  View Application
+                </Button>
+                <Button className="gap-2 bg-black hover:bg-gray-800 w-full sm:w-auto text-white">
+                  <Bell className="w-4 h-4" />
+                  Notify Me
+                </Button>
+              </div>
+
+              <p className="mt-4 sm:mt-6 text-muted-foreground text-xs">
+                You'll receive an email once your verification is complete
+              </p>
+            </CardContent>
+          </Card>
+        </Main>
+      </div>
+    );
   }
 
-  function prevStep() {
-    setStep((current) => {
-      if (current === "terms") return "pricing";
-      if (current === "pricing") return "protection";
-      if (current === "protection") return "car";
-      return "car";
-    });
-  }
-
-  function handlePhotoChange(key: PhotoKey, files: FileList | null) {
+  function handlePhotoUpload(key: PhotoKey, files: FileList | null) {
     const file = files?.[0];
-    setPhotos((prev) => ({
-      ...prev,
-      [key]: file ? file.name : null,
-    }));
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setPhotos(prev => ({
+        ...prev,
+        [key]: {
+          file,
+          preview: reader.result as string,
+          name: file.name,
+          size: (file.size / 1024 / 1024).toFixed(2) + " MB",
+          type: file.type
+        }
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function handleDocumentUpload(key: DocumentKey, files: FileList | null) {
+    const file = files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setDocuments(prev => ({
+        ...prev,
+        [key]: {
+          file,
+          preview: reader.result as string,
+          name: file.name,
+          size: (file.size / 1024 / 1024).toFixed(2) + " MB",
+          type: file.type
+        }
+      }));
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function removePhoto(key: PhotoKey) {
+    setPhotos(prev => ({ ...prev, [key]: null }));
+  }
+
+  function removeDocument(key: DocumentKey) {
+    setDocuments(prev => ({ ...prev, [key]: null }));
+  }
+
+  const isStepComplete = () => {
+    switch (step) {
+      case "car":
+        return formData.make && formData.model && formData.year && 
+               Object.values(photos).filter(Boolean).length >= 4;
+      case "documents":
+        return documents.nationalId && documents.ownership && 
+               documents.insurance && documents.license;
+      case "protection":
+        return selectedProtection !== null;
+      case "pricing":
+        return formData.price;
+      default:
+        return true;
+    }
+  };
+
+  function handleSubmit() {
+    setIsSubmitted(true);
+    // In real app, send data to API
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 to-white overflow-hidden">
       <Header />
-      <Main>
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <h2 className="text-3xl font-bold tracking-tight">Become a Host</h2>
-            <p className="text-sm text-muted-foreground">
-              Add your car to AutoRent with clear steps for details, protection, pricing
-              and hosting terms.
-            </p>
+      
+      <Main className="mx-auto px-4 py-4 sm:py-8 max-w-7xl container">
+        {/* Header - Fixed for mobile */}
+        <div className="mb-6 sm:mb-10">
+          <div className="flex sm:flex-row flex-col justify-between sm:items-center gap-3 mb-4 sm:mb-6">
+            <div>
+              <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
+                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg p-2 sm:p-2.5 rounded-xl shrink-0">
+                  <Car className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
+                </div>
+                <h1 className="bg-clip-text bg-gradient-to-r from-slate-900 to-slate-600 font-bold text-transparent text-xl sm:text-3xl">
+                  Become a Host
+                </h1>
+              </div>
+              <p className="text-muted-foreground text-xs sm:text-sm">
+                List your car and start earning in 5 simple steps
+              </p>
+            </div>
+            
+            <Badge variant="outline" className="px-3 sm:px-4 py-1 sm:py-2 w-fit text-xs sm:text-sm">
+              Step {currentStepIndex + 1}/{steps.length}
+            </Badge>
           </div>
 
-          <Badge variant="outline" className="text-xs uppercase tracking-wide">
-            Step{" "}
-            {step === "car"
-              ? "1 · Car details"
-              : step === "protection"
-                ? "2 · Insurance & protection"
-                : step === "pricing"
-                  ? "3 · Pricing & availability"
-                  : "4 · Terms & agreements"}
-          </Badge>
+          {/* Progress Steps - Scrollable on mobile */}
+          <div className="-mx-4 px-4 pb-2 overflow-x-auto">
+            <div className="relative flex justify-between items-center min-w-[500px] sm:min-w-0">
+              <div className="top-1/2 right-0 left-0 absolute bg-slate-200 h-0.5 -translate-y-1/2" />
+              <div className="relative flex justify-between w-full">
+                {steps.map((s, idx) => {
+                  const Icon = s.icon;
+                  const isActive = step === s.id;
+                  const isCompleted = currentStepIndex > idx;
+                  
+                  return (
+                    <div key={s.id} className="flex flex-col items-center">
+                      <div className={cn(
+                        "z-10 relative flex justify-center items-center rounded-full w-8 sm:w-10 h-8 sm:h-10 transition-all",
+                        isActive ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-110" : 
+                        isCompleted ? "bg-emerald-500 text-white" : 
+                        "bg-white border-2 border-slate-200 text-slate-400"
+                      )}>
+                        {isCompleted ? <CheckCircle2 className="w-4 sm:w-5 h-4 sm:h-5" /> : <Icon className="w-4 sm:w-5 h-4 sm:h-5" />}
+                      </div>
+                      <span className={cn(
+                        "mt-1 sm:mt-2 font-medium text-[10px] sm:text-xs whitespace-nowrap",
+                        isActive ? "text-blue-600" : "text-muted-foreground"
+                      )}>
+                        {s.label}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="mt-6 grid gap-4 lg:grid-cols-3">
-          {/* Left column: main form content */}
-          <Card className="border-border/50 lg:col-span-2">
-            <CardHeader>
-              <CardTitle className="text-base">
-                {step === "car" && "Car details & photos"}
-                {step === "protection" && "Insurance & protection"}
-                {step === "pricing" && "Pricing & availability"}
-                {step === "terms" && "Terms & confirmation"}
+        {/* Main Grid */}
+        <div className="gap-4 sm:gap-6 grid lg:grid-cols-3">
+          {/* Left Column - Main Form */}
+          <Card className="lg:col-span-2 bg-white/80 shadow-xl backdrop-blur border-0">
+            <CardHeader className="p-4 sm:p-6 border-slate-200 border-b">
+              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                {(() => {
+                  const IconComponent = steps[currentStepIndex].icon;
+                  return <IconComponent className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />;
+                })()}
+                <span className="truncate">{steps[currentStepIndex].label}</span>
               </CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4">
+            
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+              {/* STEP 1: Car Details */}
               {step === "car" && (
                 <>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="make">Make</Label>
-                      <Input id="make" placeholder="e.g. Toyota" />
+                  {/* Basic Info Grid */}
+                  <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="text-muted-foreground text-xs">Make</Label>
+                      <Input 
+                        placeholder="e.g. Toyota"
+                        value={formData.make}
+                        onChange={(e) => setFormData({...formData, make: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="model">Model</Label>
-                      <Input id="model" placeholder="e.g. Corolla" />
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="text-muted-foreground text-xs">Model</Label>
+                      <Input 
+                        placeholder="e.g. Corolla"
+                        value={formData.model}
+                        onChange={(e) => setFormData({...formData, model: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
                     </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="year">Year</Label>
-                      <Input id="year" type="number" placeholder="e.g. 2022" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="vin">VIN</Label>
-                      <Input id="vin" placeholder="Vehicle Identification Number" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="plate">License plate</Label>
-                      <Input id="plate" placeholder="e.g. GR 1234-22" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="mileage">Mileage (km)</Label>
-                      <Input id="mileage" type="number" placeholder="e.g. 45,000" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2 sm:grid-cols-2">
-                    <div className="grid gap-2">
-                      <Label htmlFor="fuel">Fuel type</Label>
-                      <Input id="fuel" placeholder="e.g. Petrol, Diesel, Hybrid" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="transmission">Transmission</Label>
-                      <Input id="transmission" placeholder="e.g. Automatic" />
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="text-muted-foreground text-xs">Year</Label>
+                      <Input 
+                        placeholder="e.g. 2022"
+                        value={formData.year}
+                        onChange={(e) => setFormData({...formData, year: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
                     </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="features">Features & amenities</Label>
-                    <Textarea
-                      id="features"
-                      rows={3}
-                      placeholder="e.g. GPS, Bluetooth, child seat, reverse camera, Wi‑Fi hotspot..."
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label>Car photos (4 angles)</Label>
-                    <p className="text-xs text-muted-foreground">
-                      Upload clear photos so guests can see the exact car they will get.
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-2">
-                      {([
-                        ["front", "Front / 3‑quarter view"],
-                        ["back", "Rear view"],
-                        ["side", "Side profile"],
-                        ["interior", "Interior (dashboard & seats)"],
-                      ] as [PhotoKey, string][]).map(([key, label]) => (
-                        <label
-                          key={key}
-                          className="flex cursor-pointer flex-col items-start gap-2 rounded-lg border border-dashed border-border/60 bg-muted/40 px-3 py-3 text-xs hover:border-foreground/60"
-                        >
-                          <span className="font-medium text-foreground">{label}</span>
-                          <span className="text-[11px] text-muted-foreground">
-                            {photos[key] ?? "Click to upload JPG or PNG"}
-                          </span>
-                          <Input
-                            type="file"
-                            accept="image/*"
-                            className="hidden"
-                            onChange={(e) => handlePhotoChange(key, e.target.files)}
-                          />
-                        </label>
-                      ))}
+                  {/* VIN & Plate */}
+                  <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-2">
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="text-muted-foreground text-xs">VIN</Label>
+                      <Input 
+                        placeholder="Vehicle Identification Number"
+                        value={formData.vin}
+                        onChange={(e) => setFormData({...formData, vin: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
+                    </div>
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="text-muted-foreground text-xs">License Plate</Label>
+                      <Input 
+                        placeholder="e.g. GR 1234-22"
+                        value={formData.plate}
+                        onChange={(e) => setFormData({...formData, plate: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
                     </div>
                   </div>
 
-                  <div className="grid gap-2">
-                    <Label htmlFor="condition">
-                      Condition notes (optional: existing scratches, damages, etc.)
-                    </Label>
-                    <Textarea
-                      id="condition"
-                      rows={3}
-                      placeholder="List any visible wear, scratches or issues so guests know what to expect."
-                    />
+                  {/* Specs with Dropdowns */}
+                  <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-3">
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                        <Gauge className="w-3 h-3" /> Mileage
+                      </Label>
+                      <Input 
+                        type="number"
+                        placeholder="e.g. 45000"
+                        value={formData.mileage}
+                        onChange={(e) => setFormData({...formData, mileage: e.target.value})}
+                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      />
+                    </div>
+                    
+                    {/* Fuel Type Dropdown */}
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                        <Fuel className="w-3 h-3" /> Fuel Type
+                      </Label>
+                      <Select 
+                        value={formData.fuel} 
+                        onValueChange={(value) => setFormData({...formData, fuel: value})}
+                      >
+                        <SelectTrigger className="bg-slate-100 border-0 h-9 sm:h-10 text-sm">
+                          <SelectValue placeholder="Select fuel type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="petrol">Petrol</SelectItem>
+                          <SelectItem value="diesel">Diesel</SelectItem>
+                          <SelectItem value="hybrid">Hybrid</SelectItem>
+                          <SelectItem value="electric">Electric</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Transmission Dropdown */}
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                        <Settings className="w-3 h-3" /> Transmission
+                      </Label>
+                      <Select 
+                        value={formData.transmission} 
+                        onValueChange={(value) => setFormData({...formData, transmission: value})}
+                      >
+                        <SelectTrigger className="bg-slate-100 border-0 h-9 sm:h-10 text-sm">
+                          <SelectValue placeholder="Select transmission" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="automatic">Automatic</SelectItem>
+                          <SelectItem value="manual">Manual</SelectItem>
+                          <SelectItem value="cvt">CVT</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+
+                  {/* Photo Upload Grid */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-muted-foreground text-xs">Car Photos (4 required)</Label>
+                      <Badge variant="outline" className={cn(
+                        "text-xs",
+                        Object.values(photos).filter(Boolean).length >= 4 ? "bg-emerald-50 text-emerald-600 border-emerald-200" : ""
+                      )}>
+                        {Object.values(photos).filter(Boolean).length}/4
+                      </Badge>
+                    </div>
+                    
+                    <div className="gap-3 sm:gap-4 grid grid-cols-2">
+                      {[
+                        { key: "front" as PhotoKey, label: "Front" },
+                        { key: "back" as PhotoKey, label: "Rear" },
+                        { key: "side" as PhotoKey, label: "Side" },
+                        { key: "interior" as PhotoKey, label: "Interior" },
+                      ].map(({ key, label }) => {
+                        const photo = photos[key];
+                        
+                        return (
+                          <div key={key} className="group relative">
+                            {photo ? (
+                              <div className="relative bg-slate-100 rounded-lg sm:rounded-xl aspect-[4/3] overflow-hidden">
+                                <img 
+                                  src={photo.preview} 
+                                  alt={label}
+                                  className="w-full h-full object-cover"
+                                />
+                                <div className="absolute inset-0 flex justify-center items-center gap-1 sm:gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
+                                  <Button 
+                                    size="icon" 
+                                    variant="secondary" 
+                                    className="rounded-full w-6 sm:w-8 h-6 sm:h-8"
+                                    onClick={() => {
+                                      const input = document.getElementById(`photo-${key}`) as HTMLInputElement;
+                                      input?.click();
+                                    }}
+                                  >
+                                    <Upload className="w-3 sm:w-4 h-3 sm:h-4" />
+                                  </Button>
+                                  <Button 
+                                    size="icon" 
+                                    variant="destructive" 
+                                    className="rounded-full w-6 sm:w-8 h-6 sm:h-8"
+                                    onClick={() => removePhoto(key)}
+                                  >
+                                    <X className="w-3 sm:w-4 h-3 sm:h-4" />
+                                  </Button>
+                                </div>
+                                <Badge className="top-1 sm:top-2 left-1 sm:left-2 absolute bg-black/50 border-0 text-[10px] text-white sm:text-xs">
+                                  {label}
+                                </Badge>
+                              </div>
+                            ) : (
+                              <label 
+                                htmlFor={`photo-${key}`}
+                                className="group flex flex-col justify-center items-center bg-slate-50 p-2 border-2 border-slate-300 hover:border-blue-500 border-dashed rounded-lg sm:rounded-xl aspect-[4/3] transition-colors cursor-pointer"
+                              >
+                                <Camera className="mb-1 sm:mb-2 w-6 sm:w-8 h-6 sm:h-8 text-slate-400 group-hover:text-blue-500" />
+                                <span className="font-medium text-[10px] text-slate-600 sm:text-xs">{label}</span>
+                                <span className="mt-0.5 sm:mt-1 text-[8px] text-muted-foreground sm:text-[10px]">Upload</span>
+                              </label>
+                            )}
+                            <input
+                              id={`photo-${key}`}
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={(e) => handlePhotoUpload(key, e.target.files)}
+                            />
+                          </div>
+                        );
+                      })}
+                    </div>
                   </div>
                 </>
               )}
 
+              {/* STEP 2: Documents */}
+              {step === "documents" && (
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex gap-3 bg-blue-50 p-3 sm:p-4 rounded-lg">
+                    <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 shrink-0" />
+                    <p className="text-blue-700 text-xs sm:text-sm">
+                      Upload clear photos of your documents. They will be verified by our admin team.
+                    </p>
+                  </div>
+
+                  {[
+                    { key: "nationalId" as DocumentKey, label: "National ID", description: "Front and back of your ID" },
+                    { key: "ownership" as DocumentKey, label: "Vehicle Ownership", description: "Proof of ownership" },
+                    { key: "insurance" as DocumentKey, label: "Insurance", description: "Valid insurance policy" },
+                    { key: "license" as DocumentKey, label: "Driver's License", description: "Valid driving license" },
+                  ].map(({ key, label, description }) => {
+                    const doc = documents[key];
+                    
+                    return (
+                      <div key={key} className="space-y-1 sm:space-y-2">
+                        <Label className="text-muted-foreground text-xs">{label}</Label>
+                        <p className="mb-1 sm:mb-2 text-[10px] text-muted-foreground sm:text-xs">{description}</p>
+                        
+                        {doc ? (
+                          <div className="flex justify-between items-center gap-2 bg-slate-50 p-2 sm:p-3 rounded-lg">
+                            <div className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0">
+                              <div className="bg-white p-1.5 sm:p-2 rounded-lg shrink-0">
+                                <IdCard className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-medium text-xs sm:text-sm truncate">{doc.name}</p>
+                                <p className="text-[10px] text-muted-foreground sm:text-xs">{doc.size}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1 sm:gap-2 shrink-0">
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="w-7 sm:w-8 h-7 sm:h-8"
+                                onClick={() => window.open(doc.preview, '_blank')}
+                              >
+                                <Eye className="w-3 sm:w-4 h-3 sm:h-4" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                className="w-7 sm:w-8 h-7 sm:h-8 text-red-500"
+                                onClick={() => removeDocument(key)}
+                              >
+                                <X className="w-3 sm:w-4 h-3 sm:h-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        ) : (
+                          <label 
+                            htmlFor={`doc-${key}`}
+                            className="group flex justify-between items-center p-3 sm:p-4 border-2 border-slate-300 hover:border-blue-500 border-dashed rounded-lg transition-colors cursor-pointer"
+                          >
+                            <div className="flex items-center gap-2 sm:gap-3">
+                              <Upload className="w-4 sm:w-5 h-4 sm:h-5 text-slate-400 group-hover:text-blue-500" />
+                              <span className="text-slate-600 text-xs sm:text-sm">Click to upload</span>
+                            </div>
+                          </label>
+                        )}
+                        <input
+                          id={`doc-${key}`}
+                          type="file"
+                          accept="image/*,.pdf"
+                          className="hidden"
+                          onChange={(e) => handleDocumentUpload(key, e.target.files)}
+                        />
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* STEP 3: Protection */}
               {step === "protection" && (
-                <>
-                  <div className="grid gap-3">
-                    <Label>Choose a protection option</Label>
-                    <p className="text-xs text-muted-foreground">
-                      This is not a real insurance product yet, but we capture your
-                      preference so we can match it to the right protection plan.
-                    </p>
-                    <div className="grid gap-3 sm:grid-cols-3">
-                      <Button variant="outline" className="h-auto flex-col items-start gap-1">
-                        <span className="text-sm font-medium">Standard</span>
-                        <span className="text-xs text-muted-foreground">
-                          Balanced protection & earnings.
-                        </span>
-                      </Button>
-                      <Button variant="outline" className="h-auto flex-col items-start gap-1">
-                        <span className="text-sm font-medium">Premium</span>
-                        <span className="text-xs text-muted-foreground">
-                          Higher protection, slightly lower payout.
-                        </span>
-                      </Button>
-                      <Button variant="outline" className="h-auto flex-col items-start gap-1">
-                        <span className="text-sm font-medium">Use my own cover</span>
-                        <span className="text-xs text-muted-foreground">
-                          You provide commercial insurance.
-                        </span>
-                      </Button>
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="insurer">
-                      Current insurer & policy number (if applicable)
-                    </Label>
-                    <Input
-                      id="insurer"
-                      placeholder="e.g. Enterprise Insurance · Policy #123456"
-                    />
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="compliance">
-                      Compliance confirmation
-                    </Label>
-                    <Textarea
-                      id="compliance"
-                      rows={3}
-                      placeholder="Confirm that the vehicle meets local roadworthiness, registration and insurance requirements."
-                    />
-                  </div>
-                </>
+                <div className="space-y-3 sm:space-y-4">
+                  {[
+                    {
+                      id: "standard",
+                      title: "Standard Protection",
+                      desc: "Basic coverage for peace of mind",
+                      features: ["Basic liability", "Roadside assistance", "Theft protection"],
+                      price: "15%"
+                    },
+                    {
+                      id: "premium",
+                      title: "Premium Protection",
+                      desc: "Comprehensive coverage",
+                      features: ["Full liability", "Premium assistance", "Full damage cover"],
+                      price: "20%"
+                    },
+                  ].map((plan) => (
+                    <button
+                      key={plan.id}
+                      onClick={() => setSelectedProtection(plan.id)}
+                      className={cn(
+                        "p-3 sm:p-4 border-2 rounded-xl w-full text-left transition-all",
+                        selectedProtection === plan.id 
+                          ? "border-blue-500 bg-blue-50" 
+                          : "border-slate-200 hover:border-slate-300"
+                      )}
+                    >
+                      <div className="flex justify-between items-center mb-1 sm:mb-2">
+                        <h3 className="font-semibold text-sm sm:text-base">{plan.title}</h3>
+                        <Badge variant="outline" className="text-xs">{plan.price}</Badge>
+                      </div>
+                      <p className="mb-2 text-muted-foreground text-xs sm:text-sm">{plan.desc}</p>
+                      <ul className="space-y-0.5 sm:space-y-1">
+                        {plan.features.map((f, i) => (
+                          <li key={i} className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
+                            <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 shrink-0" />
+                            <span>{f}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </button>
+                  ))}
+                </div>
               )}
 
+              {/* STEP 4: Pricing */}
               {step === "pricing" && (
-                <>
-                  <div className="grid gap-2 sm:grid-cols-3">
-                    <div className="grid gap-2">
-                      <Label htmlFor="price">Daily price (USD)</Label>
-                      <Input id="price" type="number" placeholder="e.g. 45" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="weekly">Weekly discount (%)</Label>
-                      <Input id="weekly" type="number" placeholder="e.g. 10" />
-                    </div>
-                    <div className="grid gap-2">
-                      <Label htmlFor="monthly">Monthly discount (%)</Label>
-                      <Input id="monthly" type="number" placeholder="e.g. 20" />
-                    </div>
-                  </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="availability">Availability pattern</Label>
-                    <Input
-                      id="availability"
-                      placeholder="e.g. Available Mon–Sun, blocked when already booked."
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="space-y-1 sm:space-y-2">
+                    <Label className="text-muted-foreground text-xs">Daily Price (ETB)</Label>
+                    <Input 
+                      type="number"
+                      placeholder="e.g. 1500"
+                      value={formData.price}
+                      onChange={(e) => setFormData({...formData, price: e.target.value})}
+                      className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
                     />
                   </div>
-
-                  <div className="grid gap-2">
-                    <Label htmlFor="delivery">Delivery & pickup options</Label>
-                    <Textarea
-                      id="delivery"
-                      rows={3}
-                      placeholder="e.g. Free pickup in East Legon, delivery to airport for a fee, no cross‑border trips..."
-                    />
-                  </div>
-                </>
+                </div>
               )}
 
+              {/* STEP 5: Terms */}
               {step === "terms" && (
-                <div className="space-y-3 text-sm text-muted-foreground">
-                  <p>
-                    Before you publish your car, please read and accept the hosting
-                    responsibilities:
-                  </p>
-                  <ul className="list-disc pl-5 space-y-1">
-                    <li>
-                      You’ll keep the vehicle roadworthy, insured, and compliant with
-                      local regulations.
-                    </li>
-                    <li>
-                      You’ll accurately describe the car’s condition, features and any
-                      limitations.
-                    </li>
-                    <li>
-                      You agree to respond to guests promptly and handle check‑in and
-                      return in a professional way.
-                    </li>
-                    <li>
-                      You’ll follow AutoRent’s safety, cancellation and dispute policies.
-                    </li>
-                  </ul>
-                  <p className="pt-2">
-                    By submitting, you confirm that the information provided is accurate
-                    and that you agree to AutoRent’s host terms and conditions.
-                  </p>
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="bg-amber-50 p-3 sm:p-4 rounded-lg">
+                    <h3 className="flex items-center gap-2 mb-2 font-semibold text-sm sm:text-base">
+                      <AlertCircle className="w-4 h-4" />
+                      Before submitting
+                    </h3>
+                    <p className="text-muted-foreground text-xs sm:text-sm">
+                      Your application will be reviewed by our admin team. This typically takes 24-48 hours.
+                    </p>
+                  </div>
+
+                  <div className="space-y-2 sm:space-y-3">
+                    <p className="text-xs sm:text-sm">By submitting, you confirm:</p>
+                    <ul className="space-y-1 sm:space-y-2">
+                      {[
+                        "All information provided is accurate",
+                        "You own this vehicle or have authority to list it",
+                        "Documents are genuine and valid",
+                        "You agree to AutoRent's terms and conditions"
+                      ].map((item, i) => (
+                        <li key={i} className="flex items-start gap-1 sm:gap-2 text-xs sm:text-sm">
+                          <CheckCircle2 className="mt-0.5 w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 shrink-0" />
+                          <span>{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
-          {/* Right column: summary + navigation */}
-          <Card className="border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base">Next steps</CardTitle>
+          {/* Right Column - Summary */}
+          <Card className="top-4 sticky bg-white/80 shadow-xl backdrop-blur border-0 h-fit">
+            <CardHeader className="p-4 sm:p-6 border-slate-200 border-b">
+              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+                <FileText className="w-4 h-4" />
+                Summary
+              </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4 text-sm text-muted-foreground">
-              <p>
-                Work through each section to set up your car like a professional listing.
-                You can refine prices, availability and photos later.
-              </p>
+            
+            <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+              {/* Progress Overview */}
+              <div className="space-y-2 sm:space-y-3">
+                <h3 className="font-semibold text-[10px] text-muted-foreground sm:text-xs uppercase">Completion</h3>
+                
+                {[
+                  { label: "Car Details", complete: formData.make && formData.model && Object.values(photos).filter(Boolean).length >= 4 },
+                  { label: "Documents", complete: documents.nationalId && documents.ownership && documents.insurance },
+                  { label: "Protection", complete: selectedProtection !== null },
+                  { label: "Pricing", complete: !!formData.price },
+                ].map((item, i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <span className="text-xs sm:text-sm">{item.label}</span>
+                    {item.complete ? (
+                      <Badge className="bg-emerald-100 border-0 text-[10px] text-emerald-700 sm:text-xs">Done</Badge>
+                    ) : (
+                      <Badge variant="outline" className="bg-amber-50 border-amber-200 text-[10px] text-amber-600 sm:text-xs">
+                        Pending
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
 
-              <div className="flex gap-2">
+              {/* Navigation */}
+              <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
                 <Button
                   variant="outline"
                   disabled={step === "car"}
-                  onClick={prevStep}
-                  className="flex-1"
+                  onClick={() => {
+                    const prev = steps[currentStepIndex - 1].id;
+                    setStep(prev as HostStep);
+                  }}
+                  className="flex-1 gap-1 sm:gap-2 h-8 sm:h-10 text-xs sm:text-sm"
                 >
+                  <ChevronLeft className="w-3 sm:w-4 h-3 sm:h-4" />
                   Back
                 </Button>
-                <Button
-                  onClick={nextStep}
-                  className="flex-1 bg-black text-white hover:opacity-90 dark:bg-white dark:text-black"
-                >
-                  {step === "terms" ? "Submit application" : "Continue"}
-                </Button>
+                
+                {step === "terms" ? (
+                  <Button
+                    onClick={handleSubmit}
+                    disabled={!isStepComplete()}
+                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-emerald-500 hover:from-emerald-600 to-green-600 hover:to-green-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
+                  >
+                    Submit
+                    <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    onClick={() => {
+                      const next = steps[currentStepIndex + 1].id;
+                      setStep(next as HostStep);
+                    }}
+                    disabled={!isStepComplete()}
+                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 hover:from-blue-600 to-indigo-600 hover:to-indigo-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
+                  >
+                    Next
+                    <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4" />
+                  </Button>
+                )}
               </div>
 
-              <p className="text-xs">
-                After you submit, we’ll review your details and follow up with any extra
-                verification needed before your car goes live.
+              <p className="text-[10px] text-muted-foreground sm:text-xs text-center">
+                Documents verified by admin
               </p>
             </CardContent>
           </Card>
@@ -341,4 +764,3 @@ export function PeerHostBecomeHostPage() {
     </div>
   );
 }
-
