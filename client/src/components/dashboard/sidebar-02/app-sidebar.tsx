@@ -15,6 +15,7 @@ import {
   Handshake,
   Landmark,
   LayoutDashboard,
+  MessageCircleCheckIcon,
   ShoppingCart,
   Store,
   UserCheck,
@@ -57,10 +58,10 @@ const dashboardRoutes: Route[] = [
     link: "#",
   },
   {
-    id: "User verification",
-    title: "User verification",
+    id: "Users",
+    title: "User",
     icon: <UserCheck className="size-4" />,
-    link: "#",
+    link: "/sysadmin/users",
     // subs: [
     //   {
     //     title: "Catalogue",
@@ -80,11 +81,11 @@ const dashboardRoutes: Route[] = [
     // ],
   },
   {
-    id: "Company Approval",
-    title: "Company Approval",
+    id: "Companies",
+    title: "Companies",
     //company icon
     icon: <Building2 className="size-4" />,
-    link: "#",
+    link: "/sysadmin/companies",
     // subs: [
     //   {
     //     title: "Meters",
@@ -99,10 +100,10 @@ const dashboardRoutes: Route[] = [
     // ],
   },
   {
-    id: "P2P Approval",
-    title: "P2P Approval",
+    id: "P2P",
+    title: "P2P",
     icon: <Handshake className="size-4" />,
-    link: "#",
+    link: "/sysadmin/p2p",
   },
   // {
   //   id: "customers",
@@ -111,10 +112,16 @@ const dashboardRoutes: Route[] = [
   //   link: "#",
   // },
   {
+    id: "Revenue",
+    title: "Revenue",
+    icon: <Landmark className="size-4" />,
+    link: "/sysadmin/revenue",
+  },
+  {
     id: "Disputes",
-    title: "Sales",
-    icon: <ShoppingCart className="size-4" />,
-    link: "#",
+    title: "Disputes",
+    icon: <MessageCircleCheckIcon className="size-4" />,
+    link: "/sysadmin/disputes",
     // subs: [
     //   {
     //     title: "Orders",
@@ -127,24 +134,6 @@ const dashboardRoutes: Route[] = [
     //     icon: <Infinity className="size-4" />,
     //   },
     // ],
-  },
-  {
-    id: "User Management",
-    title: "Storefront",
-    icon: <Store className="size-4" />,
-    link: "#",
-  },
-
-  {
-    id: "Revenue",
-    title: "Finance",
-    icon: <Landmark className="size-4" />,
-    link: "#",
-    subs: [
-      { title: "Incoming", link: "#" },
-      { title: "Outgoing", link: "#" },
-      { title: "Payout Account", link: "#" },
-    ],
   },
 ];
 
