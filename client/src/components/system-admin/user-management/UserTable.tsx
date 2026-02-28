@@ -16,13 +16,21 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { MoreHorizontal, Pencil, Trash2, Ban, MailCheck } from "lucide-react";
+import {
+  MoreHorizontal,
+  Pencil,
+  Trash2,
+  Ban,
+  MailCheck,
+  Eye,
+} from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
 import { User } from "./data";
 import { cn } from "@/lib/utils";
 
 interface UserTableProps {
   users: User[];
+  onView: (user: User) => void;
   onEdit: (user: User) => void;
   onSuspend: (user: User) => void;
   onDelete: (user: User) => void;
@@ -31,6 +39,7 @@ interface UserTableProps {
 
 export function UserTable({
   users,
+  onView,
   onEdit,
   onSuspend,
   onDelete,
@@ -143,6 +152,9 @@ export function UserTable({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-40">
                       <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                      <DropdownMenuItem onClick={() => onView(user)}>
+                        <Eye className="mr-2 h-4 w-4" /> View Details
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => onEdit(user)}>
                         <Pencil className="mr-2 h-4 w-4" /> Edit
                       </DropdownMenuItem>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,7 @@ import { UserTable } from "./UserTable";
 import { mockUsers, User } from "./data";
 
 export default function UserManagementPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [roleFilter, setRoleFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -35,6 +37,7 @@ export default function UserManagementPage() {
     });
   }, [search, roleFilter, statusFilter]);
 
+  const handleView = (user: User) => router.push(`/sysadmin/users/${user.id}`);
   const handleEdit = (user: User) => console.log("Edit", user);
   const handleSuspend = (user: User) => console.log("Suspend", user);
   const handleDelete = (user: User) => console.log("Delete", user);
@@ -92,9 +95,9 @@ export default function UserManagementPage() {
             </div>
           </div>
 
-          {/* Table */}
           <UserTable
             users={filteredUsers}
+            onView={handleView}
             onEdit={handleEdit}
             onSuspend={handleSuspend}
             onDelete={handleDelete}
