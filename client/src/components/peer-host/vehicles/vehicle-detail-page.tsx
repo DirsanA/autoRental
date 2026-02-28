@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion } from "framer-motion";
 import { 
   Star, 
   MapPin, 
@@ -23,10 +22,7 @@ import {
   Trash2,
   CheckCircle2,
   Wrench,
-  AlertCircle,
-  Save,
-  X,
-  Plus
+  AlertCircle
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -46,23 +42,11 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Label } from "@/components/ui/label";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Textarea } from "@/components/ui/textarea";
+
+// Import the edit components
+import { EditVehicleDialog } from "./edit-vehicle-dialog";
+import { createEditableDetails } from "./edit-vehicle-data";
+import type { EditableVehicleDetails } from "./edit-vehicle-types";
 
 function formatStatus(status: VehicleStatus) {
   switch (status) {
@@ -75,32 +59,16 @@ function formatStatus(status: VehicleStatus) {
   }
 }
 
-interface EditableVehicleDetails {
-  make: string;
-  model: string;
-  year: number;
-  location: string;
-  dailyRate: number;
-  description: string;
-  features: string[];
-  specifications: {
-    mileage: string;
-    fuelType: string;
-    transmission: string;
-    seats: number;
-    mpg: string;
-    ac: string;
-    connectivity: string;
-  };
-}
-
 export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
   const [editableRate, setEditableRate] = useState(vehicle.dailyRate);
   const [activeImage, setActiveImage] = useState(0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isSaving, setIsSaving] = useState(false);
-  const [newFeature, setNewFeature] = useState("");
   const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  
+  // State for editable details
+  const [editableDetails, setEditableDetails] = useState<EditableVehicleDetails>(
+    createEditableDetails(vehicle)
+  );
   
   const statusInfo = formatStatus(vehicle.status);
   
@@ -111,30 +79,7 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     vehicle.imageUrl,
   ].filter(Boolean) as string[];
 
-  // Editable vehicle details
-  const [editableDetails, setEditableDetails] = useState<EditableVehicleDetails>({
-    make: vehicle.make,
-    model: vehicle.model,
-    year: vehicle.year,
-    location: vehicle.location,
-    dailyRate: vehicle.dailyRate,
-    description: "Well-maintained vehicle in excellent condition. Perfect for road trips or daily commuting. Features include premium audio, leather seats, and advanced safety systems.",
-    features: [
-      "Bluetooth", "Backup Camera", "Heated Seats", "Lane Assist",
-      "Keyless Entry", "USB Ports", "Sunroof", "Premium Sound"
-    ],
-    specifications: {
-      mileage: "45,000 mi",
-      fuelType: "Gasoline",
-      transmission: "Automatic",
-      seats: 5,
-      mpg: "28 city / 34 hwy",
-      ac: "Dual Zone",
-      connectivity: "Apple CarPlay"
-    }
-  });
-
-  // Vehicle specifications display
+  // Vehicle specifications display (using editable details)
   const specifications = [
     { icon: Calendar, label: "Year", value: vehicle.year.toString() },
     { icon: Gauge, label: "Mileage", value: editableDetails.specifications.mileage },
@@ -156,45 +101,16 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     { guest: "David L.", dates: "Feb 28-Mar 3", amount: 340, status: "completed" },
   ];
 
-  const handleSaveDetails = async () => {
-    setIsSaving(true);
-    
+  const handleSaveDetails = async (updatedDetails: EditableVehicleDetails) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    // Update the local state
+    setEditableDetails(updatedDetails);
     
     // Show success message
     setShowSaveSuccess(true);
     setTimeout(() => setShowSaveSuccess(false), 3000);
-    
-    setIsSaving(false);
-    setIsEditDialogOpen(false);
-  };
-
-  const handleAddFeature = () => {
-    if (newFeature.trim()) {
-      setEditableDetails({
-        ...editableDetails,
-        features: [...editableDetails.features, newFeature.trim()]
-      });
-      setNewFeature("");
-    }
-  };
-
-  const handleRemoveFeature = (index: number) => {
-    setEditableDetails({
-      ...editableDetails,
-      features: editableDetails.features.filter((_, i) => i !== index)
-    });
-  };
-
-  const handleSpecificationChange = (key: keyof typeof editableDetails.specifications, value: string | number) => {
-    setEditableDetails({
-      ...editableDetails,
-      specifications: {
-        ...editableDetails.specifications,
-        [key]: value
-      }
-    });
   };
 
   return (
@@ -546,225 +462,13 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
           </div>
         </div>
 
-        {/* Edit Details Dialog */}
-        <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-          <DialogContent className="dark:bg-slate-900 dark:border-slate-800 max-w-3xl max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle className="dark:text-white text-xl">Edit Vehicle Details</DialogTitle>
-              <DialogDescription className="dark:text-slate-400">
-                Make changes to your vehicle information below.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 py-4">
-              {/* Basic Information */}
-              <div className="space-y-4">
-                <h3 className="font-medium dark:text-slate-200 text-lg">Basic Information</h3>
-                <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Make</Label>
-                    <Input
-                      value={editableDetails.make}
-                      onChange={(e) => setEditableDetails({...editableDetails, make: e.target.value})}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Model</Label>
-                    <Input
-                      value={editableDetails.model}
-                      onChange={(e) => setEditableDetails({...editableDetails, model: e.target.value})}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Year</Label>
-                    <Input
-                      type="number"
-                      value={editableDetails.year}
-                      onChange={(e) => setEditableDetails({...editableDetails, year: parseInt(e.target.value)})}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Location</Label>
-                    <Input
-                      value={editableDetails.location}
-                      onChange={(e) => setEditableDetails({...editableDetails, location: e.target.value})}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Daily Rate ($)</Label>
-                    <Input
-                      type="number"
-                      value={editableDetails.dailyRate}
-                      onChange={(e) => setEditableDetails({...editableDetails, dailyRate: parseInt(e.target.value)})}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="dark:bg-slate-800" />
-
-              {/* Description */}
-              <div className="space-y-2">
-                <Label className="dark:text-slate-300">Description</Label>
-                <Textarea
-                  value={editableDetails.description}
-                  onChange={(e) => setEditableDetails({...editableDetails, description: e.target.value})}
-                  rows={4}
-                  className="dark:bg-slate-800 dark:border-slate-700"
-                />
-              </div>
-
-              <Separator className="dark:bg-slate-800" />
-
-              {/* Specifications */}
-              <div className="space-y-4">
-                <h3 className="font-medium dark:text-slate-200 text-lg">Specifications</h3>
-                <div className="gap-4 grid grid-cols-1 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Mileage</Label>
-                    <Input
-                      value={editableDetails.specifications.mileage}
-                      onChange={(e) => handleSpecificationChange('mileage', e.target.value)}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Fuel Type</Label>
-                    <Select 
-                      value={editableDetails.specifications.fuelType}
-                      onValueChange={(value) => handleSpecificationChange('fuelType', value)}
-                    >
-                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-slate-900 dark:border-slate-800">
-                        <SelectItem value="Gasoline">Gasoline</SelectItem>
-                        <SelectItem value="Diesel">Diesel</SelectItem>
-                        <SelectItem value="Hybrid">Hybrid</SelectItem>
-                        <SelectItem value="Electric">Electric</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Transmission</Label>
-                    <Select
-                      value={editableDetails.specifications.transmission}
-                      onValueChange={(value) => handleSpecificationChange('transmission', value)}
-                    >
-                      <SelectTrigger className="dark:bg-slate-800 dark:border-slate-700">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent className="dark:bg-slate-900 dark:border-slate-800">
-                        <SelectItem value="Automatic">Automatic</SelectItem>
-                        <SelectItem value="Manual">Manual</SelectItem>
-                        <SelectItem value="CVT">CVT</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">Seats</Label>
-                    <Input
-                      type="number"
-                      value={editableDetails.specifications.seats}
-                      onChange={(e) => handleSpecificationChange('seats', parseInt(e.target.value))}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">MPG</Label>
-                    <Input
-                      value={editableDetails.specifications.mpg}
-                      onChange={(e) => handleSpecificationChange('mpg', e.target.value)}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label className="dark:text-slate-300">AC</Label>
-                    <Input
-                      value={editableDetails.specifications.ac}
-                      onChange={(e) => handleSpecificationChange('ac', e.target.value)}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label className="dark:text-slate-300">Connectivity</Label>
-                    <Input
-                      value={editableDetails.specifications.connectivity}
-                      onChange={(e) => handleSpecificationChange('connectivity', e.target.value)}
-                      className="dark:bg-slate-800 dark:border-slate-700"
-                    />
-                  </div>
-                </div>
-              </div>
-
-              <Separator className="dark:bg-slate-800" />
-
-              {/* Features */}
-              <div className="space-y-4">
-                <h3 className="font-medium dark:text-slate-200 text-lg">Features</h3>
-                <div className="flex flex-wrap gap-2">
-                  {editableDetails.features.map((feature, index) => (
-                    <Badge
-                      key={index}
-                      className="gap-1 dark:bg-slate-800 px-3 py-1.5 dark:text-slate-300"
-                    >
-                      {feature}
-                      <X
-                        className="ml-1 w-3 h-3 hover:text-destructive cursor-pointer"
-                        onClick={() => handleRemoveFeature(index)}
-                      />
-                    </Badge>
-                  ))}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    placeholder="Add a feature..."
-                    value={newFeature}
-                    onChange={(e) => setNewFeature(e.target.value)}
-                    className="flex-1 dark:bg-slate-800 dark:border-slate-700"
-                    onKeyPress={(e) => e.key === 'Enter' && handleAddFeature()}
-                  />
-                  <Button
-                    onClick={handleAddFeature}
-                    variant="outline"
-                    className="dark:border-slate-700 dark:text-slate-300"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <Button
-                variant="outline"
-                onClick={() => setIsEditDialogOpen(false)}
-                className="dark:border-slate-700 dark:text-slate-300"
-              >
-                Cancel
-              </Button>
-              <Button
-                onClick={handleSaveDetails}
-                disabled={isSaving}
-                className="dark:bg-blue-600 dark:hover:bg-blue-700"
-              >
-                {isSaving ? (
-                  <>Saving...</>
-                ) : (
-                  <>
-                    <Save className="mr-2 w-4 h-4" />
-                    Save Changes
-                  </>
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* Edit Dialog */}
+        <EditVehicleDialog
+          open={isEditDialogOpen}
+          onOpenChange={setIsEditDialogOpen}
+          vehicleDetails={editableDetails}
+          onSave={handleSaveDetails}
+        />
       </Main>
     </div>
   );
