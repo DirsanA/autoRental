@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
@@ -141,6 +142,7 @@ function StatCard({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function P2PApprovalPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
@@ -166,7 +168,7 @@ export default function P2PApprovalPage() {
     (l) => l.status === "rejected",
   ).length;
 
-  const handleView = (l: P2PListing) => console.log("View", l.id);
+  const handleView = (l: P2PListing) => router.push(`/sysadmin/p2p/${l.id}`);
   const handleApprove = (l: P2PListing) => console.log("Approve", l.id);
   const handleReject = (l: P2PListing) => console.log("Reject", l.id);
   const handleFlag = (l: P2PListing) => console.log("Flag", l.id);
