@@ -27,14 +27,14 @@ function formatDateRange(startIso: string, endIso: string) {
 function statusStyles(status: BookingStatus) {
   switch (status) {
     case "confirmed":
-      return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20";
+      return "bg-emerald-500/10 text-emerald-600 border-emerald-500/20 dark:bg-emerald-500/20 dark:text-emerald-400 dark:border-emerald-500/30";
     case "completed":
-      return "bg-blue-500/10 text-blue-600 border-blue-500/20";
+      return "bg-blue-500/10 text-blue-600 border-blue-500/20 dark:bg-blue-500/20 dark:text-blue-400 dark:border-blue-500/30";
     case "pending":
-      return "bg-amber-500/10 text-amber-600 border-amber-500/20";
+      return "bg-amber-500/10 text-amber-600 border-amber-500/20 dark:bg-amber-500/20 dark:text-amber-400 dark:border-amber-500/30";
     case "cancelled":
     case "declined":
-      return "bg-red-500/10 text-red-600 border-red-500/20";
+      return "bg-red-500/10 text-red-600 border-red-500/20 dark:bg-red-500/20 dark:text-red-400 dark:border-red-500/30";
   }
 }
 
@@ -58,29 +58,29 @@ export function PeerHostBookingHistoryPage() {
   }, [search, statusFilter]);
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden">
+    <div className="flex flex-col flex-1 dark:bg-slate-950 overflow-hidden">
       <Header />
 
       <Main>
         {/* ===== HEADER ===== */}
         <div className="mb-8">
-          <h2 className="font-bold text-3xl tracking-tight">
+          <h2 className="font-bold dark:text-white text-3xl tracking-tight">
             Booking History
           </h2>
-          <p className="mt-2 text-muted-foreground text-sm">
+          <p className="mt-2 text-muted-foreground dark:text-slate-400 text-sm">
             Manage and review all bookings across your vehicles.
           </p>
         </div>
 
         {/* ===== FILTERS ===== */}
-        <Card className="shadow-sm mb-6 p-6 border-border/50">
+        <Card className="dark:bg-slate-900 shadow-sm mb-6 p-6 border-border/50 dark:border-slate-800">
           <div className="flex md:flex-row flex-col md:justify-between md:items-center gap-4">
             {/* Search */}
             <Input
               placeholder="Search by vehicle or guest..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              className="md:max-w-sm"
+              className="dark:bg-slate-800 dark:border-slate-700 md:max-w-sm dark:placeholder:text-slate-500 dark:text-slate-200"
             />
 
             {/* Status Filter */}
@@ -95,8 +95,8 @@ export function PeerHostBookingHistoryPage() {
                     className={cn(
                       "px-3 py-1.5 border rounded-full text-xs transition-all",
                       statusFilter === status
-                        ? "bg-primary text-primary-foreground border-primary"
-                        : "bg-muted/40 hover:bg-muted"
+                        ? "bg-primary text-primary-foreground border-primary dark:bg-primary dark:text-primary-foreground"
+                        : "bg-muted/40 hover:bg-muted dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 dark:border-slate-700"
                     )}
                   >
                     {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -108,26 +108,26 @@ export function PeerHostBookingHistoryPage() {
         </Card>
 
         {/* ===== TABLE ===== */}
-        <div className="border border-border/50 rounded-xl overflow-hidden">
+        <div className="dark:bg-slate-900 border border-border/50 dark:border-slate-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-muted/40">
+            <thead className="bg-muted/40 dark:bg-slate-800/50">
               <tr className="text-left">
-                <th className="px-6 py-4 font-medium text-muted-foreground">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400">
                   Vehicle
                 </th>
-                <th className="px-6 py-4 font-medium text-muted-foreground">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400">
                   Guest
                 </th>
-                <th className="px-6 py-4 font-medium text-muted-foreground">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400">
                   Dates
                 </th>
-                <th className="px-6 py-4 font-medium text-muted-foreground">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400">
                   Pickup
                 </th>
-                <th className="px-6 py-4 font-medium text-muted-foreground">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400">
                   Status
                 </th>
-                <th className="px-6 py-4 font-medium text-muted-foreground text-right">
+                <th className="px-6 py-4 font-medium text-muted-foreground dark:text-slate-400 text-right">
                   Total
                 </th>
               </tr>
@@ -138,7 +138,7 @@ export function PeerHostBookingHistoryPage() {
                 <tr>
                   <td
                     colSpan={6}
-                    className="px-6 py-12 text-muted-foreground text-center"
+                    className="px-6 py-12 text-muted-foreground dark:text-slate-400 text-center"
                   >
                     No bookings found.
                   </td>
@@ -148,21 +148,21 @@ export function PeerHostBookingHistoryPage() {
               {bookings.map((b) => (
                 <tr
                   key={b.id}
-                  className="hover:bg-muted/30 border-border/50 border-t transition-colors"
+                  className="hover:bg-muted/30 dark:hover:bg-slate-800/50 border-border/50 dark:border-slate-800 border-t transition-colors"
                 >
-                  <td className="px-6 py-4 font-medium">
+                  <td className="px-6 py-4 font-medium dark:text-slate-200">
                     {b.vehicleName}
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 dark:text-slate-300">
                     {b.guestName}
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 dark:text-slate-300">
                     {formatDateRange(b.startDate, b.endDate)}
                   </td>
 
-                  <td className="px-6 py-4">
+                  <td className="px-6 py-4 dark:text-slate-300">
                     {b.pickupLocation}
                   </td>
 
@@ -179,7 +179,7 @@ export function PeerHostBookingHistoryPage() {
                     </Badge>
                   </td>
 
-                  <td className="px-6 py-4 font-semibold text-right">
+                  <td className="px-6 py-4 font-semibold dark:text-slate-200 text-right">
                     ${b.totalAmount}
                   </td>
                 </tr>
