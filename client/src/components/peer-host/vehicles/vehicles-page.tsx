@@ -135,7 +135,7 @@ export function PeerHostVehiclesPage({
         </div>
 
         {/* ===== VEHICLE GRID ===== */}
-        <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-3 mt-10">
+        <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-2 mt-10">
           {vehicles.length === 0 && (
             <div className="col-span-full py-20 text-center">
               <p className="text-muted-foreground dark:text-slate-400 text-lg">
