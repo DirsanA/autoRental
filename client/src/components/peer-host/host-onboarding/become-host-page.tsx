@@ -101,45 +101,45 @@ export function PeerHostBecomeHostPage() {
   // If already submitted, show pending approval screen
   if (isSubmitted) {
     return (
-      <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 to-white overflow-hidden">
+      <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 dark:from-slate-950 to-white dark:to-slate-900 overflow-hidden">
         <Header />
         <Main className="mx-auto px-4 py-8 sm:py-12 max-w-3xl container">
-          <Card className="shadow-xl border-0 overflow-hidden">
-            <div className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2" />
+          <Card className="dark:bg-slate-900 shadow-xl dark:border border-0 dark:border-slate-800 overflow-hidden">
+            <div className="bg-gradient-to-r from-amber-500 dark:from-amber-600 to-yellow-500 dark:to-yellow-600 h-2" />
             <CardContent className="p-4 sm:p-8 text-center">
-              <div className="flex justify-center items-center bg-amber-100 mx-auto mb-4 sm:mb-6 rounded-full w-16 sm:w-20 h-16 sm:h-20">
-                <Clock className="w-8 sm:w-10 h-8 sm:h-10 text-amber-600" />
+              <div className="flex justify-center items-center bg-amber-100 dark:bg-amber-950 mx-auto mb-4 sm:mb-6 rounded-full w-16 sm:w-20 h-16 sm:h-20">
+                <Clock className="w-8 sm:w-10 h-8 sm:h-10 text-amber-600 dark:text-amber-400" />
               </div>
               
-              <h2 className="mb-2 font-bold text-xl sm:text-2xl">Application Under Review</h2>
-              <p className="mb-4 sm:mb-6 text-muted-foreground text-sm sm:text-base">
+              <h2 className="mb-2 font-bold dark:text-white text-xl sm:text-2xl">Application Under Review</h2>
+              <p className="mb-4 sm:mb-6 text-muted-foreground dark:text-slate-400 text-sm sm:text-base">
                 Your documents are being verified by our admin team. This usually takes 24-48 hours.
               </p>
 
-              <div className="bg-slate-50 mb-4 sm:mb-6 p-4 sm:p-6 rounded-xl text-left">
-                <h3 className="flex items-center gap-2 mb-3 sm:mb-4 font-semibold text-sm sm:text-base">
+              <div className="bg-slate-50 dark:bg-slate-800 mb-4 sm:mb-6 p-4 sm:p-6 rounded-xl text-left">
+                <h3 className="flex items-center gap-2 mb-3 sm:mb-4 font-semibold dark:text-slate-200 text-sm sm:text-base">
                   <FileCheck className="w-4 h-4" />
                   Submitted Documents
                 </h3>
                 <div className="space-y-2 sm:space-y-3">
                   {Object.entries(documents).map(([key, file]) => (
                     file && (
-                      <div key={key} className="flex sm:flex-row flex-col justify-between sm:items-center gap-2 bg-white p-3 rounded-lg">
+                      <div key={key} className="flex sm:flex-row flex-col justify-between sm:items-center gap-2 bg-white dark:bg-slate-900 p-3 border dark:border-slate-700 rounded-lg">
                         <div className="flex items-center gap-3">
-                          <div className="bg-blue-50 p-2 rounded-lg shrink-0">
-                            <IdCard className="w-4 h-4 text-blue-600" />
+                          <div className="bg-blue-50 dark:bg-blue-950 p-2 rounded-lg shrink-0">
+                            <IdCard className="w-4 h-4 text-blue-600 dark:text-blue-400" />
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate">
+                            <p className="font-medium dark:text-slate-200 text-sm truncate">
                               {key === 'nationalId' && 'National ID'}
                               {key === 'ownership' && 'Ownership Certificate'}
                               {key === 'insurance' && 'Insurance'}
                               {key === 'license' && "Driver's License"}
                             </p>
-                            <p className="text-muted-foreground text-xs truncate">{file.name}</p>
+                            <p className="text-muted-foreground dark:text-slate-400 text-xs truncate">{file.name}</p>
                           </div>
                         </div>
-                        <Badge variant="outline" className="self-start sm:self-center bg-amber-50 border-amber-200 text-amber-600">
+                        <Badge variant="outline" className="self-start sm:self-center bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-amber-600 dark:text-amber-400">
                           Pending
                         </Badge>
                       </div>
@@ -149,17 +149,17 @@ export function PeerHostBecomeHostPage() {
               </div>
 
               <div className="flex sm:flex-row flex-col justify-center gap-3">
-                <Button variant="outline" className="gap-2 w-full sm:w-auto">
+                <Button variant="outline" className="gap-2 dark:hover:bg-slate-800 dark:border-slate-700 w-full sm:w-auto dark:text-slate-200">
                   <Eye className="w-4 h-4" />
                   View Application
                 </Button>
-                <Button className="gap-2 bg-black hover:bg-gray-800 w-full sm:w-auto text-white">
+                <Button className="gap-2 bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 w-full sm:w-auto text-white dark:text-black">
                   <Bell className="w-4 h-4" />
                   Notify Me
                 </Button>
               </div>
 
-              <p className="mt-4 sm:mt-6 text-muted-foreground text-xs">
+              <p className="mt-4 sm:mt-6 text-muted-foreground dark:text-slate-400 text-xs">
                 You'll receive an email once your verification is complete
               </p>
             </CardContent>
@@ -240,7 +240,7 @@ export function PeerHostBecomeHostPage() {
   }
 
   return (
-    <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 to-white overflow-hidden">
+    <div className="flex flex-col flex-1 bg-gradient-to-br from-slate-50 dark:from-slate-950 to-white dark:to-slate-900 overflow-hidden">
       <Header />
       
       <Main className="mx-auto px-4 py-4 sm:py-8 max-w-7xl container">
@@ -249,19 +249,19 @@ export function PeerHostBecomeHostPage() {
           <div className="flex sm:flex-row flex-col justify-between sm:items-center gap-3 mb-4 sm:mb-6">
             <div>
               <div className="flex items-center gap-2 sm:gap-3 mb-1 sm:mb-2">
-                <div className="bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg p-2 sm:p-2.5 rounded-xl shrink-0">
+                <div className="bg-gradient-to-br from-blue-500 dark:from-blue-600 to-indigo-600 dark:to-indigo-700 shadow-lg p-2 sm:p-2.5 rounded-xl shrink-0">
                   <Car className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
                 </div>
-                <h1 className="bg-clip-text bg-gradient-to-r from-slate-900 to-slate-600 font-bold text-transparent text-xl sm:text-3xl">
+                <h1 className="bg-clip-text bg-gradient-to-r from-slate-900 dark:from-slate-100 to-slate-600 dark:to-slate-400 font-bold text-transparent text-xl sm:text-3xl">
                   Become a Host
                 </h1>
               </div>
-              <p className="text-muted-foreground text-xs sm:text-sm">
+              <p className="text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">
                 List your car and start earning in 5 simple steps
               </p>
             </div>
             
-            <Badge variant="outline" className="px-3 sm:px-4 py-1 sm:py-2 w-fit text-xs sm:text-sm">
+            <Badge variant="outline" className="px-3 sm:px-4 py-1 sm:py-2 dark:border-slate-700 w-fit dark:text-slate-300 text-xs sm:text-sm">
               Step {currentStepIndex + 1}/{steps.length}
             </Badge>
           </div>
@@ -269,7 +269,7 @@ export function PeerHostBecomeHostPage() {
           {/* Progress Steps - Scrollable on mobile */}
           <div className="-mx-4 px-4 pb-2 overflow-x-auto">
             <div className="relative flex justify-between items-center min-w-[500px] sm:min-w-0">
-              <div className="top-1/2 right-0 left-0 absolute bg-slate-200 h-0.5 -translate-y-1/2" />
+              <div className="top-1/2 right-0 left-0 absolute bg-slate-200 dark:bg-slate-800 h-0.5 -translate-y-1/2" />
               <div className="relative flex justify-between w-full">
                 {steps.map((s, idx) => {
                   const Icon = s.icon;
@@ -282,13 +282,13 @@ export function PeerHostBecomeHostPage() {
                         "z-10 relative flex justify-center items-center rounded-full w-8 sm:w-10 h-8 sm:h-10 transition-all",
                         isActive ? "bg-blue-500 text-white shadow-lg shadow-blue-500/30 scale-110" : 
                         isCompleted ? "bg-emerald-500 text-white" : 
-                        "bg-white border-2 border-slate-200 text-slate-400"
+                        "bg-white dark:bg-slate-800 border-2 border-slate-200 dark:border-slate-700 text-slate-400 dark:text-slate-500"
                       )}>
                         {isCompleted ? <CheckCircle2 className="w-4 sm:w-5 h-4 sm:h-5" /> : <Icon className="w-4 sm:w-5 h-4 sm:h-5" />}
                       </div>
                       <span className={cn(
                         "mt-1 sm:mt-2 font-medium text-[10px] sm:text-xs whitespace-nowrap",
-                        isActive ? "text-blue-600" : "text-muted-foreground"
+                        isActive ? "text-blue-600 dark:text-blue-400" : "text-muted-foreground dark:text-slate-400"
                       )}>
                         {s.label}
                       </span>
@@ -303,12 +303,12 @@ export function PeerHostBecomeHostPage() {
         {/* Main Grid */}
         <div className="gap-4 sm:gap-6 grid lg:grid-cols-3">
           {/* Left Column - Main Form */}
-          <Card className="lg:col-span-2 bg-white/80 shadow-xl backdrop-blur border-0">
-            <CardHeader className="p-4 sm:p-6 border-slate-200 border-b">
-              <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+          <Card className="lg:col-span-2 bg-white/80 dark:bg-slate-900/80 shadow-xl backdrop-blur dark:border border-0 dark:border-slate-800">
+            <CardHeader className="p-4 sm:p-6 border-slate-200 dark:border-slate-800 border-b">
+              <CardTitle className="flex items-center gap-2 dark:text-slate-200 text-base sm:text-lg">
                 {(() => {
                   const IconComponent = steps[currentStepIndex].icon;
-                  return <IconComponent className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />;
+                  return <IconComponent className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500 dark:text-blue-400" />;
                 })()}
                 <span className="truncate">{steps[currentStepIndex].label}</span>
               </CardTitle>
@@ -321,30 +321,30 @@ export function PeerHostBecomeHostPage() {
                   {/* Basic Info Grid */}
                   <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-3">
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="text-muted-foreground text-xs">Make</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">Make</Label>
                       <Input 
                         placeholder="e.g. Toyota"
                         value={formData.make}
                         onChange={(e) => setFormData({...formData, make: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="text-muted-foreground text-xs">Model</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">Model</Label>
                       <Input 
                         placeholder="e.g. Corolla"
                         value={formData.model}
                         onChange={(e) => setFormData({...formData, model: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="text-muted-foreground text-xs">Year</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">Year</Label>
                       <Input 
                         placeholder="e.g. 2022"
                         value={formData.year}
                         onChange={(e) => setFormData({...formData, year: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                   </div>
@@ -352,21 +352,21 @@ export function PeerHostBecomeHostPage() {
                   {/* VIN & Plate */}
                   <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-2">
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="text-muted-foreground text-xs">VIN</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">VIN</Label>
                       <Input 
                         placeholder="Vehicle Identification Number"
                         value={formData.vin}
                         onChange={(e) => setFormData({...formData, vin: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="text-muted-foreground text-xs">License Plate</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">License Plate</Label>
                       <Input 
                         placeholder="e.g. GR 1234-22"
                         value={formData.plate}
                         onChange={(e) => setFormData({...formData, plate: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                   </div>
@@ -374,7 +374,7 @@ export function PeerHostBecomeHostPage() {
                   {/* Specs with Dropdowns */}
                   <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-3">
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                      <Label className="flex items-center gap-1 text-muted-foreground dark:text-slate-400 text-xs">
                         <Gauge className="w-3 h-3" /> Mileage
                       </Label>
                       <Input 
@@ -382,23 +382,23 @@ export function PeerHostBecomeHostPage() {
                         placeholder="e.g. 45000"
                         value={formData.mileage}
                         onChange={(e) => setFormData({...formData, mileage: e.target.value})}
-                        className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                       />
                     </div>
                     
                     {/* Fuel Type Dropdown */}
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                      <Label className="flex items-center gap-1 text-muted-foreground dark:text-slate-400 text-xs">
                         <Fuel className="w-3 h-3" /> Fuel Type
                       </Label>
                       <Select 
                         value={formData.fuel} 
                         onValueChange={(value) => setFormData({...formData, fuel: value})}
                       >
-                        <SelectTrigger className="bg-slate-100 border-0 h-9 sm:h-10 text-sm">
-                          <SelectValue placeholder="Select fuel type" />
+                        <SelectTrigger className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:text-slate-200 text-sm">
+                          <SelectValue placeholder="Select fuel type" className="dark:placeholder:text-slate-500" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="dark:bg-slate-900 dark:border-slate-800">
                           <SelectItem value="petrol">Petrol</SelectItem>
                           <SelectItem value="diesel">Diesel</SelectItem>
                           <SelectItem value="hybrid">Hybrid</SelectItem>
@@ -409,17 +409,17 @@ export function PeerHostBecomeHostPage() {
 
                     {/* Transmission Dropdown */}
                     <div className="space-y-1 sm:space-y-2">
-                      <Label className="flex items-center gap-1 text-muted-foreground text-xs">
+                      <Label className="flex items-center gap-1 text-muted-foreground dark:text-slate-400 text-xs">
                         <Settings className="w-3 h-3" /> Transmission
                       </Label>
                       <Select 
                         value={formData.transmission} 
                         onValueChange={(value) => setFormData({...formData, transmission: value})}
                       >
-                        <SelectTrigger className="bg-slate-100 border-0 h-9 sm:h-10 text-sm">
+                        <SelectTrigger className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:text-slate-200 text-sm">
                           <SelectValue placeholder="Select transmission" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="dark:bg-slate-900 dark:border-slate-800">
                           <SelectItem value="automatic">Automatic</SelectItem>
                           <SelectItem value="manual">Manual</SelectItem>
                           <SelectItem value="cvt">CVT</SelectItem>
@@ -431,10 +431,10 @@ export function PeerHostBecomeHostPage() {
                   {/* Photo Upload Grid */}
                   <div className="space-y-2 sm:space-y-3">
                     <div className="flex justify-between items-center">
-                      <Label className="text-muted-foreground text-xs">Car Photos (4 required)</Label>
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">Car Photos (4 required)</Label>
                       <Badge variant="outline" className={cn(
                         "text-xs",
-                        Object.values(photos).filter(Boolean).length >= 4 ? "bg-emerald-50 text-emerald-600 border-emerald-200" : ""
+                        Object.values(photos).filter(Boolean).length >= 4 ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800" : "dark:border-slate-700 dark:text-slate-400"
                       )}>
                         {Object.values(photos).filter(Boolean).length}/4
                       </Badge>
@@ -452,17 +452,17 @@ export function PeerHostBecomeHostPage() {
                         return (
                           <div key={key} className="group relative">
                             {photo ? (
-                              <div className="relative bg-slate-100 rounded-lg sm:rounded-xl aspect-[4/3] overflow-hidden">
+                              <div className="relative bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl aspect-[4/3] overflow-hidden">
                                 <img 
                                   src={photo.preview} 
                                   alt={label}
-                                  className="w-full h-full object-cover"
+                                  className="dark:brightness-90 w-full h-full object-cover"
                                 />
                                 <div className="absolute inset-0 flex justify-center items-center gap-1 sm:gap-2 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity">
                                   <Button 
                                     size="icon" 
                                     variant="secondary" 
-                                    className="rounded-full w-6 sm:w-8 h-6 sm:h-8"
+                                    className="dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full w-6 sm:w-8 h-6 sm:h-8"
                                     onClick={() => {
                                       const input = document.getElementById(`photo-${key}`) as HTMLInputElement;
                                       input?.click();
@@ -486,11 +486,11 @@ export function PeerHostBecomeHostPage() {
                             ) : (
                               <label 
                                 htmlFor={`photo-${key}`}
-                                className="group flex flex-col justify-center items-center bg-slate-50 p-2 border-2 border-slate-300 hover:border-blue-500 border-dashed rounded-lg sm:rounded-xl aspect-[4/3] transition-colors cursor-pointer"
+                                className="group flex flex-col justify-center items-center bg-slate-50 dark:bg-slate-800 p-2 border-2 border-slate-300 hover:border-blue-500 dark:border-slate-700 dark:hover:border-blue-400 border-dashed rounded-lg sm:rounded-xl aspect-[4/3] transition-colors cursor-pointer"
                               >
-                                <Camera className="mb-1 sm:mb-2 w-6 sm:w-8 h-6 sm:h-8 text-slate-400 group-hover:text-blue-500" />
-                                <span className="font-medium text-[10px] text-slate-600 sm:text-xs">{label}</span>
-                                <span className="mt-0.5 sm:mt-1 text-[8px] text-muted-foreground sm:text-[10px]">Upload</span>
+                                <Camera className="mb-1 sm:mb-2 w-6 sm:w-8 h-6 sm:h-8 text-slate-400 dark:group-hover:text-blue-400 dark:text-slate-500 group-hover:text-blue-500" />
+                                <span className="font-medium text-[10px] text-slate-600 dark:text-slate-300 sm:text-xs">{label}</span>
+                                <span className="mt-0.5 sm:mt-1 text-[8px] text-muted-foreground sm:text-[10px] dark:text-slate-400">Upload</span>
                               </label>
                             )}
                             <input
@@ -511,9 +511,9 @@ export function PeerHostBecomeHostPage() {
               {/* STEP 2: Documents */}
               {step === "documents" && (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className="flex gap-3 bg-blue-50 p-3 sm:p-4 rounded-lg">
-                    <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 shrink-0" />
-                    <p className="text-blue-700 text-xs sm:text-sm">
+                  <div className="flex gap-3 bg-blue-50 dark:bg-blue-950/50 p-3 sm:p-4 border border-blue-100 dark:border-blue-900 rounded-lg">
+                    <AlertCircle className="w-4 sm:w-5 h-4 sm:h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                    <p className="text-blue-700 dark:text-blue-300 text-xs sm:text-sm">
                       Upload clear photos of your documents. They will be verified by our admin team.
                     </p>
                   </div>
@@ -528,25 +528,25 @@ export function PeerHostBecomeHostPage() {
                     
                     return (
                       <div key={key} className="space-y-1 sm:space-y-2">
-                        <Label className="text-muted-foreground text-xs">{label}</Label>
-                        <p className="mb-1 sm:mb-2 text-[10px] text-muted-foreground sm:text-xs">{description}</p>
+                        <Label className="text-muted-foreground dark:text-slate-400 text-xs">{label}</Label>
+                        <p className="mb-1 sm:mb-2 text-[10px] text-muted-foreground dark:text-slate-400 sm:text-xs">{description}</p>
                         
                         {doc ? (
-                          <div className="flex justify-between items-center gap-2 bg-slate-50 p-2 sm:p-3 rounded-lg">
+                          <div className="flex justify-between items-center gap-2 bg-slate-50 dark:bg-slate-800 p-2 sm:p-3 border dark:border-slate-700 rounded-lg">
                             <div className="flex flex-1 items-center gap-2 sm:gap-3 min-w-0">
-                              <div className="bg-white p-1.5 sm:p-2 rounded-lg shrink-0">
-                                <IdCard className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500" />
+                              <div className="bg-white dark:bg-slate-700 p-1.5 sm:p-2 rounded-lg shrink-0">
+                                <IdCard className="w-4 sm:w-5 h-4 sm:h-5 text-blue-500 dark:text-blue-400" />
                               </div>
                               <div className="flex-1 min-w-0">
-                                <p className="font-medium text-xs sm:text-sm truncate">{doc.name}</p>
-                                <p className="text-[10px] text-muted-foreground sm:text-xs">{doc.size}</p>
+                                <p className="font-medium dark:text-slate-200 text-xs sm:text-sm truncate">{doc.name}</p>
+                                <p className="text-[10px] text-muted-foreground dark:text-slate-400 sm:text-xs">{doc.size}</p>
                               </div>
                             </div>
                             <div className="flex gap-1 sm:gap-2 shrink-0">
                               <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="w-7 sm:w-8 h-7 sm:h-8"
+                                className="dark:hover:bg-slate-700 w-7 sm:w-8 h-7 sm:h-8 dark:text-slate-400"
                                 onClick={() => window.open(doc.preview, '_blank')}
                               >
                                 <Eye className="w-3 sm:w-4 h-3 sm:h-4" />
@@ -554,7 +554,7 @@ export function PeerHostBecomeHostPage() {
                               <Button 
                                 size="icon" 
                                 variant="ghost" 
-                                className="w-7 sm:w-8 h-7 sm:h-8 text-red-500"
+                                className="dark:hover:bg-slate-700 w-7 sm:w-8 h-7 sm:h-8 text-red-500 dark:text-red-400"
                                 onClick={() => removeDocument(key)}
                               >
                                 <X className="w-3 sm:w-4 h-3 sm:h-4" />
@@ -564,11 +564,11 @@ export function PeerHostBecomeHostPage() {
                         ) : (
                           <label 
                             htmlFor={`doc-${key}`}
-                            className="group flex justify-between items-center p-3 sm:p-4 border-2 border-slate-300 hover:border-blue-500 border-dashed rounded-lg transition-colors cursor-pointer"
+                            className="group flex justify-between items-center p-3 sm:p-4 border-2 border-slate-300 hover:border-blue-500 dark:border-slate-700 dark:hover:border-blue-400 border-dashed rounded-lg transition-colors cursor-pointer"
                           >
                             <div className="flex items-center gap-2 sm:gap-3">
-                              <Upload className="w-4 sm:w-5 h-4 sm:h-5 text-slate-400 group-hover:text-blue-500" />
-                              <span className="text-slate-600 text-xs sm:text-sm">Click to upload</span>
+                              <Upload className="w-4 sm:w-5 h-4 sm:h-5 text-slate-400 dark:group-hover:text-blue-400 dark:text-slate-500 group-hover:text-blue-500" />
+                              <span className="text-slate-600 dark:text-slate-300 text-xs sm:text-sm">Click to upload</span>
                             </div>
                           </label>
                         )}
@@ -610,19 +610,19 @@ export function PeerHostBecomeHostPage() {
                       className={cn(
                         "p-3 sm:p-4 border-2 rounded-xl w-full text-left transition-all",
                         selectedProtection === plan.id 
-                          ? "border-blue-500 bg-blue-50" 
-                          : "border-slate-200 hover:border-slate-300"
+                          ? "border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/50" 
+                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
                       )}
                     >
                       <div className="flex justify-between items-center mb-1 sm:mb-2">
-                        <h3 className="font-semibold text-sm sm:text-base">{plan.title}</h3>
-                        <Badge variant="outline" className="text-xs">{plan.price}</Badge>
+                        <h3 className="font-semibold dark:text-slate-200 text-sm sm:text-base">{plan.title}</h3>
+                        <Badge variant="outline" className="dark:border-slate-600 dark:text-slate-300 text-xs">{plan.price}</Badge>
                       </div>
-                      <p className="mb-2 text-muted-foreground text-xs sm:text-sm">{plan.desc}</p>
+                      <p className="mb-2 text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">{plan.desc}</p>
                       <ul className="space-y-0.5 sm:space-y-1">
                         {plan.features.map((f, i) => (
-                          <li key={i} className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm">
-                            <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 shrink-0" />
+                          <li key={i} className="flex items-center gap-1 sm:gap-2 dark:text-slate-300 text-xs sm:text-sm">
+                            <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                             <span>{f}</span>
                           </li>
                         ))}
@@ -636,13 +636,13 @@ export function PeerHostBecomeHostPage() {
               {step === "pricing" && (
                 <div className="space-y-4 sm:space-y-6">
                   <div className="space-y-1 sm:space-y-2">
-                    <Label className="text-muted-foreground text-xs">Daily Price (ETB)</Label>
+                    <Label className="text-muted-foreground dark:text-slate-400 text-xs">Daily Price (ETB)</Label>
                     <Input 
                       type="number"
                       placeholder="e.g. 1500"
                       value={formData.price}
                       onChange={(e) => setFormData({...formData, price: e.target.value})}
-                      className="bg-slate-100 border-0 h-9 sm:h-10 text-sm"
+                      className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                     />
                   </div>
                 </div>
@@ -651,18 +651,18 @@ export function PeerHostBecomeHostPage() {
               {/* STEP 5: Terms */}
               {step === "terms" && (
                 <div className="space-y-4 sm:space-y-6">
-                  <div className="bg-amber-50 p-3 sm:p-4 rounded-lg">
-                    <h3 className="flex items-center gap-2 mb-2 font-semibold text-sm sm:text-base">
+                  <div className="bg-amber-50 dark:bg-amber-950/50 p-3 sm:p-4 border border-amber-100 dark:border-amber-900 rounded-lg">
+                    <h3 className="flex items-center gap-2 mb-2 font-semibold dark:text-amber-300 text-sm sm:text-base">
                       <AlertCircle className="w-4 h-4" />
                       Before submitting
                     </h3>
-                    <p className="text-muted-foreground text-xs sm:text-sm">
+                    <p className="text-muted-foreground dark:text-amber-400 text-xs sm:text-sm">
                       Your application will be reviewed by our admin team. This typically takes 24-48 hours.
                     </p>
                   </div>
 
                   <div className="space-y-2 sm:space-y-3">
-                    <p className="text-xs sm:text-sm">By submitting, you confirm:</p>
+                    <p className="dark:text-slate-300 text-xs sm:text-sm">By submitting, you confirm:</p>
                     <ul className="space-y-1 sm:space-y-2">
                       {[
                         "All information provided is accurate",
@@ -670,8 +670,8 @@ export function PeerHostBecomeHostPage() {
                         "Documents are genuine and valid",
                         "You agree to AutoRent's terms and conditions"
                       ].map((item, i) => (
-                        <li key={i} className="flex items-start gap-1 sm:gap-2 text-xs sm:text-sm">
-                          <CheckCircle2 className="mt-0.5 w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 shrink-0" />
+                        <li key={i} className="flex items-start gap-1 sm:gap-2 dark:text-slate-300 text-xs sm:text-sm">
+                          <CheckCircle2 className="mt-0.5 w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
                           <span>{item}</span>
                         </li>
                       ))}
@@ -683,9 +683,9 @@ export function PeerHostBecomeHostPage() {
           </Card>
 
           {/* Right Column - Summary */}
-          <Card className="top-4 sticky bg-white/80 shadow-xl backdrop-blur border-0 h-fit">
-            <CardHeader className="p-4 sm:p-6 border-slate-200 border-b">
-              <CardTitle className="flex items-center gap-2 text-sm sm:text-base">
+          <Card className="top-4 sticky bg-white/80 dark:bg-slate-900/80 shadow-xl backdrop-blur dark:border border-0 dark:border-slate-800 h-fit">
+            <CardHeader className="p-4 sm:p-6 border-slate-200 dark:border-slate-800 border-b">
+              <CardTitle className="flex items-center gap-2 dark:text-slate-200 text-sm sm:text-base">
                 <FileText className="w-4 h-4" />
                 Summary
               </CardTitle>
@@ -694,7 +694,7 @@ export function PeerHostBecomeHostPage() {
             <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
               {/* Progress Overview */}
               <div className="space-y-2 sm:space-y-3">
-                <h3 className="font-semibold text-[10px] text-muted-foreground sm:text-xs uppercase">Completion</h3>
+                <h3 className="font-semibold text-[10px] text-muted-foreground dark:text-slate-400 sm:text-xs uppercase">Completion</h3>
                 
                 {[
                   { label: "Car Details", complete: formData.make && formData.model && Object.values(photos).filter(Boolean).length >= 4 },
@@ -703,11 +703,11 @@ export function PeerHostBecomeHostPage() {
                   { label: "Pricing", complete: !!formData.price },
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center">
-                    <span className="text-xs sm:text-sm">{item.label}</span>
+                    <span className="dark:text-slate-300 text-xs sm:text-sm">{item.label}</span>
                     {item.complete ? (
-                      <Badge className="bg-emerald-100 border-0 text-[10px] text-emerald-700 sm:text-xs">Done</Badge>
+                      <Badge className="bg-emerald-100 dark:bg-emerald-950 border-0 text-[10px] text-emerald-700 dark:text-emerald-400 sm:text-xs">Done</Badge>
                     ) : (
-                      <Badge variant="outline" className="bg-amber-50 border-amber-200 text-[10px] text-amber-600 sm:text-xs">
+                      <Badge variant="outline" className="bg-amber-50 dark:bg-amber-950 border-amber-200 dark:border-amber-800 text-[10px] text-amber-600 dark:text-amber-400 sm:text-xs">
                         Pending
                       </Badge>
                     )}
@@ -724,7 +724,7 @@ export function PeerHostBecomeHostPage() {
                     const prev = steps[currentStepIndex - 1].id;
                     setStep(prev as HostStep);
                   }}
-                  className="flex-1 gap-1 sm:gap-2 h-8 sm:h-10 text-xs sm:text-sm"
+                  className="flex-1 gap-1 sm:gap-2 dark:hover:bg-slate-800 dark:border-slate-700 h-8 sm:h-10 dark:text-slate-200 text-xs sm:text-sm"
                 >
                   <ChevronLeft className="w-3 sm:w-4 h-3 sm:h-4" />
                   Back
@@ -734,7 +734,7 @@ export function PeerHostBecomeHostPage() {
                   <Button
                     onClick={handleSubmit}
                     disabled={!isStepComplete()}
-                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-emerald-500 hover:from-emerald-600 to-green-600 hover:to-green-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
+                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-emerald-500 hover:from-emerald-600 dark:from-emerald-600 dark:hover:from-emerald-700 to-green-600 hover:to-green-700 dark:hover:to-green-800 dark:to-green-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
                   >
                     Submit
                     <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4" />
@@ -746,7 +746,7 @@ export function PeerHostBecomeHostPage() {
                       setStep(next as HostStep);
                     }}
                     disabled={!isStepComplete()}
-                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 hover:from-blue-600 to-indigo-600 hover:to-indigo-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
+                    className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-blue-500 hover:from-blue-600 dark:from-blue-600 dark:hover:from-blue-700 to-indigo-600 hover:to-indigo-700 dark:hover:to-indigo-800 dark:to-indigo-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
                   >
                     Next
                     <ChevronRight className="w-3 sm:w-4 h-3 sm:h-4" />
@@ -754,7 +754,7 @@ export function PeerHostBecomeHostPage() {
                 )}
               </div>
 
-              <p className="text-[10px] text-muted-foreground sm:text-xs text-center">
+              <p className="text-[10px] text-muted-foreground dark:text-slate-400 sm:text-xs text-center">
                 Documents verified by admin
               </p>
             </CardContent>
