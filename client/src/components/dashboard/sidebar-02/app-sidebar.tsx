@@ -55,11 +55,11 @@ const dashboardRoutes: Route[] = [
     id: "Overview",
     title: "Overview",
     icon: <LayoutDashboard className="size-4" />,
-    link: "#",
+    link: "/sysadmin/dashboard",
   },
   {
     id: "Users",
-    title: "User",
+    title: "Users",
     icon: <UserCheck className="size-4" />,
     link: "/sysadmin/users",
     // subs: [
@@ -100,8 +100,8 @@ const dashboardRoutes: Route[] = [
     // ],
   },
   {
-    id: "P2P",
-    title: "P2P",
+    id: "P2P Hosts",
+    title: "P2P Hosts",
     icon: <Handshake className="size-4" />,
     link: "/sysadmin/p2p",
   },

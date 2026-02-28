@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
@@ -49,6 +50,7 @@ function StatCard({
 // ─── Page ────────────────────────────────────────────────────────────────────
 
 export default function CompanyManagementPage() {
+  const router = useRouter();
   const [search, setSearch] = useState("");
   const [planFilter, setPlanFilter] = useState("all");
   const [statusFilter, setStatusFilter] = useState("all");
@@ -82,7 +84,8 @@ export default function CompanyManagementPage() {
   const totalSeats = mockCompanies.reduce((a, c) => a + c.seatsUsed, 0);
 
   // ─── Handlers (stubs for now) ───────────────────────────────────────────────
-  const handleView = (co: Company) => console.log("View", co);
+  const handleView = (co: Company) =>
+    router.push(`/sysadmin/companies/${co.id}`);
   const handleEdit = (co: Company) => console.log("Edit", co);
   const handleSuspend = (co: Company) => console.log("Suspend", co);
   const handleReactivate = (co: Company) => console.log("Reactivate", co);
