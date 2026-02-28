@@ -29,18 +29,5 @@ export const sampleVehicles: Vehicle[] = [
     ratingAvg: 4.4,
     ratingCount: 18,
   },
-  {
-    id: "veh_003",
-    make: "BMW",
-    model: "X5",
-    year: 2022,
-    dailyRate: 120,
-    status: "maintenance",
-    location: "Accra, GH",
-    imageUrl:
-      "https://images.unsplash.com/photo-1542362567-b07e54358753?auto=format&fit=crop&w=1200&q=80",
-    ratingAvg: 4.6,
-    ratingCount: 11,
-  },
 ];
 

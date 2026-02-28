@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -195,12 +196,13 @@ export function PeerHostVehiclesPage({
                   </div>
 
                   <Button
+                    asChild
                     variant="secondary"
                     className={cn(
                       "bg-muted/50 hover:bg-muted transition-colors"
                     )}
                   >
-                    View details
+                    <Link href={`/peerhost/vehicles/${v.id}`}>View details</Link>
                   </Button>
                 </div>
               </CardContent>
