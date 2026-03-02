@@ -5,6 +5,9 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -22,12 +25,15 @@ import {
   Users,
   Shield,
   ClipboardCheck,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Logo } from "@/components/peer-host/sidebar-02/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/peer-host/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/peer-host/sidebar-02/nav-notifications";
-import { TeamSwitcher } from "@/components/peer-host/sidebar-02/team-switcher";
+import { useRouter } from "next/navigation";
+import { useUserRoleState } from "@/hooks/use-user-role-state";
+import { toggleActiveRole, writeUserRoleState } from "@/lib/role-store";
 
 const sampleNotifications = [
   {
@@ -92,15 +98,17 @@ const dashboardRoutes: Route[] = [
   },
 ];
 
-const teams = [
-  { id: "1", name: "My Host Account", logo: Logo, plan: "Verified Host" },
-  { id: "2", name: "Business Profile", logo: Logo, plan: "Pending" },
-  { id: "3", name: "Premium Vehicles", logo: Logo, plan: "Basic" },
-];
-
 export function PeerToPeerSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const router = useRouter();
+  const roleState = useUserRoleState();
+
+  function handleSwitchRole() {
+    const next = toggleActiveRole(roleState);
+    writeUserRoleState(next);
+    router.push(next.activeRole === "peerhost" ? "/peerhost/dashboard" : "/renter/dashboard");
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -141,7 +149,25 @@ export function PeerToPeerSidebar() {
       </SidebarContent>
       
       <SidebarFooter className="px-2">
-        <TeamSwitcher teams={teams} />
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <SidebarMenuButton
+              size="lg"
+              onClick={handleSwitchRole}
+              className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
+            >
+              <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-background text-foreground">
+                <ArrowLeftRight className="size-4" />
+              </div>
+              <div className="grid flex-1 text-left text-sm leading-tight">
+                <span className="truncate font-semibold">Switch Role</span>
+                <span className="truncate text-xs">
+                  {roleState.activeRole === "peerhost" ? "Go to renter" : "Go to peer host"}
+                </span>
+              </div>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+        </SidebarMenu>
       </SidebarFooter>
     </Sidebar>
   );
