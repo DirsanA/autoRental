@@ -1,67 +1,34 @@
 import Navbar from "@/components/navbar";
-import { BackgroundPattern1 } from "@/components/background-pattern1";
 import { LandingHero } from "@/components/marketing/landing-hero";
-import { LandingSocialProof } from "@/components/marketing/landing-social-proof";
-import { LandingFeatures } from "@/components/marketing/landing-features";
 import { LandingSearch } from "@/components/marketing/laning-search";
-import { LandingDeveloperShowcase } from "@/components/marketing/landing-developer-showcase";
-import { LandingHowItWorks } from "@/components/marketing/landing-how-it-works";
-import { LandingTestimonials } from "@/components/marketing/landing-testimonials";
-import { LandingStats } from "@/components/marketing/landing-stats";
-import { LandingIntegrations } from "@/components/marketing/landing-integrations";
-import { LandingFaq } from "@/components/marketing/landing-faq";
+import { LandingFeatures } from "@/components/marketing/landing-features";
 import { LandingCta } from "@/components/marketing/landing-cta";
 import { LandingFooter } from "@/components/marketing/landing-footer";
 
 export default function HomePage() {
   return (
-    <div className="relative">
+    <div className="min-h-screen bg-white text-gray-900">
       <Navbar />
-      <main>
-        <div className="space-y-0">
-          <LandingHero />
-          <LandingSearch />
-          <LandingFeatures />
-        </div>
 
-        <div className="bg-card/50 border-t">
+      <main>
+        <section className="pt-2 pb-16 px-6 lg:px-20">
+          <LandingHero />
+        </section>
+
+        <section className="px-6 lg:px-20 -mt-10 relative z-10">
+          <LandingSearch />
+        </section>
+
+        <section className="py-20 px-6 lg:px-20 bg-gray-50">
+          <LandingFeatures />
+        </section>
+
+        <section className="py-24 px-6 lg:px-20 bg-black text-white">
           <LandingCta />
-        </div>
+        </section>
 
         <LandingFooter />
       </main>
     </div>
   );
 }
-
-{
-  /* <LandingDeveloperShowcase />
-
-        <div className="bg-card/50 border-y">
-          <LandingHowItWorks />
-        </div> */
-}
-
-{
-  /* <div className="bg-muted/50 border-b">
-          <LandingTestimonials />
-        </div>
-
-        <LandingStats /> */
-}
-
-{
-  /* <div className="bg-muted/30 border-y">
-          <LandingIntegrations />
-        </div>
-
-        <LandingFaq /> */
-}
-
-//     <div className="bg-card/50 border-t">
-//       <LandingCta />
-//     </div>
-
-//     <LandingFooter />
-//   </main>
-// </div>

@@ -7,6 +7,8 @@ import { Car, Contact2, Key, Menu, Notebook, Search, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "./mode-toggle";
+import { useState } from "react";
+import { AuthModal } from "@/components/auth-modal";
 
 import {
   DropdownMenu,
@@ -22,15 +24,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
+  const [authOpen, setAuthOpen] = useState(false);
+
   const pathname = usePathname();
-  // Check if we are on a detail page (e.g., /cars/123 or /detail/123)
   const isDetailPage =
     pathname.includes("/detail") || pathname.split("/").length > 2;
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50 mx-auto h-16 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
-        {/* LEFT SIDE: Logo & Search (Search only shows on Detail Page) */}
         <div className="flex items-center gap-6">
           <div className="text-black text-lg font-semibold dark:text-white">
             <Logo />
@@ -51,12 +53,11 @@ const Navbar = () => {
           )}
         </div>
 
-        {/* RIGHT SIDE: Menu & Toggle */}
         <div className="flex items-center gap-3">
-          {/* Only show "Why Choose" if NOT on detail page */}
           {!isDetailPage && (
             <Button
               variant="ghost"
+              onClick={() => (window.location.href = "/why-choose-us")}
               className="hidden rounded-xl sm:inline-flex font-semibold"
             >
               Why choose Auto-rent?
@@ -82,10 +83,16 @@ const Navbar = () => {
               className="w-[280px] rounded-2xl border border-border/50 bg-white p-2 shadow-xl dark:bg-black"
             >
               <DropdownMenuGroup>
-                <DropdownMenuItem className="flex text-md font-semibold items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => setAuthOpen(true)}
+                  className="flex  text-md font-semibold items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer"
+                >
                   Login
                 </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center text-md font-medium gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
+                <DropdownMenuItem
+                  onClick={() => setAuthOpen(true)}
+                  className="flex items-center text-md font-medium gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer"
+                >
                   Sign Up
                 </DropdownMenuItem>
               </DropdownMenuGroup>
@@ -132,6 +139,7 @@ const Navbar = () => {
           <ModeToggle />
         </div>
       </div>
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </nav>
   );
 };

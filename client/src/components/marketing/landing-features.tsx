@@ -97,7 +97,7 @@ const COMPANY_SECTIONS = [
 
 export function LandingFeatures() {
   return (
- <SectionContainer id="features" className="py-0 space-y-0">
+ <SectionContainer  className="py-0 space-y-0">
       {COMPANY_SECTIONS.map((section) => (
         <CarRow key={section.id} section={section} />
       ))}
@@ -179,7 +179,7 @@ function CarRow({ section }: { section: (typeof COMPANY_SECTIONS)[0] }) {
           {section.cars.map((car, idx) => (
             <Card
               key={idx}
-              className="min-w-[300px] md:min-w-[340px] snap-start overflow-hidden border-none shadow-none bg-transparent hover:bg-accent/5 transition-colors p-2"
+              className="min-w-[250px] md:min-w-[340px] snap-start overflow-hidden border-none shadow-none bg-transparent hover:bg-accent/5 transition-colors p-2"
             >
               <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden mb-3 shadow-sm">
                 <Image src={car.image} alt="car" fill className="object-cover" />
