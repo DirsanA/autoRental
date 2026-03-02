@@ -7,10 +7,14 @@ import {
   type UserRoleState,
 } from "@/lib/role-store";
 
-const getServerSnapshot = (): UserRoleState => ({
+// Cache the server snapshot so that getServerSnapshot
+// returns a stable value and avoids React warnings.
+const SERVER_SNAPSHOT: UserRoleState = {
   roles: { peerhost: true, renter: true },
   activeRole: "peerhost",
-});
+};
+
+const getServerSnapshot = (): UserRoleState => SERVER_SNAPSHOT;
 
 export function useUserRoleState(): UserRoleState {
   return useSyncExternalStore(
