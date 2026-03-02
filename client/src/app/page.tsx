@@ -2,7 +2,6 @@ import Navbar from "@/components/navbar";
 import { LandingHero } from "@/components/marketing/landing-hero";
 import { LandingSearch } from "@/components/marketing/laning-search";
 import { LandingFeatures } from "@/components/marketing/landing-features";
-import { LandingCta } from "@/components/marketing/landing-cta";
 import { LandingFooter } from "@/components/marketing/landing-footer";
 
 export default function HomePage() {
@@ -23,9 +22,7 @@ export default function HomePage() {
           <LandingFeatures />
         </section>
 
-        <section className="py-24 px-6 lg:px-20 bg-black text-white">
-          <LandingCta />
-        </section>
+       
       </main>
       <LandingFooter />
     </div>

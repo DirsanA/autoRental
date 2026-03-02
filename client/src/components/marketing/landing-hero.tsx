@@ -112,17 +112,17 @@ export function LandingHero() {
                         </span>
                       </button>
                     </PopoverTrigger>
-                    <PopoverContent
-                      className="w-auto p-0 bg-white"
-                      align="center"
-                    >
+
+                    <PopoverContent className="w-auto p-0 bg-white z-50 !absolute top-[100%] left-0 mt-2 shadow-lg rounded-lg">
+                      {/* Single month for mobile */}
                       <Calendar
                         mode="range"
                         selected={date}
                         onSelect={setDate}
-                        numberOfMonths={1} // Better for mobile
+                        numberOfMonths={1}
                         className="md:hidden"
                       />
+                      {/* Two months for desktop */}
                       <Calendar
                         mode="range"
                         selected={date}
@@ -164,7 +164,7 @@ export function LandingHero() {
       </div>
 
       {/* Filters Section */}
-      <div className="mt-16 md:mt-20 flex flex-col items-center px-4">
+      <div className="mt-8 md:mt-8 flex flex-col items-center px-4">
         <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-6">
           Quick Filters
         </p>
