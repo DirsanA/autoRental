@@ -26,9 +26,8 @@ export default function HomePage() {
         <section className="py-24 px-6 lg:px-20 bg-black text-white">
           <LandingCta />
         </section>
-
-        <LandingFooter />
       </main>
+      <LandingFooter />
     </div>
   );
 }
