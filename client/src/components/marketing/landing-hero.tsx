@@ -54,7 +54,8 @@ export function LandingHero() {
 
   return (
     <SectionContainer className="pt-16 md:pt-20">
-      <div className="relative w-full min-h-[380px] md:h-[300px] flex flex-col items-center justify-center rounded-[2rem] md:rounded-[1.5rem] overflow-hidden shadow-2xl px-4 md:px-2">
+      <div className="relative z-40 w-full min-h-[380px] md:h-[300px] flex flex-col items-center justify-center rounded-[2rem] md:rounded-[1.5rem] overflow-visible shadow-2xl px-4 md:px-2">
+
         <Image
           src={carImage}
           alt="Auto Rent Ethiopia"
@@ -64,7 +65,7 @@ export function LandingHero() {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/60" />
 
-        <div className="relative z-10 w-full max-w-6xl flex flex-col items-center text-center mb-6 md:mb-6">
+        <div className="relative z-50 w-full max-w-6xl flex flex-col items-center text-center mb-6 md:mb-6">
           <h1 className="text-4xl md:text-6xl font-black text-white tracking-tight drop-shadow-md mb-4">
             Auto Rent Ethiopia
           </h1>
@@ -74,7 +75,8 @@ export function LandingHero() {
           </p>
 
           {/* Search Card */}
-          <Card className="w-full max-w-5xl h-auto bg-white border-none shadow-2xl rounded-2xl md:absolute md:-bottom-12 z-20">
+          {/* FIX: Increased z-index from z-20 to z-50 */}
+          <Card className="w-full max-w-5xl h-auto bg-white border-none shadow-2xl rounded-2xl md:absolute md:-bottom-12 z-50">
             <CardContent className="p-4 md:p-3">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 items-end text-left">
                 {/* Location */}
@@ -102,33 +104,43 @@ export function LandingHero() {
                   </label>
                   <Popover>
                     <PopoverTrigger asChild>
-                      <button className="w-full h-12 px-3 flex items-center gap-2 bg-gray-50 border-none rounded-xl text-sm font-semibold text-gray-900">
-                        <CalendarIcon className="w-4 h-4 text-blue-600 flex-shrink-0" />
-                        <span className="truncate">
-                          {date?.from
-                            ? format(date.from, "MMM dd")
-                            : "Pick dates"}{" "}
-                          - {date?.to ? format(date.to, "MMM dd") : ""}
-                        </span>
-                      </button>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "w-full justify-start text-left font-medium h-12 rounded-xl bg-muted border-0",
+                          !date && "text-muted-foreground",
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+                        {date?.from
+                          ? format(date.from, "MMM dd")
+                          : "Pick dates"}{" "}
+                        - {date?.to ? format(date.to, "MMM dd") : ""}
+                      </Button>
                     </PopoverTrigger>
-
-                    <PopoverContent className="w-auto p-0 bg-white z-50 !absolute top-[100%] left-0 mt-2 shadow-lg rounded-lg">
+                    <PopoverContent
+                      className="w-auto bg-white p-3 pointer-events-auto z-[100] shadow-xl"
+                      align="start"
+                      side="bottom"
+                      sideOffset={8}
+                    >
                       {/* Single month for mobile */}
                       <Calendar
                         mode="range"
+                        defaultMonth={date?.from}
                         selected={date}
                         onSelect={setDate}
                         numberOfMonths={1}
-                        className="md:hidden"
+                        className="p-3 pointer-events-auto md:hidden"
                       />
                       {/* Two months for desktop */}
                       <Calendar
                         mode="range"
+                        defaultMonth={date?.from}
                         selected={date}
                         onSelect={setDate}
                         numberOfMonths={2}
-                        className="hidden md:block"
+                        className="p-3 pointer-events-auto hidden md:block"
                       />
                     </PopoverContent>
                   </Popover>
@@ -164,7 +176,8 @@ export function LandingHero() {
       </div>
 
       {/* Filters Section */}
-      <div className="mt-8 md:mt-8 flex flex-col items-center px-4">
+      {/* FIX: Added 'relative z-10' so it explicitly sits below the hero section's z-40 */}
+      <div className="relative z-10 mt-8 md:mt-8 flex flex-col items-center px-4">
         <p className="text-gray-400 text-xs font-bold uppercase tracking-[0.2em] mb-6">
           Quick Filters
         </p>
