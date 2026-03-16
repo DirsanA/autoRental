@@ -143,7 +143,7 @@ const teams = [
   { id: "3", name: "Gamma Tech", logo: Logo, plan: "Free" },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar()  {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
