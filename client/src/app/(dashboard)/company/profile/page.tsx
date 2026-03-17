@@ -181,8 +181,8 @@ export default function SmartProfile() {
               <div className="md:col-span-2 space-y-2">
                 <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter ml-1">Headquarters Address</label>
                 <div className={`flex gap-3 p-3 rounded-2xl border transition-all ${isEditing
-                    ? 'border-emerald-500/30 ring-4 ring-emerald-500/10 bg-background'
-                    : 'border-border/50 bg-muted/20 dark:bg-slate-950/20'
+                  ? 'border-emerald-500/30 ring-4 ring-emerald-500/10 bg-background'
+                  : 'border-border/50 bg-muted/20 dark:bg-slate-950/20'
                   }`}>
                   <MapPin className="text-muted-foreground shrink-0" size={18} />
                   {isEditing ? (
@@ -250,8 +250,8 @@ function EditableField({
     <div className="space-y-2">
       <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-tighter ml-1">{label}</label>
       <div className={`flex items-center gap-3 p-3 rounded-2xl border transition-all ${isEditing
-          ? 'border-emerald-500/30 ring-4 ring-emerald-500/10 bg-background'
-          : 'border-border/50 bg-muted/20 dark:bg-slate-950/20'
+        ? 'border-emerald-500/30 ring-4 ring-emerald-500/10 bg-background'
+        : 'border-border/50 bg-muted/20 dark:bg-slate-950/20'
         }`}>
         <span className="text-muted-foreground">{icon}</span>
         {isEditing ? (
