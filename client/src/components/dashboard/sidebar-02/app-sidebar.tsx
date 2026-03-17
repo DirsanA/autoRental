@@ -11,20 +11,14 @@ import {
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
-  Activity,
-  DollarSign,
-  Home,
-  Infinity,
-  LinkIcon,
-  Package2,
-  Percent,
-  PieChart,
-  Settings,
-  ShoppingBag,
-  Sparkles,
+  Building2,
+  Handshake,
+  Landmark,
+  LayoutDashboard,
+  MessageCircleCheckIcon,
+  ShoppingCart,
   Store,
-  TrendingUp,
-  Users,
+  UserCheck,
 } from "lucide-react";
 import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
@@ -58,115 +52,88 @@ const sampleNotifications = [
 
 const dashboardRoutes: Route[] = [
   {
-    id: "home",
-    title: "Home",
-    icon: <Home className="size-4" />,
-    link: "#",
+    id: "Overview",
+    title: "Overview",
+    icon: <LayoutDashboard className="size-4" />,
+    link: "/sysadmin/dashboard",
   },
   {
-    id: "products",
-    title: "Products",
-    icon: <Package2 className="size-4" />,
-    link: "#",
-    subs: [
-      {
-        title: "Catalogue",
-        link: "#",
-        icon: <Package2 className="size-4" />,
-      },
-      {
-        title: "Checkout Links",
-        link: "#",
-        icon: <LinkIcon className="size-4" />,
-      },
-      {
-        title: "Discounts",
-        link: "#",
-        icon: <Percent className="size-4" />,
-      },
-    ],
+    id: "Users",
+    title: "Users",
+    icon: <UserCheck className="size-4" />,
+    link: "/sysadmin/users",
+    // subs: [
+    //   {
+    //     title: "Catalogue",
+    //     link: "#",
+    //     icon: <Package2 className="size-4" />,
+    //   },
+    //   {
+    //     title: "Checkout Links",
+    //     link: "#",
+    //     icon: <LinkIcon className="size-4" />,
+    //   },
+    //   {
+    //     title: "Discounts",
+    //     link: "#",
+    //     icon: <Percent className="size-4" />,
+    //   },
+    // ],
   },
   {
-    id: "usage-billing",
-    title: "Usage Billing",
-    icon: <PieChart className="size-4" />,
-    link: "#",
-    subs: [
-      {
-        title: "Meters",
-        link: "#",
-        icon: <PieChart className="size-4" />,
-      },
-      {
-        title: "Events",
-        link: "#",
-        icon: <Activity className="size-4" />,
-      },
-    ],
+    id: "Companies",
+    title: "Companies",
+    //company icon
+    icon: <Building2 className="size-4" />,
+    link: "/sysadmin/companies",
+    // subs: [
+    //   {
+    //     title: "Meters",
+    //     link: "#",
+    //     icon: <PieChart className="size-4" />,
+    //   },
+    //   {
+    //     title: "Events",
+    //     link: "#",
+    //     icon: <Activity className="size-4" />,
+    //   },
+    // ],
   },
   {
-    id: "benefits",
-    title: "Benefits",
-    icon: <Sparkles className="size-4" />,
-    link: "#",
+    id: "P2P Hosts",
+    title: "P2P Hosts",
+    icon: <Handshake className="size-4" />,
+    link: "/sysadmin/p2p",
+  },
+  // {
+  //   id: "customers",
+  //   title: "Customers",
+  //   icon: <Users className="size-4" />,
+  //   link: "#",
+  // },
+  {
+    id: "Revenue",
+    title: "Revenue",
+    icon: <Landmark className="size-4" />,
+    link: "/sysadmin/revenue",
   },
   {
-    id: "customers",
-    title: "Customers",
-    icon: <Users className="size-4" />,
-    link: "#",
-  },
-  {
-    id: "sales",
-    title: "Sales",
-    icon: <ShoppingBag className="size-4" />,
-    link: "#",
-    subs: [
-      {
-        title: "Orders",
-        link: "#",
-        icon: <ShoppingBag className="size-4" />,
-      },
-      {
-        title: "Subscriptions",
-        link: "#",
-        icon: <Infinity className="size-4" />,
-      },
-    ],
-  },
-  {
-    id: "storefront",
-    title: "Storefront",
-    icon: <Store className="size-4" />,
-    link: "#",
-  },
-  {
-    id: "analytics",
-    title: "Analytics",
-    icon: <TrendingUp className="size-4" />,
-    link: "#",
-  },
-  {
-    id: "finance",
-    title: "Finance",
-    icon: <DollarSign className="size-4" />,
-    link: "#",
-    subs: [
-      { title: "Incoming", link: "#" },
-      { title: "Outgoing", link: "#" },
-      { title: "Payout Account", link: "#" },
-    ],
-  },
-  {
-    id: "settings",
-    title: "Settings",
-    icon: <Settings className="size-4" />,
-    link: "#",
-    subs: [
-      { title: "General", link: "#" },
-      { title: "Webhooks", link: "#" },
-      { title: "Custom Fields", link: "#" },
-    ],
+    id: "Disputes",
+    title: "Disputes",
+    icon: <MessageCircleCheckIcon className="size-4" />,
+    link: "/sysadmin/disputes",
+    // subs: [
+    //   {
+    //     title: "Orders",
+    //     link: "#",
+    //     icon: <ShoppingBag className="size-4" />,
+    //   },
+    //   {
+    //     title: "Subscriptions",
+    //     link: "#",
+    //     icon: <Infinity className="size-4" />,
+    //   },
+    // ],
   },
 ];
 
@@ -191,7 +158,7 @@ export function DashboardSidebar() {
         )}
       >
         <a href="#" className="flex items-center gap-2">
-          <Logo className="h-8 w-8" />
+          <Logo className="w-8 h-8" />
           {!isCollapsed && (
             <span className="font-semibold text-black dark:text-white">
               Acme

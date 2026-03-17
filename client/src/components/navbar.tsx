@@ -33,16 +33,16 @@ const Navbar = () => {
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
         {/* Logo */}
         <div className="flex items-center gap-6">
-          <div className="text-black text-lg font-semibold dark:text-white">
+          <div className="font-semibold text-black dark:text-white text-lg">
             <Logo />
           </div>
 
           {isDetailPage && (
-            <div className="hidden lg:flex items-center gap-3 border rounded-full px-4 py-2 shadow-sm hover:shadow-md transition cursor-pointer bg-white dark:bg-zinc-900">
-              <span className="text-sm font-bold border-r pr-3">
+            <div className="hidden lg:flex items-center gap-3 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md px-4 py-2 border rounded-full transition cursor-pointer">
+              <span className="pr-3 border-r font-bold text-sm">
                 Addis Ababa
               </span>
-              <span className="text-sm text-muted-foreground px-1">
+              <span className="px-1 text-muted-foreground text-sm">
                 03/27 - 03/30
               </span>
             </div>
@@ -69,10 +69,10 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="flex items-center gap-3 rounded-full border-gray-300 py-6 px-3 hover:shadow-md transition-all"
+                className="flex items-center gap-3 hover:shadow-md px-3 py-6 border-gray-300 rounded-full transition-all"
               >
                 <Menu size={20} />
-                <div className="bg-zinc-800 text-white p-1 rounded-full">
+                <div className="bg-zinc-800 p-1 rounded-full text-white">
                   <User size={18} />
                 </div>
               </Button>
@@ -81,7 +81,7 @@ const Navbar = () => {
             <DropdownMenuContent
               align="end"
               sideOffset={12}
-              className="w-[280px] rounded-2xl border border-border/50 bg-white p-2 shadow-xl dark:bg-black"
+              className="bg-white dark:bg-black shadow-xl p-2 border border-border/50 rounded-2xl w-[280px]"
             >
               <DropdownMenuGroup>
                 {/* Updated links */}
@@ -101,16 +101,16 @@ const Navbar = () => {
 
               <DropdownMenuGroup>
                 <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="flex items-center text-md gap-2 rounded-lg px-3 py-3 hover:bg-muted">
+                  <DropdownMenuSubTrigger className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
                     <Car size={18} />
                     Become a host
                   </DropdownMenuSubTrigger>
                   <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="rounded-xl p-2 w-48">
-                      <DropdownMenuItem className="rounded-lg px-3 py-2 text-md">
+                    <DropdownMenuSubContent className="p-2 rounded-xl w-48">
+                      <DropdownMenuItem className="px-3 py-2 rounded-lg text-md">
                         Peer To Peer
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="rounded-lg px-3 py-2 text-md">
+                      <DropdownMenuItem className="px-3 py-2 rounded-lg text-md">
                         Register Company
                       </DropdownMenuItem>
                     </DropdownMenuSubContent>
@@ -124,7 +124,7 @@ const Navbar = () => {
                   </Link>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 text-md hover:bg-muted">
+                <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
                   <Contact2 size={18} />
                   Contact Support
                 </DropdownMenuItem>
@@ -132,7 +132,7 @@ const Navbar = () => {
 
               <DropdownMenuSeparator />
 
-              <DropdownMenuItem className="rounded-lg px-3 py-3 text-md text-red-500 hover:bg-red-50">
+              <DropdownMenuItem className="hover:bg-red-50 px-3 py-3 rounded-lg text-md text-red-500">
                 Log out
               </DropdownMenuItem>
             </DropdownMenuContent>
