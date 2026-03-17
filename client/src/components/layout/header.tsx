@@ -7,20 +7,14 @@ import { ProfileDropdown } from "@/components/dashboard/profile-dropdown";
 
 export function Header() {
   return (
-    <header className="sticky top-0 z-10 flex h-16 items-center border-b bg-white/95 dark:bg-black/95 px-4 backdrop-blur md:px-8">
+    <header className="top-0 z-10 sticky flex items-center bg-white/95 dark:bg-black/95 backdrop-blur px-4 md:px-8 border-b h-16">
       <div className="flex items-center space-x-4">
         {/** display the sidebarTrigger here only in mobile screen */}
         <div className="md:hidden">
           <SidebarTrigger />
         </div>
-
-        {/* <SidebarTrigger /> */}
-        {/* <Button variant="ghost" size="icon">
-          <LayoutGrid className="h-5 w-5" />
-        </Button> */}
-        <TopNav links={topNavLinks} className="hidden md:flex" />
       </div>
-      <div className="ml-auto flex items-center space-x-4">
+      <div className="flex justify-end space-x-4 ml-auto">
         <ModeToggle />
         <ConfigDrawer />
         <ProfileDropdown />
@@ -28,29 +22,3 @@ export function Header() {
     </header>
   );
 }
-
-const topNavLinks = [
-  {
-    title: "Overview",
-    href: "/dashboard",
-    isActive: true,
-  },
-  {
-    title: "Customers",
-    href: "/customers",
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: "Products",
-    href: "/products",
-    isActive: false,
-    disabled: true,
-  },
-  {
-    title: "Settings",
-    href: "/settings",
-    isActive: false,
-    disabled: true,
-  },
-];
