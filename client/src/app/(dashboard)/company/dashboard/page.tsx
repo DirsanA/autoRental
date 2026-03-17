@@ -28,6 +28,13 @@ import {
 import { motion } from "framer-motion";
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"weekly" | "monthly">("weekly");
+  const tooltipStyle = {
+    backgroundColor: "var(--card)",
+    borderRadius: "12px",
+    border: "1px solid var(--border)",
+    boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
+    color: "var(--card-foreground)",
+  } as const;
 
   // Sample data
   const revenueData = {
@@ -67,8 +74,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="font-bold text-slate-900 text-2xl">Fleet Dashboard</h2>
-          <p className="text-slate-500">Real-time performance and fleet status overview.</p>
+          <h2 className="font-bold text-foreground text-2xl">Fleet Dashboard</h2>
+          <p className="text-muted-foreground">Real-time performance and fleet status overview.</p>
         </div>
         
         <button className="flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 shadow-lg px-4 py-2 rounded-xl w-full sm:w-auto font-medium text-white transition-all">
@@ -85,16 +92,16 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white shadow-sm hover:shadow-md p-4 border border-slate-100 rounded-2xl transition-all"
+            className="bg-card shadow-sm hover:shadow-md p-4 border border-border rounded-2xl transition-all text-card-foreground"
           >
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <p className="font-medium text-slate-500 text-xs truncate">{stat.label}</p>
+                <p className="font-medium text-muted-foreground text-xs truncate">{stat.label}</p>
                 <div className={`${stat.color} p-2 rounded-xl text-white`}>
                   <stat.icon size={18} />
                 </div>
               </div>
-              <p className="font-bold text-slate-900 text-xl">{stat.value}</p>
+              <p className="font-bold text-foreground text-xl">{stat.value}</p>
               <p className={`text-xs font-bold flex items-center gap-0.5 ${
                 stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'
               }`}>
@@ -109,14 +116,14 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="gap-6 grid grid-cols-1 lg:grid-cols-3">
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
+        <div className="lg:col-span-2 bg-card shadow-sm p-6 border border-border rounded-2xl text-card-foreground">
           <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 mb-6">
-            <h3 className="font-bold text-slate-900">Revenue Overview</h3>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
+            <h3 className="font-bold text-foreground">Revenue Overview</h3>
+            <div className="flex gap-1 bg-muted p-1 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab("weekly")}
                 className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === "weekly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  activeTab === "weekly" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Week
@@ -124,7 +131,7 @@ export default function Dashboard() {
               <button
                 onClick={() => setActiveTab("monthly")}
                 className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  activeTab === "monthly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
+                  activeTab === "monthly" ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"
                 }`}
               >
                 Month
@@ -141,27 +148,22 @@ export default function Dashboard() {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="var(--border)" strokeOpacity={0.5} />
                 <XAxis 
                   dataKey="day" 
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                   dy={10}
                 />
                 <YAxis 
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: 'var(--muted-foreground)', fontSize: 12 }}
                   tickFormatter={(value) => `$${value}`}
                 />
                 <Tooltip 
-                  contentStyle={{ 
-                    backgroundColor: '#fff', 
-                    borderRadius: '12px', 
-                    border: '1px solid #f1f5f9',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
+                  contentStyle={tooltipStyle}
                 />
                 <Area 
                   type="monotone" 
@@ -184,8 +186,8 @@ export default function Dashboard() {
         </div>
 
         {/* Fleet Status */}
-        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
-          <h3 className="mb-6 font-bold text-slate-900">Fleet Status</h3>
+        <div className="bg-card shadow-sm p-6 border border-border rounded-2xl text-card-foreground">
+          <h3 className="mb-6 font-bold text-foreground">Fleet Status</h3>
           
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
@@ -204,11 +206,7 @@ export default function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip 
-                  contentStyle={{ 
-                    borderRadius: '12px', 
-                    border: 'none',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
+                  contentStyle={tooltipStyle}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -220,11 +218,11 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center text-sm">
                   <span className="flex items-center gap-2">
                     <div className="rounded-full w-2 h-2" style={{ backgroundColor: item.color }} />
-                    <span className="font-medium text-slate-600">{item.name}</span>
+                    <span className="font-medium text-muted-foreground">{item.name}</span>
                   </span>
-                  <span className="font-bold text-slate-900">{item.value} veh</span>
+                  <span className="font-bold text-foreground">{item.value} veh</span>
                 </div>
-                <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="bg-muted rounded-full h-2 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(item.value / 24) * 100}%` }}
@@ -236,9 +234,9 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="bg-emerald-50 mt-8 p-4 border border-emerald-100 rounded-xl">
-            <p className="text-emerald-700 text-xs leading-relaxed">
-              <span className="font-bold">💡 Pro Tip:</span> Your fleet utilization is at 87%. Consider adding 2 luxury vehicles to capture weekend demand.
+          <div className="bg-emerald-500/10 mt-8 p-4 border border-emerald-500/20 rounded-xl">
+            <p className="text-emerald-700 dark:text-emerald-300 text-xs leading-relaxed">
+              <span className="font-bold">Pro Tip:</span> Your fleet utilization is at 87%. Consider adding 2 luxury vehicles to capture weekend demand.
             </p>
           </div>
         </div>

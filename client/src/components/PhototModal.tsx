@@ -1,9 +1,10 @@
 import { X } from "lucide-react";
 import Image from "next/image";
+import type { StaticImageData } from "next/image";
 import { useEffect } from "react";
 
 interface PhotoModalProps {
-  images: string[];
+  images: Array<string | StaticImageData>;
   carName: string;
   open: boolean;
   onClose: () => void;

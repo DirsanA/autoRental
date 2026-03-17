@@ -121,7 +121,7 @@ const dashboardRoutes: Route[] = [
     id: "Profile",
     title: "Profile",
     icon: <MessageCircleCheckIcon className="size-4" />,
-    link: "/company/profile ",
+    link: "/company/profile",
     // subs: [
     //   {
     //     title: "Orders",

@@ -1,5 +1,6 @@
 import { Star, Award } from "lucide-react";
 import Image from "next/image";
+import type { StaticImageData } from "next/image";
 
 interface Host {
   name: string;
@@ -7,7 +8,7 @@ interface Host {
   trips: number;
   joined: string;
   allStar: boolean;
-  image: string;
+  image: string | StaticImageData;
 }
 
 const HostSection = ({ host }: { host: Host }) => {

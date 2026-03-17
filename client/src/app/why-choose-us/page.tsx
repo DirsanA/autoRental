@@ -2,7 +2,7 @@
 
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import whyChooseImg from "next/image"; // replace with your image
+import whyChooseImg from "@/assets/image.jpg";
 
 export default function WhyChooseUs() {
   const sections = [
@@ -44,7 +44,8 @@ export default function WhyChooseUs() {
           <Image
             src={whyChooseImg}
             alt="Why Choose Us"
-            className="shadow-lg mx-auto rounded-xl"
+            className="shadow-lg mx-auto rounded-xl max-h-[420px] w-full object-cover"
+            priority
           />
         </div>
       </section>
