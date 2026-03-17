@@ -5,6 +5,7 @@ import {
   ShieldCheck, Upload, Save, Trash2, X,
   Edit3, CheckCircle2, AlertCircle
 } from 'lucide-react';
+// comment added 
 
 export default function SmartProfile() {
   const [isEditing, setIsEditing] = useState(false);
