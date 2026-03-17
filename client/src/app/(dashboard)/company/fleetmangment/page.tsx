@@ -1,12 +1,13 @@
+'use client'
 import React, { useState } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Car, 
-  Wrench, 
-  CheckCircle2, 
+import {
+  Plus,
+  Search,
+  Filter,
+  MoreVertical,
+  Car,
+  Wrench,
+  CheckCircle2,
   Clock,
   FileText,
   Trash2,
@@ -19,7 +20,7 @@ export default function FleetManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
   const [searchTerm, setSearchTerm] = useState('');
 
-  const filteredVehicles = vehicles.filter(v => 
+  const filteredVehicles = vehicles.filter(v =>
     v.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
     v.plate.toLowerCase().includes(searchTerm.toLowerCase())
@@ -62,9 +63,9 @@ export default function FleetManagement() {
       <div className="flex sm:flex-row flex-col gap-4">
         <div className="relative flex-1">
           <Search className="top-1/2 left-3 absolute text-slate-400 -translate-y-1/2" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search by make, model or plate..." 
+          <input
+            type="text"
+            placeholder="Search by make, model or plate..."
             className="py-2 pr-4 pl-10 border border-slate-200 focus:border-emerald-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full transition-all"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
@@ -79,17 +80,17 @@ export default function FleetManagement() {
       <div className="gap-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
         <AnimatePresence mode="popLayout">
           {filteredVehicles.map((vehicle) => (
-            <motion.div 
+            <motion.div
               layout
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              key={vehicle.id} 
+              key={vehicle.id}
               className="group bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden"
             >
               <div className="relative h-48 overflow-hidden">
-                <img 
-                  src={vehicle.image} 
+                <img
+                  src={vehicle.image}
                   alt={`${vehicle.make} ${vehicle.model}`}
                   className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
                 />
@@ -97,7 +98,7 @@ export default function FleetManagement() {
                   {vehicle.status.toUpperCase()}
                 </div>
               </div>
-              
+
               <div className="p-6">
                 <div className="flex justify-between items-start mb-4">
                   <div>
@@ -118,7 +119,7 @@ export default function FleetManagement() {
                     <div className={`w-2 h-2 rounded-full ${vehicle.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
                     <span className="font-bold text-slate-700 text-xs">Manual Availability</span>
                   </div>
-                  <button 
+                  <button
                     onClick={() => toggleAvailability(vehicle.id)}
                     className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${vehicle.status === 'available' ? 'bg-emerald-500' : 'bg-slate-300'}`}
                   >
