@@ -1,14 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { usePathname } from "next/navigation";
-import { Car, Contact2, Key, Menu, Notebook, Search, User } from "lucide-react";
+import { Car, Contact2, Key, Menu, User } from "lucide-react";
+import Link from "next/link";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
 import { ModeToggle } from "./mode-toggle";
-import { useState } from "react";
-import { AuthModal } from "@/components/auth-modal";
 
 import {
   DropdownMenu,
@@ -16,23 +15,23 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuPortal,
-  DropdownMenuSeparator,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 
 const Navbar = () => {
-  const [authOpen, setAuthOpen] = useState(false);
-
   const pathname = usePathname();
   const isDetailPage =
     pathname.includes("/detail") || pathname.split("/").length > 2;
+  const isWhyChoosePage = pathname === "/why-choose-us";
 
   return (
-    <nav className="top-0 z-50 fixed inset-x-0 bg-background/80 backdrop-blur-xl mx-auto border-border/40 border-b w-full h-16 transition-all">
-      <div className="flex justify-between items-center mx-auto px-6 max-w-7xl h-full">
+    <nav className="fixed inset-x-0 top-0 z-50 mx-auto h-16 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
+      <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
+        {/* Logo */}
         <div className="flex items-center gap-6">
           <div className="font-semibold text-black dark:text-white text-lg">
             <Logo />
@@ -46,21 +45,23 @@ const Navbar = () => {
               <span className="px-1 text-muted-foreground text-sm">
                 03/27 - 03/30
               </span>
-              <div className="bg-[#593CFB] p-1.5 rounded-full text-white">
-                <Search size={14} strokeWidth={3} />
-              </div>
             </div>
           )}
         </div>
 
+        {/* Right-side menu */}
         <div className="flex items-center gap-3">
           {!isDetailPage && (
             <Button
               variant="ghost"
-              onClick={() => (window.location.href = "/why-choose-us")}
-              className="hidden sm:inline-flex rounded-xl font-semibold"
+              onClick={() =>
+                (window.location.href = isWhyChoosePage
+                  ? "/become-a-host"
+                  : "/why-choose-us")
+              }
+              className="hidden rounded-xl sm:inline-flex font-semibold"
             >
-              Why choose Auto-rent?
+              {isWhyChoosePage ? "Become a host" : "Why choose Auto-rent?"}
             </Button>
           )}
 
@@ -83,17 +84,16 @@ const Navbar = () => {
               className="bg-white dark:bg-black shadow-xl p-2 border border-border/50 rounded-2xl w-[280px]"
             >
               <DropdownMenuGroup>
-                <DropdownMenuItem
-                  onClick={() => setAuthOpen(true)}
-                  className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg font-semibold text-md cursor-pointer"
-                >
-                  Login
+                {/* Updated links */}
+                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
+                  <Link href="/auth/signin" className="w-full">
+                    Login
+                  </Link>
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setAuthOpen(true)}
-                  className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg font-medium text-md cursor-pointer"
-                >
-                  Sign Up
+                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
+                  <Link href="/auth/signup" className="w-full">
+                    Sign Up
+                  </Link>
                 </DropdownMenuItem>
               </DropdownMenuGroup>
 
@@ -117,9 +117,11 @@ const Navbar = () => {
                   </DropdownMenuPortal>
                 </DropdownMenuSub>
 
-                <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
-                  <Key size={18} />
-                  How Auto-rent works
+                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 text-md hover:bg-muted">
+                  <Link href="/why-choose-us" className="flex items-center gap-2">
+                    <Key size={18} />
+                    How Auto-rent works
+                  </Link>
                 </DropdownMenuItem>
 
                 <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
@@ -139,7 +141,6 @@ const Navbar = () => {
           <ModeToggle />
         </div>
       </div>
-      <AuthModal open={authOpen} onOpenChange={setAuthOpen} />
     </nav>
   );
 };
