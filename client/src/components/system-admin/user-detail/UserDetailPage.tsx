@@ -10,9 +10,8 @@ import { ArrowLeft, Activity, ShieldAlert, KeyRound } from "lucide-react";
 import { UserSidebar } from "./UserSidebar";
 import { ActivityTab } from "./ActivityTab";
 import { SecurityTab } from "./SecurityTab";
-import { ToastContainer } from "./ToastContainer";
 import { ConfirmationModal } from "./ConfirmationModal";
-import { useToast } from "./useToast";
+import { useToast } from "@/hooks/use-toast";
 
 import { getUserData } from "./data";
 import type { ConfirmationConfig, UserStatus } from "./types";
@@ -24,15 +23,14 @@ export function UserDetailPage({ userId }: { userId: string }) {
   const [user, setUser] = useState(initialData.user);
   const [activities] = useState(initialData.activities);
   const [securityEvents] = useState(initialData.securityEvents);
-
-  const { toasts, addToast, removeToast } = useToast();
+  const { toast } = useToast();
   const [modalConfig, setModalConfig] = useState<ConfirmationConfig | null>(
     null,
   );
 
   const wait = () => new Promise((resolve) => setTimeout(resolve, 800));
   const showSuccess = (title: string, msg: string) =>
-    addToast("success", title, msg);
+    toast({ title, description: msg });
 
   // ─── Actions ───
 
@@ -69,7 +67,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
       variant: "destructive",
       onConfirm: async () => {
         await wait();
-        addToast("success", "User Deleted", "Redirecting...");
+        toast({ title: "User Deleted", description: "Redirecting..." });
         setTimeout(() => router.push("/sysadmin/user-management"), 1000);
       },
     });
@@ -157,7 +155,6 @@ export function UserDetailPage({ userId }: { userId: string }) {
         </Main>
       </div>
 
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
       <ConfirmationModal
         config={modalConfig}
         onClose={() => setModalConfig(null)}
