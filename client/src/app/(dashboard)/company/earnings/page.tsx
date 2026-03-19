@@ -1,8 +1,7 @@
-import React from 'react';
+'use client';
 import { 
   BarChart3, 
   TrendingUp, 
-  TrendingDown, 
   DollarSign, 
   Download, 
   Calendar,
@@ -17,7 +16,6 @@ import {
   CartesianGrid, 
   Tooltip, 
   ResponsiveContainer,
-  Cell
 } from 'recharts';
 
 const monthlyData = [
@@ -40,17 +38,17 @@ const vehicleRevenue = [
 export default function Earnings() {
   return (
     <div className="space-y-8">
-      <div className="flex justify-between items-center">
+      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="font-bold text-slate-900 text-2xl">Earnings & Reports</h2>
           <p className="text-slate-500">Track your revenue, profits, and financial performance.</p>
         </div>
-        <div className="flex gap-3">
-          <button className="flex items-center gap-2 hover:bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 text-sm transition-colors">
+        <div className="flex sm:flex-row flex-col gap-3 w-full sm:w-auto">
+          <button className="flex justify-center items-center gap-2 hover:bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl w-full sm:w-auto font-medium text-slate-600 text-sm transition-colors">
             <Calendar size={18} />
             <span>Last 6 Months</span>
           </button>
-          <button className="flex items-center gap-2 bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 px-4 py-2 rounded-xl font-medium text-white text-sm transition-colors">
+          <button className="flex justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 shadow-lg shadow-slate-900/20 px-4 py-2 rounded-xl w-full sm:w-auto font-medium text-white text-sm transition-colors">
             <Download size={18} />
             <span>Download Excel</span>
           </button>
@@ -58,7 +56,7 @@ export default function Earnings() {
       </div>
 
       <div className="gap-6 grid grid-cols-1 md:grid-cols-3">
-        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
+        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
           <div className="flex justify-between items-start mb-4">
             <div className="bg-emerald-50 p-3 rounded-xl text-emerald-600">
               <DollarSign size={24} />
@@ -71,7 +69,7 @@ export default function Earnings() {
           <p className="font-medium text-slate-500 text-sm">Total Revenue</p>
           <h3 className="mt-1 font-bold text-slate-900 text-2xl">$33,700</h3>
         </div>
-        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
+        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
           <div className="flex justify-between items-start mb-4">
             <div className="bg-blue-50 p-3 rounded-xl text-blue-600">
               <TrendingUp size={24} />

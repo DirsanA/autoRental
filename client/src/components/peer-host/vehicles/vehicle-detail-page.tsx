@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { 
   Star, 
   MapPin, 
@@ -12,7 +12,6 @@ import {
   Wind,
   Snowflake,
   Bluetooth,
-  Camera,
   Shield,
   Clock,
   ChevronLeft,
@@ -41,6 +40,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 // Import the edit components
@@ -63,7 +63,11 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
   const [editableRate, setEditableRate] = useState(vehicle.dailyRate);
   const [activeImage, setActiveImage] = useState(0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [showSaveSuccess, setShowSaveSuccess] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
+  const [acceptingBookings, setAcceptingBookings] = useState(
+    vehicle.acceptingBookings ?? vehicle.status === "available"
+  );
+  const noticeTimeoutRef = useRef<number | null>(null);
   
   // State for editable details
   const [editableDetails, setEditableDetails] = useState<EditableVehicleDetails>(
@@ -101,6 +105,27 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     { guest: "David L.", dates: "Feb 28-Mar 3", amount: 340, status: "completed" },
   ];
 
+  useEffect(() => {
+    return () => {
+      if (noticeTimeoutRef.current) {
+        window.clearTimeout(noticeTimeoutRef.current);
+      }
+    };
+  }, []);
+
+  const pushNotice = (message: string) => {
+    setNotice(message);
+
+    if (noticeTimeoutRef.current) {
+      window.clearTimeout(noticeTimeoutRef.current);
+    }
+
+    noticeTimeoutRef.current = window.setTimeout(() => {
+      setNotice(null);
+      noticeTimeoutRef.current = null;
+    }, 3000);
+  };
+
   const handleSaveDetails = async (updatedDetails: EditableVehicleDetails) => {
     // Simulate API call
     await new Promise(resolve => setTimeout(resolve, 1500));
@@ -109,9 +134,27 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     setEditableDetails(updatedDetails);
     
     // Show success message
-    setShowSaveSuccess(true);
-    setTimeout(() => setShowSaveSuccess(false), 3000);
+    pushNotice("Vehicle details updated successfully.");
   };
+
+  const handleAvailabilityToggle = (checked: boolean) => {
+    setAcceptingBookings(checked);
+    pushNotice(
+      checked
+        ? "Availability is on. New bookings can be accepted."
+        : "Availability is off. New bookings are paused."
+    );
+  };
+
+  const availabilityTone = acceptingBookings
+    ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+    : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
+
+  const availabilityHelperText = acceptingBookings
+    ? vehicle.status === "rented"
+      ? "Future dates are open again as soon as the current trip finishes."
+      : "Your listing is visible and ready to receive new bookings."
+    : "The car stays visible here, but renters cannot book it until you switch availability back on.";
 
   return (
     <div className="flex flex-col flex-1 bg-background dark:bg-slate-950">
@@ -119,12 +162,12 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
       
       <Main className="pt-4">
         {/* Success Message */}
-        {showSaveSuccess && (
+        {notice && (
           <div className="top-4 right-4 z-50 fixed slide-in-from-top-2 animate-in fade-in">
             <div className="bg-emerald-50 dark:bg-emerald-950 shadow-lg px-4 py-3 border border-emerald-200 dark:border-emerald-800 rounded-lg">
               <div className="flex items-center gap-2">
                 <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                <p className="font-medium text-emerald-800 dark:text-emerald-300">Changes saved successfully!</p>
+                <p className="font-medium text-emerald-800 dark:text-emerald-300">{notice}</p>
               </div>
             </div>
           </div>
@@ -444,10 +487,27 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
               <CardContent className="p-4">
                 <h3 className="mb-3 font-semibold dark:text-slate-200">Controls</h3>
                 <div className="space-y-2">
-                  <Button variant="outline" className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full dark:text-slate-300" size="sm">
-                    <Calendar className="mr-2 w-4 h-4" />
-                    Edit availability
-                  </Button>
+                  <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/70 p-3 border dark:border-slate-700 rounded-xl">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium dark:text-slate-200 text-sm">
+                          Availability
+                        </p>
+                        <Badge className={cn("border-0", availabilityTone)}>
+                          {acceptingBookings ? "On" : "Off"}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-muted-foreground dark:text-slate-400 text-xs leading-5">
+                        {availabilityHelperText}
+                      </p>
+                    </div>
+                    <Switch
+                      checked={acceptingBookings}
+                      onCheckedChange={handleAvailabilityToggle}
+                      aria-label="Toggle vehicle availability"
+                      className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600"
+                    />
+                  </div>
                   <Button variant="outline" className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full dark:text-slate-300" size="sm">
                     <Wrench className="mr-2 w-4 h-4" />
                     Maintenance mode

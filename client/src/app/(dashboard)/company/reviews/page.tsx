@@ -1,4 +1,3 @@
-import React from "react";
 import { Search, ThumbsUp, MessageSquare } from "lucide-react";
 
 const reviews = [
@@ -26,7 +25,7 @@ const ratingBreakdown = [
   { star: 1, percent: 5 },
 ];
 
-const StarRating = ({ rating }) => {
+const StarRating = ({ rating }: { rating: number }) => {
   return (
     <div className="flex gap-1 text-yellow-400">
       {[1,2,3,4,5].map((star) => (
@@ -40,10 +39,8 @@ const StarRating = ({ rating }) => {
 
 const RatingsPage = () => {
   return (
-    <div className="bg-gray-50 p-6 min-h-screen">
-
-      {/* Title */}
-      <div className="mb-6">
+    <div className="space-y-6">
+      <div>
         <h1 className="font-bold text-2xl">Ratings & Reviews</h1>
         <p className="text-gray-500 text-sm">
           See what your customers are saying about your fleet.
@@ -100,8 +97,8 @@ const RatingsPage = () => {
         <div className="space-y-6 lg:col-span-2">
 
           {/* Search + Sort */}
-          <div className="flex gap-4">
-            <div className="flex flex-1 items-center gap-2 bg-white px-3 py-2 border rounded-lg">
+          <div className="flex sm:flex-row flex-col gap-4">
+            <div className="flex flex-1 items-center gap-2 bg-white px-3 py-2 border rounded-lg min-w-0">
               <Search size={18} className="text-gray-400"/>
               <input
                 placeholder="Search reviews..."
@@ -109,7 +106,7 @@ const RatingsPage = () => {
               />
             </div>
 
-            <button className="bg-white px-4 py-2 border rounded-lg">
+            <button className="bg-white px-4 py-2 border rounded-lg w-full sm:w-auto">
               Sort by: Newest
             </button>
           </div>
@@ -120,7 +117,7 @@ const RatingsPage = () => {
               key={index}
               className="space-y-3 bg-white shadow p-5 rounded-xl"
             >
-              <div className="flex justify-between">
+              <div className="flex sm:flex-row flex-col justify-between gap-3">
 
                 <div className="flex gap-3">
                   <div className="flex justify-center items-center bg-blue-100 rounded-full w-10 h-10 font-bold text-blue-600">
@@ -139,7 +136,7 @@ const RatingsPage = () => {
               </div>
 
               <p className="text-gray-600 italic">
-                "{review.comment}"
+                &quot;{review.comment}&quot;
               </p>
 
               <div className="flex gap-6 text-gray-500 text-sm">
