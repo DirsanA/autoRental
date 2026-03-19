@@ -1,15 +1,14 @@
-import React from 'react';
 import { Building2, Mail, Phone, MapPin, Globe, ShieldCheck, Upload, Save } from 'lucide-react';
 
 export default function Profile() {
   return (
     <div className="space-y-8 mx-auto max-w-4xl">
-      <div className="flex justify-between items-center">
+      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="font-bold text-slate-900 text-2xl">Company Profile</h2>
           <p className="text-slate-500">Manage your business information and verification status.</p>
         </div>
-        <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 shadow-lg px-6 py-2 rounded-xl font-bold text-white transition-colors">
+        <button className="flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 shadow-lg px-6 py-2 rounded-xl w-full sm:w-auto font-bold text-white transition-colors">
           <Save size={18} />
           <span>Save Changes</span>
         </button>

@@ -22,6 +22,12 @@ export const sampleBookings: Booking[] = [
     endDate: "2026-02-12T09:00:00.000Z",
     totalAmount: 70,
     pickupLocation: "Kumasi, GH",
+    review: {
+      rating: 5,
+      comment:
+        "Clean car, smooth pickup, and the trip was comfortable from start to finish.",
+      submittedAt: "2026-02-13T10:30:00.000Z",
+    },
   },
   {
     id: "bk_003",
@@ -34,4 +40,3 @@ export const sampleBookings: Booking[] = [
     pickupLocation: "Accra, GH",
   },
 ];
-
