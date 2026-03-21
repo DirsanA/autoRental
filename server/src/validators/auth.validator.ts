@@ -1,0 +1,104 @@
+import { z } from "zod";
+
+/**
+ * Shared base fields for all registration types.
+ */
+// Reuses the core identity and credential rules across every registration flow.
+const baseRegistrationFields = {
+  firstName: z
+    .string()
+    .min(2, "First name must be at least 2 characters")
+    .max(50, "First name must be at most 50 characters")
+    .trim(),
+  lastName: z
+    .string()
+    .min(2, "Last name must be at least 2 characters")
+    .max(50, "Last name must be at most 50 characters")
+    .trim(),
+  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  phoneNumber: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/, "Phone number must be in valid E.164 format")
+    .trim(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters"),
+};
+
+/**
+ * POST /api/auth/register
+ * Register a base user account (no rental abilities yet).
+ */
+// Validates the standard user sign-up payload without any company-specific fields.
+export const registerUserSchema = z.object({
+  ...baseRegistrationFields,
+});
+
+/**
+ * POST /api/auth/register/company
+ * Register a new company host account.
+ * Includes user info + company details in a single request.
+ */
+// Combines personal account details and company profile data into one onboarding schema.
+export const registerCompanySchema = z.object({
+  // User fields
+  ...baseRegistrationFields,
+
+  // Company fields
+  companyName: z
+    .string()
+    .min(2, "Company name must be at least 2 characters")
+    .max(100, "Company name must be at most 100 characters")
+    .trim(),
+  tinNumber: z
+    .string()
+    .min(4, "TIN number must be at least 4 characters")
+    .max(30, "TIN number must be at most 30 characters")
+    .trim(),
+  companyEmail: z.string().email("Invalid company contact email").trim().toLowerCase(),
+  companyPhone: z
+    .string()
+    .regex(/^\+?[1-9]\d{1,14}$/, "Company phone must be in E.164 format")
+    .trim(),
+  companyAddress: z.string().max(200).optional(),
+  website: z.string().url("Invalid website URL").optional(),
+  bio: z.string().max(500, "Bio must be at most 500 characters").optional(),
+});
+
+/**
+ * POST /api/auth/login
+ * Login with email and password.
+ */
+// Restricts login requests to the minimum credentials needed for email/password auth.
+export const loginSchema = z.object({
+  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  password: z.string().min(1, "Password is required"),
+});
+
+/**
+ * POST /api/auth/forgot-password
+ */
+// Validates the email used to request a password reset without revealing account existence.
+export const forgotPasswordSchema = z.object({
+  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+});
+
+/**
+ * POST /api/auth/reset-password
+ */
+// Validates the reset token and replacement password before handing off to better-auth.
+export const resetPasswordSchema = z.object({
+  token: z.string().min(1, "Reset token is required"),
+  newPassword: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters"),
+});
+
+// Type exports
+export type RegisterUserInput = z.infer<typeof registerUserSchema>;
+export type RegisterCompanyInput = z.infer<typeof registerCompanySchema>;
+export type LoginInput = z.infer<typeof loginSchema>;
+export type ForgotPasswordInput = z.infer<typeof forgotPasswordSchema>;
+export type ResetPasswordInput = z.infer<typeof resetPasswordSchema>;
