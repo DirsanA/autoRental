@@ -1,11 +1,11 @@
-import { Schema, model, type HydratedDocument } from "mongoose";
+import { Schema, model, type HydratedDocument, type Types } from "mongoose";
 
 /**
  * 1. Interface Definition
  */
 export interface IVerification {
-  userId: Schema.Types.ObjectId; // The uploader
-  companyId?: Schema.Types.ObjectId | undefined; // Link if this is a business verification
+  userId: Types.ObjectId; // The uploader
+  companyId?: Types.ObjectId | undefined; // Link if this is a business verification
 
   documentType:
     | "NATIONAL_ID"
@@ -20,7 +20,7 @@ export interface IVerification {
 
   status: "PENDING" | "APPROVED" | "REJECTED";
   adminComment?: string | undefined;
-  verifiedBy?: Schema.Types.ObjectId | undefined;
+  verifiedBy?: Types.ObjectId | undefined;
   verifiedAt?: Date | undefined;
 
   createdAt?: Date | undefined;
