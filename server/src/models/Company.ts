@@ -1,10 +1,10 @@
-import { Schema, model, type HydratedDocument } from "mongoose";
+import { Schema, model, type HydratedDocument, Types } from "mongoose";
 
 /**
  * 1. Interface Definition
  */
 export interface ICompany {
-  ownerId: Schema.Types.ObjectId; // The User who manages this company
+  ownerId: Types.ObjectId; // The User who manages this company
 
   name: string;
   tinNumber: string; // Tax Identification Number
@@ -134,7 +134,6 @@ const companySchema = new Schema<ICompany>(
  * 3. Performance Indexing
  */
 companySchema.index({ ownerId: 1 });
-companySchema.index({ tinNumber: 1 });
 companySchema.index({ status: 1 });
 companySchema.index({ name: "text" }); // Full-text search on company name
 companySchema.index({ location: "2dsphere" }); // Geospatial queries (find nearby companies)
