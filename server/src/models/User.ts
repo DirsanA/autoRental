@@ -1,26 +1,38 @@
 import { Schema, model, type HydratedDocument, type Types } from "mongoose";
 
+export enum AccountType {
+  USER = "USER",
+  COMPANY = "COMPANY",
+  ADMIN = "ADMIN",
+}
+
+export enum VerificationLevel {
+  BASIC = "BASIC",
+  ID_VERIFIED = "ID_VERIFIED",
+  LICENSE_VERIFIED = "LICENSE_VERIFIED",
+}
 /**
  * 1. Interface Definitions
  * Defines the shape of the User data for TypeScript safety across the app.
  */
 export interface IUser {
+  accountType: AccountType;
   name?: string | undefined;
-  firstName: string;
-  lastName: string;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
   email: string;
   emailVerified?: boolean | undefined;
   image?: string | undefined;
-  phoneNumber: string;
+  phoneNumber?: string | undefined;
   roles: Types.ObjectId[];
-  verificationLevel: "BASIC" | "ID_VERIFIED" | "LICENSE_VERIFIED";
+  verificationLevel: VerificationLevel;
   status: "PENDING" | "ACTIVE" | "SUSPENDED";
   walletBalance: number;
-  
+
   // Identity Verification
   idNumber?: string | undefined;
   idImageUrl?: string | undefined;
-  
+
   // Additional info for Peerhost
   address?: string | undefined;
 
@@ -37,20 +49,24 @@ export type UserDocument = HydratedDocument<IUser>;
  */
 const userSchema = new Schema<IUser>(
   {
+    accountType: {
+      type: String,
+      enum: AccountType,
+      default: AccountType.USER,
+      required: true,
+    },
     name: {
       type: String,
       trim: true,
     },
     firstName: {
       type: String,
-      required: [true, "First name is required"],
       trim: true,
       minlength: 2,
       maxlength: 50,
     },
     lastName: {
       type: String,
-      required: [true, "Last name is required"],
       trim: true,
       minlength: 2,
       maxlength: 50,
@@ -76,8 +92,8 @@ const userSchema = new Schema<IUser>(
     },
     phoneNumber: {
       type: String,
-      required: [true, "Phone number is required"],
       unique: true,
+      sparse: true,
       trim: true,
       match: [
         /^\+?[1-9]\d{1,14}$/,
@@ -87,8 +103,8 @@ const userSchema = new Schema<IUser>(
     roles: [{ type: Schema.Types.ObjectId, ref: "Role" }],
     verificationLevel: {
       type: String,
-      enum: ["BASIC", "ID_VERIFIED", "LICENSE_VERIFIED"],
-      default: "BASIC",
+      enum: VerificationLevel,
+      default: VerificationLevel.BASIC,
     },
     status: {
       type: String,
@@ -123,10 +139,9 @@ const userSchema = new Schema<IUser>(
 
 /**
  * 3. Performance Indexing
- * Optimized for high-frequency queries on identity and account status.
+ * Optimized for high-frequency queries on account type and lifecycle state.
  */
-userSchema.index({ email: 1 });
-userSchema.index({ phoneNumber: 1 });
+userSchema.index({ accountType: 1 });
 userSchema.index({ status: 1 });
 
 export const User = model<IUser>("User", userSchema);

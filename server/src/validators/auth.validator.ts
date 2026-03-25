@@ -1,10 +1,21 @@
 import { z } from "zod";
 
 /**
- * Shared base fields for all registration types.
+ * Shared credential fields for all registration types.
  */
-// Reuses the core identity and credential rules across every registration flow.
-const baseRegistrationFields = {
+// Reuses the login credential rules across user and company registration flows.
+const authRegistrationFields = {
+  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  password: z
+    .string()
+    .min(8, "Password must be at least 8 characters")
+    .max(128, "Password must be at most 128 characters"),
+};
+
+/**
+ * Shared personal identity fields for user registration.
+ */
+const personalRegistrationFields = {
   firstName: z
     .string()
     .min(2, "First name must be at least 2 characters")
@@ -20,10 +31,6 @@ const baseRegistrationFields = {
     .string()
     .regex(/^\+?[1-9]\d{1,14}$/, "Phone number must be in valid E.164 format")
     .trim(),
-  password: z
-    .string()
-    .min(8, "Password must be at least 8 characters")
-    .max(128, "Password must be at most 128 characters"),
 };
 
 /**
@@ -32,7 +39,8 @@ const baseRegistrationFields = {
  */
 // Validates the standard user sign-up payload without any company-specific fields.
 export const registerUserSchema = z.object({
-  ...baseRegistrationFields,
+  ...authRegistrationFields,
+  ...personalRegistrationFields,
 });
 
 /**
@@ -42,8 +50,7 @@ export const registerUserSchema = z.object({
  */
 // Combines personal account details and company profile data into one onboarding schema.
 export const registerCompanySchema = z.object({
-  // User fields
-  ...baseRegistrationFields,
+  ...authRegistrationFields,
 
   // Company fields
   companyName: z
@@ -64,6 +71,23 @@ export const registerCompanySchema = z.object({
   companyAddress: z.string().max(200).optional(),
   website: z.string().url("Invalid website URL").optional(),
   bio: z.string().max(500, "Bio must be at most 500 characters").optional(),
+  licenseDocumentUrl: z.string().url("Invalid license document URL").optional(),
+  location: z
+    .object({
+      type: z.literal("Point"),
+      coordinates: z.tuple([
+        z.number().min(-180).max(180),
+        z.number().min(-90).max(90),
+      ]),
+    })
+    .optional(),
+  socialLinks: z
+    .object({
+      linkedin: z.string().url().optional(),
+      facebook: z.string().url().optional(),
+      x: z.string().url().optional(),
+    })
+    .optional(),
 });
 
 /**

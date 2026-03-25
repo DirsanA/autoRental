@@ -1,0 +1,5 @@
+## validation.service.ts  : renter and peerhost verification processed through common class method since the requirement varies 
+between them it should be handled separately.
+
+
+### validation.service.ts : company data validation should also be included in the verification service

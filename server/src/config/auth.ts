@@ -72,17 +72,23 @@ export function createAuth() {
     user: {
       // Extends better-auth's core user record with domain fields used across the platform.
       additionalFields: {
+        accountType: {
+          type: "string",
+          required: false,
+          defaultValue: "USER",
+          input: false,
+        },
         firstName: {
           type: "string",
-          required: true,
+          required: false,
         },
         lastName: {
           type: "string",
-          required: true,
+          required: false,
         },
         phoneNumber: {
           type: "string",
-          required: true,
+          required: false,
         },
         roles: {
           type: "string[]",

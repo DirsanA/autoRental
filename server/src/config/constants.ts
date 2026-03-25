@@ -10,9 +10,7 @@ export const SYSTEM_CONSTANTS = {
 
   // Defines the minimum balance a user must reach before requesting a payout.
   /** Minimum payout threshold in ETB */
-  PAYOUT_MINIMUM_AMOUNT: parseFloat(
-    process.env.PAYOUT_MINIMUM_AMOUNT || "500",
-  ),
+  PAYOUT_MINIMUM_AMOUNT: parseFloat(process.env.PAYOUT_MINIMUM_AMOUNT || "500"),
 
   // Controls how long an unconfirmed booking can stay pending before auto-cancellation.
   /** Hours before an unconfirmed booking is auto-cancelled */

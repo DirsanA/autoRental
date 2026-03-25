@@ -11,9 +11,11 @@ import {
 } from "../validators/auth.validator.js";
 import { authLimiter } from "../middlewares/rateLimiter.js";
 import { createAuthMiddleware } from "../middlewares/authenticate.js";
+import { requireAccountType } from "../middlewares/requireAccountType.js";
 import type { Auth } from "../config/auth.js";
 import { createVerificationController } from "../controllers/verification.controller.js";
 import { verificationService } from "../services/verification.service.js";
+import { AccountType } from "../models/User.js";
 import {
   legacySubmitPeerhostVerificationSchema,
   legacySubmitRenterVerificationSchema,
@@ -51,6 +53,7 @@ export function createAuthRoutes(auth: Auth): Router {
   router.post(
     "/upgrade/renter",
     authenticate,
+    requireAccountType(AccountType.USER),
     validate({ body: legacySubmitRenterVerificationSchema }),
     verificationController.submitRenter,
   );
@@ -59,6 +62,7 @@ export function createAuthRoutes(auth: Auth): Router {
   router.post(
     "/upgrade/peerhost",
     authenticate,
+    requireAccountType(AccountType.USER),
     validate({ body: legacySubmitPeerhostVerificationSchema }),
     verificationController.submitPeerhost,
   );
@@ -73,7 +77,26 @@ export function createAuthRoutes(auth: Auth): Router {
   // --- Login / Session ---
 
   // POST /api/auth/login
-  router.post("/login", validate({ body: loginSchema }), authController.login);
+  // Backward-compatible user portal login.
+  router.post(
+    "/login",
+    validate({ body: loginSchema }),
+    authController.loginUser,
+  );
+
+  // POST /api/auth/login/user
+  router.post(
+    "/login/user",
+    validate({ body: loginSchema }),
+    authController.loginUser,
+  );
+
+  // POST /api/auth/login/company
+  router.post(
+    "/login/company",
+    validate({ body: loginSchema }),
+    authController.loginCompany,
+  );
 
   // POST /api/auth/logout
   router.post("/logout", authController.logout);

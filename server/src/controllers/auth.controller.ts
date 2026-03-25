@@ -4,6 +4,9 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { AuthService } from "../services/auth.service.js";
 import type { Auth } from "../config/auth.js";
 import { ENV } from "../config/env.js";
+import { AccountType } from "../models/User.js";
+import { companyService } from "../services/company.service.js";
+import { userPersistenceService } from "../services/user.persistence.service.js";
 import { ApiError } from "../utils/ApiError.js";
 
 /**
@@ -18,6 +21,13 @@ export function createAuthController(auth: Auth, authService: AuthService) {
      */
     registerUser: asyncHandler(async (req: Request, res: Response) => {
       // Delegates user sign-up to the auth service so controller logic stays transport-focused.
+      const existingUser = await userPersistenceService.findByEmail(
+        req.body.email as string,
+      );
+      if (existingUser) {
+        throw ApiError.conflict("User already exists");
+      }
+
       const result = await authService.registerUser(
         req.body,
         fromNodeHeaders(req.headers),
@@ -38,6 +48,14 @@ export function createAuthController(auth: Auth, authService: AuthService) {
      * Register a new company admin + create company profile.
      */
     registerCompany: asyncHandler(async (req: Request, res: Response) => {
+      // add check for existing company with the same email
+      const existingCompany = await companyService.findByEmail(
+        req.body.email as string,
+      );
+      if (existingCompany) {
+        throw ApiError.conflict("Company already exists");
+      }
+
       // Runs the combined company-account onboarding flow through the auth service.
       const result = await authService.registerCompany(
         req.body,
@@ -57,16 +75,42 @@ export function createAuthController(auth: Auth, authService: AuthService) {
 
     /**
      * POST /api/auth/login
-     * Login with email and password.
+     * Login a user account with email and password.
      */
-    login: asyncHandler(async (req: Request, res: Response) => {
+    loginUser: asyncHandler(async (req: Request, res: Response) => {
       const { email, password } = req.body;
 
-      // Signs the user in through better-auth-backed service logic and returns the issued session token.
+      // Signs the user into the user portal only.
       const result = await authService.login(
         email,
         password,
         fromNodeHeaders(req.headers),
+        AccountType.USER,
+      );
+
+      res.json({
+        success: true,
+        data: {
+          user: result.user,
+          token: result.token,
+          message: "Login successful",
+        },
+      });
+    }),
+
+    /**
+     * POST /api/auth/login/company
+     * Login a company account with email and password.
+     */
+    loginCompany: asyncHandler(async (req: Request, res: Response) => {
+      const { email, password } = req.body;
+
+      // Signs the company into the company portal only.
+      const result = await authService.login(
+        email,
+        password,
+        fromNodeHeaders(req.headers),
+        AccountType.COMPANY,
       );
 
       res.json({
@@ -122,6 +166,10 @@ export function createAuthController(auth: Auth, authService: AuthService) {
         data: {
           user: session.user,
           session: session.session,
+          company:
+            session.user.accountType === AccountType.COMPANY
+              ? await companyService.getByAuthUserId(session.user.id)
+              : null,
         },
       });
     }),
@@ -164,7 +212,10 @@ export function createAuthController(auth: Auth, authService: AuthService) {
 
       res.json({
         success: true,
-        data: { message: "Password reset successfully. You can now log in with your new password." },
+        data: {
+          message:
+            "Password reset successfully. You can now log in with your new password.",
+        },
       });
     }),
   };
