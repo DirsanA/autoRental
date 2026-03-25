@@ -7,9 +7,9 @@ export type Vehicle = {
   year: number;
   dailyRate: number;
   status: VehicleStatus;
+  acceptingBookings?: boolean;
   location: string;
   imageUrl?: string;
   ratingAvg: number;
   ratingCount: number;
 };
-

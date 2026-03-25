@@ -1,159 +1,332 @@
-import React, { useState } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Filter, 
-  MoreVertical, 
-  Car, 
-  Wrench, 
-  CheckCircle2, 
-  Clock,
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  Clock3,
   FileText,
+  Filter,
+  Plus,
+  Search,
+  Settings2,
   Trash2,
-  Edit2
-} from 'lucide-react';
-import { MOCK_VEHICLES, Vehicle } from '../types';
-import { motion, AnimatePresence } from 'motion/react';
+  Wrench,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
+import { cn } from "@/lib/utils";
+import { MOCK_VEHICLES, type Vehicle } from "../types";
+
+type FleetFilter = "all" | Vehicle["status"];
+
+function formatStatus(status: Vehicle["status"]) {
+  switch (status) {
+    case "available":
+      return "Available";
+    case "booked":
+      return "Booked";
+    case "maintenance":
+      return "Maintenance";
+  }
+}
+
+function statusBadgeClass(status: Vehicle["status"]) {
+  switch (status) {
+    case "available":
+      return "bg-emerald-600 text-white";
+    case "booked":
+      return "bg-blue-600 text-white";
+    case "maintenance":
+      return "bg-amber-600 text-white";
+  }
+}
 
 export default function FleetManagement() {
   const [vehicles, setVehicles] = useState<Vehicle[]>(MOCK_VEHICLES);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
+  const [activeFilter, setActiveFilter] = useState<FleetFilter>("all");
 
-  const filteredVehicles = vehicles.filter(v => 
-    v.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    v.plate.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredVehicles = useMemo(() => {
+    return vehicles.filter((vehicle) => {
+      const matchesSearch =
+        vehicle.make.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        vehicle.plate.toLowerCase().includes(searchTerm.toLowerCase());
 
-  const toggleAvailability = (id: string) => {
-    setVehicles(prev => prev.map(v => {
-      if (v.id === id) {
-        // If it's available, mark as booked (taken). If it's booked/maintenance, mark as available.
-        // This allows manual override.
-        const newStatus: Vehicle['status'] = v.status === 'available' ? 'booked' : 'available';
-        return { ...v, status: newStatus };
-      }
-      return v;
-    }));
-  };
+      const matchesFilter =
+        activeFilter === "all" ? true : vehicle.status === activeFilter;
 
-  const getStatusColor = (status: Vehicle['status']) => {
-    switch (status) {
-      case 'available': return 'bg-emerald-100 text-emerald-700 border-emerald-200';
-      case 'booked': return 'bg-blue-100 text-blue-700 border-blue-200';
-      case 'maintenance': return 'bg-rose-100 text-rose-700 border-rose-200';
-      default: return 'bg-slate-100 text-slate-700 border-slate-200';
-    }
+      return matchesSearch && matchesFilter;
+    });
+  }, [activeFilter, searchTerm, vehicles]);
+
+  const availableCount = vehicles.filter((vehicle) => vehicle.status === "available").length;
+  const bookedCount = vehicles.filter((vehicle) => vehicle.status === "booked").length;
+  const maintenanceCount = vehicles.filter((vehicle) => vehicle.status === "maintenance").length;
+
+  const toggleAvailability = (id: string, checked: boolean) => {
+    setVehicles((prev) =>
+      prev.map((vehicle) => {
+        if (vehicle.id !== id) {
+          return vehicle;
+        }
+
+        if (checked) {
+          return { ...vehicle, status: "available" };
+        }
+
+        return {
+          ...vehicle,
+          status: vehicle.status === "maintenance" ? "maintenance" : "booked",
+        };
+      })
+    );
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
+    <div className="space-y-10">
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h2 className="font-bold text-slate-900 text-2xl">Fleet Management</h2>
-          <p className="text-slate-500">Manage your vehicles, pricing, and maintenance schedules.</p>
+          <h2 className="font-bold text-slate-900 text-3xl tracking-tight">
+            Fleet Management
+          </h2>
+          <p className="mt-1 text-slate-500 text-sm">
+            Manage listings, pricing, service windows, and company availability.
+          </p>
         </div>
-        <button className="flex items-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 shadow-lg px-4 py-2 rounded-xl font-medium text-white transition-colors">
-          <Plus size={18} />
-          <span>Add Vehicle</span>
-        </button>
+
+        <Button className="bg-black hover:bg-slate-900 shadow-lg text-white w-full sm:w-auto">
+          <Plus className="mr-2 w-4 h-4" />
+          Add Vehicle
+        </Button>
       </div>
 
-      <div className="flex sm:flex-row flex-col gap-4">
-        <div className="relative flex-1">
-          <Search className="top-1/2 left-3 absolute text-slate-400 -translate-y-1/2" size={18} />
-          <input 
-            type="text" 
-            placeholder="Search by make, model or plate..." 
-            className="py-2 pr-4 pl-10 border border-slate-200 focus:border-emerald-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full transition-all"
+      <div className="gap-4 grid lg:grid-cols-[minmax(0,1fr)_auto]">
+        <div className="relative">
+          <Search className="top-1/2 left-3 absolute w-4 h-4 text-slate-400 -translate-y-1/2" />
+          <Input
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search by make, model, or plate..."
+            className="bg-white pl-9 border-slate-200 focus-visible:ring-slate-400 h-11"
           />
         </div>
-        <button className="flex items-center gap-2 hover:bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 transition-colors">
-          <Filter size={18} />
-          <span>Filters</span>
-        </button>
+
+        <div className="flex flex-wrap gap-2">
+          {(["all", "available", "booked", "maintenance"] as FleetFilter[]).map(
+            (filter) => (
+              <button
+                key={filter}
+                onClick={() => setActiveFilter(filter)}
+                className={cn(
+                  "rounded-full border px-3 py-2 text-xs font-medium transition-colors",
+                  activeFilter === filter
+                    ? "border-slate-900 bg-slate-900 text-white"
+                    : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50"
+                )}
+              >
+                {filter === "all" ? "All" : formatStatus(filter)}
+              </button>
+            )
+          )}
+
+          <Button
+            variant="outline"
+            className="border-slate-200 text-slate-600 hover:bg-slate-50"
+          >
+            <Filter className="mr-2 w-4 h-4" />
+            Filters
+          </Button>
+        </div>
       </div>
 
-      <div className="gap-6 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3">
-        <AnimatePresence mode="popLayout">
-          {filteredVehicles.map((vehicle) => (
-            <motion.div 
-              layout
-              initial={{ opacity: 0, scale: 0.9 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.9 }}
-              key={vehicle.id} 
-              className="group bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden"
+      <div className="gap-6 grid grid-cols-1 sm:grid-cols-3">
+        <Card
+          className="group relative bg-gradient-to-br from-emerald-500/10 to-emerald-400/5 shadow-lg hover:shadow-emerald-500/20 border-0 overflow-hidden transition-all duration-300"
+          onClick={() => setActiveFilter("available")}
+        >
+          <div className="top-0 right-0 absolute bg-emerald-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-emerald-600 text-sm">
+                  Available Fleet
+                </p>
+                <p className="mt-2 font-bold text-emerald-700 text-3xl">
+                  {availableCount}
+                </p>
+              </div>
+              <div className="opacity-30 text-4xl">🚗</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="group relative bg-gradient-to-br from-blue-500/10 to-blue-400/5 shadow-lg hover:shadow-blue-500/20 border-0 overflow-hidden transition-all duration-300"
+          onClick={() => setActiveFilter("booked")}
+        >
+          <div className="top-0 right-0 absolute bg-blue-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-blue-600 text-sm">Booked Fleet</p>
+                <p className="mt-2 font-bold text-blue-700 text-3xl">
+                  {bookedCount}
+                </p>
+              </div>
+              <div className="opacity-30 text-4xl">📅</div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card
+          className="group relative bg-gradient-to-br from-amber-500/10 to-amber-400/5 shadow-lg hover:shadow-amber-500/20 border-0 overflow-hidden transition-all duration-300"
+          onClick={() => setActiveFilter("maintenance")}
+        >
+          <div className="top-0 right-0 absolute bg-amber-500/10 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-amber-600 text-sm">
+                  In Maintenance
+                </p>
+                <p className="mt-2 font-bold text-amber-700 text-3xl">
+                  {maintenanceCount}
+                </p>
+              </div>
+              <div className="opacity-30 text-4xl">🛠️</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-2">
+        {filteredVehicles.length === 0 && (
+          <div className="col-span-full py-20 text-center">
+            <p className="text-slate-500 text-lg">No vehicles found for this filter.</p>
+            <Button className="bg-slate-900 hover:bg-slate-800 mt-6 text-white">
+              Add your first fleet vehicle
+            </Button>
+          </div>
+        )}
+
+        {filteredVehicles.map((vehicle) => {
+          const isAvailable = vehicle.status === "available";
+
+          return (
+            <Card
+              key={vehicle.id}
+              className="group bg-white hover:shadow-2xl border-slate-200/80 overflow-hidden transition-all duration-300"
             >
-              <div className="relative h-48 overflow-hidden">
-                <img 
-                  src={vehicle.image} 
+              <div className="relative bg-slate-100 w-full h-56 overflow-hidden">
+                <img
+                  src={vehicle.image}
                   alt={`${vehicle.make} ${vehicle.model}`}
-                  className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
+                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
                 />
-                <div className={`absolute top-4 right-4 px-3 py-1 rounded-full text-xs font-bold border ${getStatusColor(vehicle.status)}`}>
-                  {vehicle.status.toUpperCase()}
+
+                <div className="top-3 right-3 absolute">
+                  <Badge className={cn("border-0", statusBadgeClass(vehicle.status))}>
+                    {formatStatus(vehicle.status)}
+                  </Badge>
+                </div>
+
+                <div className="bottom-3 left-3 absolute bg-black/70 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm">
+                  ${vehicle.pricePerDay}/day
                 </div>
               </div>
-              
-              <div className="p-6">
-                <div className="flex justify-between items-start mb-4">
+
+              <CardContent className="space-y-5 p-5">
+                <div className="flex justify-between items-start gap-4">
                   <div>
-                    <h3 className="font-bold text-slate-900 text-lg">{vehicle.make} {vehicle.model}</h3>
-                    <p className="flex items-center gap-1 text-slate-500 text-sm">
-                      <Clock size={14} />
-                      <span>{vehicle.year} • {vehicle.plate}</span>
+                    <h3 className="font-semibold text-slate-900 text-lg leading-tight">
+                      {vehicle.year} {vehicle.make} {vehicle.model}
+                    </h3>
+                    <p className="mt-1 text-slate-500 text-sm">{vehicle.plate}</p>
+                  </div>
+
+                  <Badge
+                    variant="outline"
+                    className="border-slate-200 text-slate-600 text-xs"
+                  >
+                    Company Fleet
+                  </Badge>
+                </div>
+
+                <div className="flex justify-between items-center bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                  <div>
+                    <p className="font-medium text-slate-900 text-sm">
+                      Manual Availability
+                    </p>
+                    <p className="mt-1 text-slate-500 text-xs">
+                      Turn bookings on or off for this vehicle.
                     </p>
                   </div>
-                  <div className="text-right">
-                    <p className="text-slate-500 text-sm">Price/Day</p>
-                    <p className="font-bold text-emerald-600 text-lg">${vehicle.pricePerDay}</p>
+
+                  <Switch
+                    checked={isAvailable}
+                    onCheckedChange={(checked) =>
+                      toggleAvailability(vehicle.id, checked)
+                    }
+                    aria-label="Toggle fleet vehicle availability"
+                    className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300"
+                  />
+                </div>
+
+                <div className="gap-4 grid sm:grid-cols-2">
+                  <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs">
+                      <Clock3 className="w-4 h-4" />
+                      Last Service
+                    </div>
+                    <p className="mt-2 font-medium text-slate-900 text-sm">
+                      {vehicle.lastMaintenance}
+                    </p>
+                  </div>
+
+                  <div className="bg-slate-50 p-4 border border-slate-200 rounded-xl">
+                    <div className="flex items-center gap-2 text-slate-500 text-xs">
+                      <Wrench className="w-4 h-4" />
+                      Next Service
+                    </div>
+                    <p className="mt-2 font-medium text-slate-900 text-sm">
+                      {vehicle.nextMaintenance}
+                    </p>
                   </div>
                 </div>
 
-                <div className="flex justify-between items-center bg-slate-50 mb-4 p-3 border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-2 h-2 rounded-full ${vehicle.status === 'available' ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
-                    <span className="font-bold text-slate-700 text-xs">Manual Availability</span>
-                  </div>
-                  <button 
-                    onClick={() => toggleAvailability(vehicle.id)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${vehicle.status === 'available' ? 'bg-emerald-500' : 'bg-slate-300'}`}
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-slate-200 text-slate-700 hover:bg-slate-50"
                   >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${vehicle.status === 'available' ? 'translate-x-6' : 'translate-x-1'}`} />
-                  </button>
-                </div>
+                    <Settings2 className="mr-2 w-4 h-4" />
+                    Manage
+                  </Button>
 
-                <div className="gap-4 grid grid-cols-2 mb-6">
-                  <div className="bg-slate-50 p-3 border border-slate-100 rounded-xl">
-                    <p className="mb-1 font-bold text-[10px] text-slate-400 uppercase tracking-wider">Last Service</p>
-                    <p className="font-medium text-slate-700 text-xs">{vehicle.lastMaintenance}</p>
-                  </div>
-                  <div className="bg-slate-50 p-3 border border-slate-100 rounded-xl">
-                    <p className="mb-1 font-bold text-[10px] text-slate-400 uppercase tracking-wider">Next Service</p>
-                    <p className="font-medium text-slate-700 text-xs">{vehicle.nextMaintenance}</p>
-                  </div>
-                </div>
+                  <Button
+                    variant="outline"
+                    className="flex-1 border-slate-200 text-slate-700 hover:bg-slate-50"
+                  >
+                    <FileText className="mr-2 w-4 h-4" />
+                    Documents
+                  </Button>
 
-                <div className="flex gap-2">
-                  <button className="flex flex-1 justify-center items-center gap-2 hover:bg-slate-50 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 text-sm transition-colors">
-                    <Edit2 size={16} />
-                    <span>Edit</span>
-                  </button>
-                  <button className="flex flex-1 justify-center items-center gap-2 hover:bg-slate-50 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 text-sm transition-colors">
-                    <FileText size={16} />
-                    <span>Docs</span>
-                  </button>
-                  <button className="hover:bg-rose-50 p-2 border border-slate-200 hover:border-rose-200 rounded-xl text-rose-500 transition-colors">
-                    <Trash2 size={18} />
-                  </button>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="border-rose-200 text-rose-500 hover:bg-rose-50 hover:text-rose-600"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-              </div>
-            </motion.div>
-          ))}
-        </AnimatePresence>
+              </CardContent>
+            </Card>
+          );
+        })}
       </div>
     </div>
   );

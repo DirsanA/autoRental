@@ -1,5 +1,5 @@
 'use client';
-import React, { useState } from "react";
+import { useState } from "react";
 import {
   Car,
   CalendarCheck,
@@ -9,12 +9,10 @@ import {
   TrendingUp,
   ArrowUpRight,
   ArrowDownRight,
-  Menu,
 } from "lucide-react";
 import {
   AreaChart,
   Area,
-  BarChart,
   Bar,
   PieChart,
   Pie,
@@ -109,7 +107,7 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="gap-6 grid grid-cols-1 lg:grid-cols-3">
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
+        <div className="lg:col-span-2 bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
           <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 mb-6">
             <h3 className="font-bold text-slate-900">Revenue Overview</h3>
             <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
@@ -184,7 +182,7 @@ export default function Dashboard() {
         </div>
 
         {/* Fleet Status */}
-        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl">
+        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
           <h3 className="mb-6 font-bold text-slate-900">Fleet Status</h3>
           
           <div className="h-40">
