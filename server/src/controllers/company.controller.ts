@@ -5,12 +5,12 @@ import { companyService } from "../services/company.service.js";
 export const companyController = {
   /**
    * POST /api/companies
-   * Register a new company. The authenticated user becomes the owner.
+   * Create a company profile for the authenticated company account.
    * Company starts in PENDING_APPROVAL state.
    */
   create: asyncHandler(async (req: Request, res: Response) => {
     const user = (req as any).user;
-    // Creates a company record owned by the authenticated user through the company service.
+    // Creates a company record owned by the authenticated company account through the company service.
     const company = await companyService.create(user.id, req.body);
 
     res.status(201).json({
@@ -25,12 +25,12 @@ export const companyController = {
 
   /**
    * GET /api/companies/me
-   * Get the company owned by the authenticated user.
+   * Get the company owned by the authenticated company account.
    */
   getMyCompany: asyncHandler(async (req: Request, res: Response) => {
     const user = (req as any).user;
-    // Looks up the company currently associated with the signed-in owner account.
-    const company = await companyService.getByOwnerId(user.id);
+    // Looks up the company currently associated with the signed-in company account.
+    const company = await companyService.getByAuthUserId(user.id);
 
     // Returns a not-found response instead of an empty object when the user has no company.
     if (!company) {
@@ -38,7 +38,7 @@ export const companyController = {
         success: false,
         error: {
           code: "NOT_FOUND",
-          message: "You don't have a registered company",
+          message: "You don't have a registered company account",
         },
       });
       return;
@@ -66,7 +66,7 @@ export const companyController = {
 
   /**
    * PATCH /api/companies/:id
-   * Update company profile. Only the company owner can update.
+   * Update company profile. Only the authenticated company account can update.
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const user = (req as any).user;

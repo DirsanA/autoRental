@@ -1,6 +1,8 @@
+import mongoose from "mongoose";
 import { Role } from "../models/Role.js";
 import { Verification, type VerificationDocument } from "../models/Verification.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
+import { VerificationLevel } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import type {
@@ -91,7 +93,11 @@ export class VerificationService {
     // Marks the verification approved before applying the corresponding user upgrades.
     verification.status = "APPROVED";
     verification.adminComment = data.adminComment;
-    verification.verifiedBy = userPersistenceService.toObjectId(adminUserId);
+    const adminPrimaryKey =
+      await userPersistenceService.resolveUserPrimaryKey(adminUserId);
+    if (adminPrimaryKey && adminPrimaryKey instanceof mongoose.Types.ObjectId) {
+      verification.verifiedBy = adminPrimaryKey;
+    }
     verification.verifiedAt = new Date();
 
     // Resolves the requested role id so the approved capability can be attached to the user.
@@ -101,7 +107,7 @@ export class VerificationService {
     }
 
     // Copies verified identity data onto the user record and elevates their verification level.
-    user.verificationLevel = "LICENSE_VERIFIED";
+    user.verificationLevel = VerificationLevel.LICENSE_VERIFIED;
     user.idNumber = metadata.licenseNumber;
     user.idImageUrl = verification.documentFrontUrl;
     if (metadata.address) {

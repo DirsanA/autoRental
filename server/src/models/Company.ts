@@ -1,10 +1,10 @@
-import { Schema, model, type HydratedDocument, Types } from "mongoose";
+import { Schema, model, type HydratedDocument } from "mongoose";
 
 /**
  * 1. Interface Definition
  */
 export interface ICompany {
-  ownerId: Types.ObjectId; // The User who manages this company
+  authUserId: string; // Better Auth account id used to sign into the company portal
 
   name: string;
   tinNumber: string; // Tax Identification Number
@@ -13,6 +13,7 @@ export interface ICompany {
   website?: string | undefined;
   logoUrl?: string | undefined;
   bio?: string | undefined;
+  licenseDocumentUrl?: string | undefined;
 
   contactInfo: {
     email: string;
@@ -39,7 +40,12 @@ export interface ICompany {
   // Verification Lifecycle (driven by the Verification model)
   isVerified: boolean;
   verifiedAt?: Date | undefined; // Set when status transitions to ACTIVE
-  status: "PENDING_APPROVAL" | "ACTIVE" | "SUSPENDED";
+  status:
+    | "PENDING_APPROVAL"
+    | "ACTIVE"
+    | "REJECTED_TEMPORARY"
+    | "REJECTED_PERMANENT"
+    | "SUSPENDED";
   rejectionReason?: string | undefined; // Admin-provided reason on SUSPENDED/rejection
 
   // Financial (mirrors User.walletBalance - platform earnings go here)
@@ -56,7 +62,7 @@ export type CompanyDocument = HydratedDocument<ICompany>;
  */
 const companySchema = new Schema<ICompany>(
   {
-    ownerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
+    authUserId: { type: String, required: true, unique: true, index: true },
 
     name: { type: String, required: true, trim: true },
     tinNumber: { type: String, required: true, unique: true, trim: true },
@@ -65,6 +71,7 @@ const companySchema = new Schema<ICompany>(
     website: { type: String, trim: true },
     logoUrl: String,
     bio: { type: String, maxlength: 500 },
+    licenseDocumentUrl: { type: String, trim: true },
 
     contactInfo: {
       email: {
@@ -103,7 +110,13 @@ const companySchema = new Schema<ICompany>(
     verifiedAt: { type: Date },
     status: {
       type: String,
-      enum: ["PENDING_APPROVAL", "ACTIVE", "SUSPENDED"],
+      enum: [
+        "PENDING_APPROVAL",
+        "ACTIVE",
+        "REJECTED_TEMPORARY",
+        "REJECTED_PERMANENT",
+        "SUSPENDED",
+      ],
       default: "PENDING_APPROVAL",
     },
     rejectionReason: { type: String },
@@ -133,7 +146,6 @@ const companySchema = new Schema<ICompany>(
 /**
  * 3. Performance Indexing
  */
-companySchema.index({ ownerId: 1 });
 companySchema.index({ status: 1 });
 companySchema.index({ name: "text" }); // Full-text search on company name
 companySchema.index({ location: "2dsphere" }); // Geospatial queries (find nearby companies)

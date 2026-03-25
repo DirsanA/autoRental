@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Company, type CompanyDocument } from "../models/Company.js";
+import { User } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
   CreateCompanyInput,
@@ -8,16 +9,15 @@ import type {
 
 export class CompanyService {
   /**
-   * Register a new company under the authenticated user.
+   * Register a new company under the authenticated company account.
    * Companies start in PENDING_APPROVAL status until admin approves.
    */
   async create(
-    ownerId: string,
+    authUserId: string,
     data: CreateCompanyInput,
   ): Promise<CompanyDocument> {
-    // Prevents one user from owning multiple company profiles inside the platform.
-    // Check if user already owns a company
-    const existing = await Company.findOne({ ownerId: new mongoose.Types.ObjectId(ownerId) });
+    // Prevents one auth account from owning multiple company profiles inside the platform.
+    const existing = await Company.findOne({ authUserId });
     if (existing) {
       throw ApiError.conflict("You already have a registered company");
     }
@@ -29,12 +29,31 @@ export class CompanyService {
       throw ApiError.conflict("A company with this TIN number already exists");
     }
 
+    const companyEmailExists = await Company.findOne({
+      "contactInfo.email": data.contactInfo.email,
+    });
+    if (companyEmailExists) {
+      throw ApiError.conflict(
+        "A company with this contact email already exists",
+      );
+    }
+
+    const companyPhoneExists = await Company.findOne({
+      "contactInfo.phoneNumber": data.contactInfo.phoneNumber,
+    });
+    if (companyPhoneExists) {
+      throw ApiError.conflict(
+        "A company with this contact phone number already exists",
+      );
+    }
+
     const company = await Company.create({
-      ownerId,
+      authUserId,
       name: data.name,
       tinNumber: data.tinNumber,
       website: data.website,
       bio: data.bio,
+      licenseDocumentUrl: data.licenseDocumentUrl,
       contactInfo: data.contactInfo,
       location: data.location,
       socialLinks: data.socialLinks,
@@ -60,10 +79,10 @@ export class CompanyService {
   }
 
   /**
-   * Get the company owned by a specific user.
+   * Get the company owned by a specific auth account.
    */
-  async getByOwnerId(ownerId: string): Promise<CompanyDocument | null> {
-    return Company.findOne({ ownerId: new mongoose.Types.ObjectId(ownerId) });
+  async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
+    return Company.findOne({ authUserId });
   }
 
   /**
@@ -71,7 +90,7 @@ export class CompanyService {
    */
   async update(
     companyId: string,
-    ownerId: string,
+    authUserId: string,
     data: UpdateCompanyInput,
   ): Promise<CompanyDocument> {
     // Loads the target company first so ownership and partial field updates can be checked safely.
@@ -81,7 +100,7 @@ export class CompanyService {
     }
 
     // Restricts profile edits to the user who owns the company record.
-    if (company.ownerId.toString() !== ownerId) {
+    if (company.authUserId !== authUserId) {
       throw ApiError.forbidden("You can only update your own company");
     }
 
@@ -91,6 +110,9 @@ export class CompanyService {
     if (data.website !== undefined) company.website = data.website ?? undefined;
     if (data.bio !== undefined) company.bio = data.bio ?? undefined;
     if (data.logoUrl !== undefined) company.logoUrl = data.logoUrl ?? undefined;
+    if (data.licenseDocumentUrl !== undefined) {
+      company.licenseDocumentUrl = data.licenseDocumentUrl ?? undefined;
+    }
 
     if (data.contactInfo) {
       if (data.contactInfo.email)
@@ -140,12 +162,34 @@ export class CompanyService {
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
-        .populate("ownerId", "firstName lastName email phoneNumber"),
+        .lean(),
       Company.countDocuments(filter),
     ]);
 
+    const authUserIds = companies
+      .map((company) => company.authUserId)
+      .filter(
+        (authUserId): authUserId is string =>
+          typeof authUserId === "string" &&
+          mongoose.Types.ObjectId.isValid(authUserId),
+      )
+      .map((authUserId) => new mongoose.Types.ObjectId(authUserId));
+
+    const authAccounts = authUserIds.length
+      ? await User.find({ _id: { $in: authUserIds } })
+          .select("name email accountType status")
+          .lean()
+      : [];
+
+    const authAccountMap = new Map(
+      authAccounts.map((account) => [account._id.toString(), account]),
+    );
+
     return {
-      companies,
+      companies: companies.map((company) => ({
+        ...company,
+        authAccount: authAccountMap.get(company.authUserId) ?? null,
+      })),
       pagination: {
         page,
         limit,
@@ -181,10 +225,7 @@ export class CompanyService {
   /**
    * Admin: Suspend a company with a reason.
    */
-  async suspend(
-    companyId: string,
-    reason: string,
-  ): Promise<CompanyDocument> {
+  async suspend(companyId: string, reason: string): Promise<CompanyDocument> {
     // Suspends the company and records the reason that explains the administrative action.
     const company = await Company.findById(companyId);
     if (!company) {
@@ -200,6 +241,10 @@ export class CompanyService {
 
     await company.save();
     return company;
+  }
+  //check existing company with the same email
+  async findByEmail(email: string): Promise<CompanyDocument | null> {
+    return Company.findOne({ "contactInfo.email": email });
   }
 }
 
