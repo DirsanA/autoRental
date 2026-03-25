@@ -5,6 +5,12 @@ export type BookingStatus =
   | "cancelled"
   | "declined";
 
+export type BookingReview = {
+  rating: number;
+  comment: string;
+  submittedAt: string;
+};
+
 export type Booking = {
   id: string;
   vehicleName: string;
@@ -14,5 +20,5 @@ export type Booking = {
   endDate: string; // ISO date string
   totalAmount: number;
   pickupLocation: string;
+  review?: BookingReview;
 };
-
