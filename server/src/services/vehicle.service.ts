@@ -39,6 +39,20 @@ async function resolveUploadValue(
 }
 
 export class VehicleService {
+  async list(filter?: "available" | "rented" | "maintenance") {
+    const query: { status?: "AVAILABLE" | "BOOKED" | "MAINTENANCE" } = {};
+
+    if (filter === "available") query.status = "AVAILABLE";
+    if (filter === "rented") query.status = "BOOKED";
+    if (filter === "maintenance") query.status = "MAINTENANCE";
+
+    return Vehicle.find(query).sort({ createdAt: -1 });
+  }
+
+  async getById(id: string) {
+    return Vehicle.findById(id);
+  }
+
   async create(data: CreateVehicleInput): Promise<VehicleDocument> {
     const ownerId = data.ownerId
       ? new mongoose.Types.ObjectId(data.ownerId)

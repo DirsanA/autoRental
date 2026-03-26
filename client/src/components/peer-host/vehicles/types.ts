@@ -10,6 +10,14 @@ export type Vehicle = {
   acceptingBookings?: boolean;
   location: string;
   imageUrl?: string;
+  galleryImages?: string[];
+  vin?: string;
+  mileage?: number;
+  fuel?: string;
+  transmission?: string;
+  seats?: number;
+  features?: string[];
+  description?: string;
   ratingAvg: number;
   ratingCount: number;
 };

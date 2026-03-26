@@ -76,12 +76,19 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
   
   const statusInfo = formatStatus(vehicle.status);
   
-  const galleryImages = [
-    vehicle.imageUrl,
-    vehicle.imageUrl,
-    vehicle.imageUrl,
-    vehicle.imageUrl,
-  ].filter(Boolean) as string[];
+  const galleryImages = (() => {
+    const images = [
+      ...(vehicle.galleryImages || []),
+      vehicle.imageUrl,
+    ].filter(Boolean) as string[];
+
+    const unique = [...new Set(images)];
+    if (unique.length > 0) return unique;
+
+    return [
+      "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?auto=format&fit=crop&w=1200&q=80",
+    ];
+  })();
 
   // Vehicle specifications display (using editable details)
   const specifications = [

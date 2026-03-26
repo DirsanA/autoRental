@@ -48,4 +48,11 @@ export const createVehicleSchema = z.object({
   }),
 });
 
+export const vehicleIdParamsSchema = z.object({
+  id: z
+    .string()
+    .trim()
+    .regex(/^[a-f\d]{24}$/i, "Vehicle id must be a valid ObjectId"),
+});
+
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
