@@ -1,19 +1,41 @@
-import { Schema, model, type HydratedDocument } from "mongoose";
+import { Schema, model, type HydratedDocument, type Types } from "mongoose";
 
+export enum AccountType {
+  USER = "USER",
+  COMPANY = "COMPANY",
+  ADMIN = "ADMIN",
+}
+
+export enum VerificationLevel {
+  BASIC = "BASIC",
+  ID_VERIFIED = "ID_VERIFIED",
+  LICENSE_VERIFIED = "LICENSE_VERIFIED",
+}
 /**
  * 1. Interface Definitions
  * Defines the shape of the User data for TypeScript safety across the app.
  */
 export interface IUser {
-  firstName: string;
-  lastName: string;
+  accountType: AccountType;
+  name?: string | undefined;
+  firstName?: string | undefined;
+  lastName?: string | undefined;
   email: string;
-  phoneNumber: string;
-  password: string; // Ideally hashed before saving
-  roles: Schema.Types.ObjectId[];
-  verificationLevel: "BASIC" | "ID_VERIFIED" | "LICENSE_VERIFIED";
+  emailVerified?: boolean | undefined;
+  image?: string | undefined;
+  phoneNumber?: string | undefined;
+  roles: Types.ObjectId[];
+  verificationLevel: VerificationLevel;
   status: "PENDING" | "ACTIVE" | "SUSPENDED";
   walletBalance: number;
+
+  // Identity Verification
+  idNumber?: string | undefined;
+  idImageUrl?: string | undefined;
+
+  // Additional info for Peerhost
+  address?: string | undefined;
+
   lastLogin?: Date | undefined;
   createdAt?: Date | undefined;
   updatedAt?: Date | undefined;
@@ -27,16 +49,24 @@ export type UserDocument = HydratedDocument<IUser>;
  */
 const userSchema = new Schema<IUser>(
   {
+    accountType: {
+      type: String,
+      enum: AccountType,
+      default: AccountType.USER,
+      required: true,
+    },
+    name: {
+      type: String,
+      trim: true,
+    },
     firstName: {
       type: String,
-      required: [true, "First name is required"],
       trim: true,
       minlength: 2,
       maxlength: 50,
     },
     lastName: {
       type: String,
-      required: [true, "Last name is required"],
       trim: true,
       minlength: 2,
       maxlength: 50,
@@ -52,27 +82,29 @@ const userSchema = new Schema<IUser>(
         "Please provide a valid email address",
       ],
     },
+    emailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    image: {
+      type: String,
+      trim: true,
+    },
     phoneNumber: {
       type: String,
-      required: [true, "Phone number is required"],
       unique: true,
+      sparse: true,
       trim: true,
       match: [
         /^\+?[1-9]\d{1,14}$/,
         "Phone number must be in valid E.164 format",
       ],
     },
-    password: {
-      type: String,
-      required: [true, "Password is required"],
-      // Use select: false in production to hide hash from accidental API exposure
-      select: false,
-    },
     roles: [{ type: Schema.Types.ObjectId, ref: "Role" }],
     verificationLevel: {
       type: String,
-      enum: ["BASIC", "ID_VERIFIED", "LICENSE_VERIFIED"],
-      default: "BASIC",
+      enum: VerificationLevel,
+      default: VerificationLevel.BASIC,
     },
     status: {
       type: String,
@@ -84,14 +116,17 @@ const userSchema = new Schema<IUser>(
       default: 0,
       min: [0, "Wallet balance cannot be negative"],
     },
+    idNumber: { type: String, trim: true },
+    idImageUrl: { type: String, trim: true },
+    address: { type: String, trim: true },
     lastLogin: { type: Date },
   },
   {
+    collection: "user",
     timestamps: true,
     toJSON: {
       virtuals: true,
       transform: (_doc, ret: Record<string, any>) => {
-        delete ret.password; // Security: Never expose password hashes in API responses
         delete ret.__v;
         ret.id = ret._id.toString();
         delete ret._id;
@@ -104,10 +139,9 @@ const userSchema = new Schema<IUser>(
 
 /**
  * 3. Performance Indexing
- * Optimized for high-frequency queries on identity and account status.
+ * Optimized for high-frequency queries on account type and lifecycle state.
  */
-userSchema.index({ email: 1 });
-userSchema.index({ phoneNumber: 1 });
+userSchema.index({ accountType: 1 });
 userSchema.index({ status: 1 });
 
 export const User = model<IUser>("User", userSchema);
