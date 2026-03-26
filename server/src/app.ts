@@ -34,8 +34,8 @@ export function createApp(auth: Auth) {
 
   // --- Body parsing ---
   // Mounted before API routes so our custom auth endpoints can read req.body.
-  app.use(express.json({ limit: "10mb" }));
-  app.use(express.urlencoded({ extended: true }));
+  app.use(express.json({ limit: "50mb" }));
+  app.use(express.urlencoded({ extended: true, limit: "50mb" }));
 
   // --- Health check ---
   app.get("/health", (_req, res) => {
@@ -58,4 +58,3 @@ export function createApp(auth: Auth) {
 
   return app;
 }
-
