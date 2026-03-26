@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { vehicleService } from "../services/vehicle.service.js";
+import type { UpdateVehicleStatusInput } from "../validators/vehicle.validator.js";
 
 export const vehicleController = {
   list: asyncHandler(async (req: Request, res: Response) => {
@@ -36,6 +37,22 @@ export const vehicleController = {
     res.json({
       success: true,
       data: { vehicle },
+    });
+  }),
+
+  updateStatus: asyncHandler(async (req: Request, res: Response) => {
+    const { status } = req.body as UpdateVehicleStatusInput;
+    const vehicle = await vehicleService.updateStatus(
+      req.params.id as string,
+      status,
+    );
+
+    res.json({
+      success: true,
+      data: {
+        vehicle,
+        message: "Vehicle status updated successfully.",
+      },
     });
   }),
 

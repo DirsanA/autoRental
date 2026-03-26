@@ -1,4 +1,4 @@
-import type { Vehicle, VehicleStatus } from "./types";
+import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
 
 type ApiVehicle = {
   id: string;
@@ -23,19 +23,29 @@ type ApiVehicle = {
 };
 
 function mapStatus(status?: string): VehicleStatus {
-  switch (status) {
+  const normalized = status?.trim().toUpperCase();
+
+  switch (normalized) {
     case "AVAILABLE":
       return "available";
     case "BOOKED":
+    case "RENTED":
       return "rented";
     case "MAINTENANCE":
       return "maintenance";
+    case "PENDING_APPROVAL":
+    case "PENDING":
+      return "pending_approval";
+    case "RETIRED":
+    case "INACTIVE":
+      return "retired";
     default:
       return "maintenance";
   }
 }
 
 function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
+  const mappedStatus = mapStatus(vehicle.status);
   const imageFromGallery = Array.isArray(vehicle.photos?.gallery)
     ? vehicle.photos?.gallery[0]
     : undefined;
@@ -56,8 +66,8 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     features: Array.isArray(vehicle.features) ? vehicle.features : [],
     description: vehicle.condition,
     dailyRate: typeof vehicle.price === "number" ? vehicle.price : 0,
-    status: mapStatus(vehicle.status),
-    acceptingBookings: vehicle.status === "AVAILABLE",
+    status: mappedStatus,
+    acceptingBookings: mappedStatus === "available",
     location: vehicle.delivery || vehicle.availability || "Ethiopia",
     imageUrl: vehicle.photos?.front || imageFromGallery,
     galleryImages,
@@ -69,7 +79,7 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
 
-export async function fetchPeerHostVehicles(filter?: VehicleStatus) {
+export async function fetchPeerHostVehicles(filter?: VehicleFilterStatus) {
   const query = filter ? `?filter=${encodeURIComponent(filter)}` : "";
   const response = await fetch(`${API_BASE_URL}/vehicles${query}`, {
     cache: "no-store",
@@ -119,6 +129,49 @@ export async function fetchPeerHostVehicleById(id: string) {
 
   const vehicle = payload.data?.vehicle;
   if (!vehicle) return null;
+
+  return mapApiVehicleToCard(vehicle);
+}
+
+export async function updatePeerHostVehicleAvailability(
+  id: string,
+  acceptingBookings: boolean,
+) {
+  const status = acceptingBookings ? "AVAILABLE" : "MAINTENANCE";
+
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}/status`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status }),
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to update vehicle availability (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { vehicle?: ApiVehicle };
+  };
+
+  const vehicle = payload.data?.vehicle;
+  if (!vehicle) {
+    throw new Error("Vehicle status updated but response was empty.");
+  }
 
   return mapApiVehicleToCard(vehicle);
 }
