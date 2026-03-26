@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { cn } from "@/lib/utils";
-import { sampleVehicles } from "./data";
 import type { VehicleStatus } from "./types";
+import { fetchPeerHostVehicles } from "./api";
 
 function statusBadgeVariant(
   status: VehicleStatus
@@ -32,27 +32,35 @@ function formatStatus(status: VehicleStatus) {
   }
 }
 
-export function PeerHostVehiclesPage({
+export async function PeerHostVehiclesPage({
   filter,
 }: {
   filter?: VehicleStatus;
 }) {
-  const vehicles = filter
-    ? sampleVehicles.filter((v) => v.status === filter)
-    : sampleVehicles;
+  let vehicles = [] as Awaited<ReturnType<typeof fetchPeerHostVehicles>>;
+  let loadError: string | null = null;
+
+  try {
+    vehicles = await fetchPeerHostVehicles(filter);
+  } catch (error) {
+    loadError =
+      error instanceof Error
+        ? error.message
+        : "Failed to load vehicles from server.";
+  }
 
   const title = filter ? `My Vehicles · ${formatStatus(filter)}` : "My Vehicles";
 
   // Smart Stats (later replace with backend aggregation)
-  const availableCount = sampleVehicles.filter(
+  const availableCount = vehicles.filter(
     (v) => v.status === "available"
   ).length;
 
-  const rentedCount = sampleVehicles.filter(
+  const rentedCount = vehicles.filter(
     (v) => v.status === "rented"
   ).length;
 
-  const maintenanceCount = sampleVehicles.filter(
+  const maintenanceCount = vehicles.filter(
     (v) => v.status === "maintenance"
   ).length;
 
@@ -136,6 +144,12 @@ export function PeerHostVehiclesPage({
 
         {/* ===== VEHICLE GRID ===== */}
         <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-2 mt-10">
+          {loadError && (
+            <div className="col-span-full py-6 text-center">
+              <p className="text-red-600 dark:text-red-400 text-sm">{loadError}</p>
+            </div>
+          )}
+
           {vehicles.length === 0 && (
             <div className="col-span-full py-20 text-center">
               <p className="text-muted-foreground dark:text-slate-400 text-lg">

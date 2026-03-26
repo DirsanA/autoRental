@@ -21,14 +21,35 @@ export const defaultSpecifications = {
 };
 
 export function createEditableDetails(vehicle: Vehicle): EditableVehicleDetails {
+  const inferredFuelType = vehicle.fuel
+    ? `${vehicle.fuel.charAt(0).toUpperCase()}${vehicle.fuel.slice(1)}`
+    : defaultSpecifications.fuelType;
+  const inferredTransmission = vehicle.transmission
+    ? `${vehicle.transmission.charAt(0).toUpperCase()}${vehicle.transmission.slice(1)}`
+    : defaultSpecifications.transmission;
+
   return {
     make: vehicle.make,
     model: vehicle.model,
     year: vehicle.year,
     location: vehicle.location,
     dailyRate: vehicle.dailyRate,
-    description: defaultDescription,
-    features: [...defaultFeatures],
-    specifications: { ...defaultSpecifications }
+    description: vehicle.description || defaultDescription,
+    features:
+      vehicle.features && vehicle.features.length > 0
+        ? [...vehicle.features]
+        : [...defaultFeatures],
+    specifications: {
+      mileage:
+        typeof vehicle.mileage === "number"
+          ? `${vehicle.mileage.toLocaleString()} km`
+          : defaultSpecifications.mileage,
+      fuelType: inferredFuelType,
+      transmission: inferredTransmission,
+      seats: vehicle.seats || defaultSpecifications.seats,
+      mpg: defaultSpecifications.mpg,
+      ac: defaultSpecifications.ac,
+      connectivity: defaultSpecifications.connectivity,
+    },
   };
 }
