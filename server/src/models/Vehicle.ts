@@ -1,56 +1,66 @@
-import { Schema, model, type HydratedDocument } from "mongoose";
+import { Schema, model, type HydratedDocument, type Types } from "mongoose";
 
 /**
  * 1. Interface Definitions
  */
-export interface IGeoPoint {
-  type: "Point";
-  coordinates: [number, number]; // [longitude, latitude]
+export type VehicleOwnerType = "User" | "Company";
+export type VehicleFuel = "petrol" | "diesel" | "hybrid" | "electric";
+export type VehicleTransmission = "manual" | "automatic" | "cvt";
+export type VehicleStatus =
+  | "AVAILABLE"
+  | "BOOKED"
+  | "MAINTENANCE"
+  | "RETIRED"
+  | "PENDING_APPROVAL";
+
+export interface IVehiclePhotos {
+  front?: string | undefined;
+  back?: string | undefined;
+  side?: string | undefined;
+  interior?: string | undefined;
+  gallery?: string[] | undefined;
 }
 
-export interface IVehicleFeatures {
-  transmission?: "MANUAL" | "AUTOMATIC" | undefined;
-  fuelType?: "PETROL" | "DIESEL" | "ELECTRIC" | "HYBRID" | undefined;
-  seatingCapacity?: number | undefined;
-  hasAC?: boolean | undefined;
-  hasGPS?: boolean | undefined;
+export interface IVehicleDocuments {
+  ownership?: string | undefined;
+  insurance?: string | undefined;
 }
 
 export interface IVehicle {
-  // Ownership (Polymorphic)
-  ownerId: Schema.Types.ObjectId;
-  ownerType: "User" | "Company";
+  // Ownership
+  ownerId: Types.ObjectId;
+  ownerType: VehicleOwnerType;
 
-  // Basic Details
-  brand: string;
+  // Become Host: Car details
+  make: string;
   model: string;
   year: number;
-  plateNumber: string;
-  category: "SEDAN" | "SUV" | "LUXURY" | "TRUCK" | "VAN";
+  vin?: string | undefined;
+  plate: string;
 
-  // Rental Configuration
-  isDriverAvailable: boolean;
-  canSelfDrive: boolean;
-  minRentalHours: number;
-  pricePerHour: number;
+  // Become Host: Specs and comfort
+  mileage?: number | undefined;
+  fuel?: VehicleFuel | undefined;
+  transmission?: VehicleTransmission | undefined;
+  seats?: number | undefined;
+  features: string[];
+  condition?: string | undefined;
 
-  // Location Management (Pickup & Return can be different)
-  pickupLocation: IGeoPoint;
-  returnLocation: IGeoPoint;
-  addressName?: string | undefined;
+  // Become Host: Pricing
+  price: number;
+  weeklyDiscount?: number | undefined;
+  monthlyDiscount?: number | undefined;
 
-  // Status & Availability
-  status:
-    | "AVAILABLE"
-    | "BOOKED"
-    | "MAINTENANCE"
-    | "RETIRED"
-    | "PENDING_APPROVAL";
+  // Become Host: Optional availability and delivery notes
+  availability?: string | undefined;
+  delivery?: string | undefined;
 
-  // Dynamic Features
-  features?: IVehicleFeatures | undefined;
+  // Become Host: Uploaded media and documents
+  photos?: IVehiclePhotos | undefined;
+  documents?: IVehicleDocuments | undefined;
 
-  images: string[];
+  // Lifecycle
+  status: VehicleStatus;
   verifiedAt?: Date | undefined;
 
   createdAt?: Date | undefined;
@@ -62,10 +72,21 @@ export type VehicleDocument = HydratedDocument<IVehicle>;
 /**
  * 2. Schema Definition
  */
-const pointSchema = new Schema<IGeoPoint>(
+const photosSchema = new Schema<IVehiclePhotos>(
   {
-    type: { type: String, enum: ["Point"], default: "Point" },
-    coordinates: { type: [Number], required: true },
+    front: { type: String, trim: true },
+    back: { type: String, trim: true },
+    side: { type: String, trim: true },
+    interior: { type: String, trim: true },
+    gallery: { type: [String], default: [] },
+  },
+  { _id: false },
+);
+
+const documentsSchema = new Schema<IVehicleDocuments>(
+  {
+    ownership: { type: String, trim: true },
+    insurance: { type: String, trim: true },
   },
   { _id: false },
 );
@@ -75,28 +96,34 @@ const vehicleSchema = new Schema<IVehicle>(
     ownerId: { type: Schema.Types.ObjectId, required: true, refPath: "ownerType" },
     ownerType: { type: String, required: true, enum: ["User", "Company"] },
 
-    brand: { type: String, required: true, trim: true },
+    make: { type: String, required: true, trim: true },
     model: { type: String, required: true, trim: true },
-    year: { type: Number, required: true },
-    plateNumber: { type: String, required: true, unique: true, trim: true },
-    category: {
+    year: { type: Number, required: true, min: 1900 },
+    vin: { type: String, trim: true, uppercase: true },
+    plate: { type: String, required: true, unique: true, trim: true, uppercase: true },
+
+    mileage: { type: Number, min: 0 },
+    fuel: {
       type: String,
-      enum: ["SEDAN", "SUV", "LUXURY", "TRUCK", "VAN"],
-      required: true,
+      enum: ["petrol", "diesel", "hybrid", "electric"],
     },
-
-    isDriverAvailable: { type: Boolean, default: false },
-    canSelfDrive: {
-      type: Boolean,
-      default: true,
-      alias: "allowsSelfDrive",
+    transmission: {
+      type: String,
+      enum: ["manual", "automatic", "cvt"],
     },
-    minRentalHours: { type: Number, default: 24 },
-    pricePerHour: { type: Number, required: true },
+    seats: { type: Number, min: 1 },
+    features: { type: [String], default: [] },
+    condition: { type: String, trim: true },
 
-    pickupLocation: { type: pointSchema, required: true },
-    returnLocation: { type: pointSchema, required: true },
-    addressName: { type: String, trim: true },
+    price: { type: Number, required: true, min: 0 },
+    weeklyDiscount: { type: Number, min: 0, max: 100 },
+    monthlyDiscount: { type: Number, min: 0, max: 100 },
+
+    availability: { type: String, trim: true },
+    delivery: { type: String, trim: true },
+
+    photos: { type: photosSchema, default: {} },
+    documents: { type: documentsSchema, default: {} },
 
     status: {
       type: String,
@@ -104,15 +131,6 @@ const vehicleSchema = new Schema<IVehicle>(
       default: "PENDING_APPROVAL",
     },
 
-    features: {
-      transmission: { type: String, enum: ["MANUAL", "AUTOMATIC"] },
-      fuelType: { type: String, enum: ["PETROL", "DIESEL", "ELECTRIC", "HYBRID"] },
-      seatingCapacity: { type: Number },
-      hasAC: { type: Boolean, default: true },
-      hasGPS: { type: Boolean, default: true },
-    },
-
-    images: { type: [String], default: [] },
     verifiedAt: { type: Date },
   },
   {
@@ -134,9 +152,8 @@ const vehicleSchema = new Schema<IVehicle>(
  * 3. Performance Indexing
  */
 vehicleSchema.index({ ownerId: 1, ownerType: 1 });
-vehicleSchema.index({ plateNumber: 1 }, { unique: true });
 vehicleSchema.index({ status: 1 });
-vehicleSchema.index({ category: 1 });
-vehicleSchema.index({ pickupLocation: "2dsphere" });
+vehicleSchema.index({ make: 1, model: 1, year: -1 });
+vehicleSchema.index({ price: 1 });
 
 export const Vehicle = model<IVehicle>("Vehicle", vehicleSchema);

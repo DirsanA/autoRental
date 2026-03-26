@@ -6,7 +6,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import {
@@ -22,7 +21,6 @@ import {
   ChevronRight, 
   ChevronLeft,
   Car,
-  Shield,
   DollarSign,
   FileText,
   Upload,
@@ -33,15 +31,17 @@ import {
   AlertCircle,
   Eye,
   Bell,
+  Plus,
   Fuel,
   Gauge,
-  Settings
+  Settings,
+  Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-type HostStep = "car" | "documents" | "protection" | "pricing" | "terms";
+type HostStep = "car" | "documents" | "pricing" | "terms";
 type PhotoKey = "front" | "back" | "side" | "interior";
-type DocumentKey = "nationalId" | "ownership" | "insurance" | "license";
+type DocumentKey = "ownership" | "insurance";
 
 interface UploadedFile {
   file: File;
@@ -51,9 +51,25 @@ interface UploadedFile {
   type: string;
 }
 
+const suggestedFeatures = [
+  "Bluetooth",
+  "Backup Camera",
+  "Heated Seats",
+  "Lane Assist",
+  "Keyless Entry",
+  "USB Ports",
+  "Sunroof",
+  "Premium Sound",
+];
+
 export function PeerHostBecomeHostPage() {
+  const apiBaseUrl =
+    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
   const [step, setStep] = useState<HostStep>("car");
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [newFeature, setNewFeature] = useState("");
   const [photos, setPhotos] = useState<Record<PhotoKey, UploadedFile | null>>({
     front: null,
     back: null,
@@ -62,13 +78,9 @@ export function PeerHostBecomeHostPage() {
   });
   
   const [documents, setDocuments] = useState<Record<DocumentKey, UploadedFile | null>>({
-    nationalId: null,
     ownership: null,
     insurance: null,
-    license: null,
   });
-
-  const [selectedProtection, setSelectedProtection] = useState<string | null>(null);
   
   const [formData, setFormData] = useState({
     make: "",
@@ -79,7 +91,8 @@ export function PeerHostBecomeHostPage() {
     mileage: "",
     fuel: "",
     transmission: "",
-    features: "",
+    seats: "",
+    features: [] as string[],
     condition: "",
     price: "",
     weeklyDiscount: "",
@@ -91,7 +104,6 @@ export function PeerHostBecomeHostPage() {
   const steps = [
     { id: "car", label: "Car Details", icon: Car },
     { id: "documents", label: "Documents", icon: FileCheck },
-    { id: "protection", label: "Protection", icon: Shield },
     { id: "pricing", label: "Pricing", icon: DollarSign },
     { id: "terms", label: "Submit", icon: FileText },
   ] as const;
@@ -131,10 +143,8 @@ export function PeerHostBecomeHostPage() {
                           </div>
                           <div className="flex-1 min-w-0">
                             <p className="font-medium dark:text-slate-200 text-sm truncate">
-                              {key === 'nationalId' && 'National ID'}
                               {key === 'ownership' && 'Ownership Certificate'}
                               {key === 'insurance' && 'Insurance'}
-                              {key === 'license' && "Driver's License"}
                             </p>
                             <p className="text-muted-foreground dark:text-slate-400 text-xs truncate">{file.name}</p>
                           </div>
@@ -160,7 +170,7 @@ export function PeerHostBecomeHostPage() {
               </div>
 
               <p className="mt-4 sm:mt-6 text-muted-foreground dark:text-slate-400 text-xs">
-                You'll receive an email once your verification is complete
+                You&apos;ll receive an email once your verification is complete
               </p>
             </CardContent>
           </Card>
@@ -217,26 +227,161 @@ export function PeerHostBecomeHostPage() {
     setDocuments(prev => ({ ...prev, [key]: null }));
   }
 
+  function addFeature(feature: string) {
+    const normalized = feature.trim();
+    if (!normalized) return;
+
+    setFormData(prev => {
+      if (prev.features.some((item) => item.toLowerCase() === normalized.toLowerCase())) {
+        return prev;
+      }
+
+      return { ...prev, features: [...prev.features, normalized] };
+    });
+    setNewFeature("");
+  }
+
+  function removeFeature(index: number) {
+    setFormData(prev => ({
+      ...prev,
+      features: prev.features.filter((_, i) => i !== index),
+    }));
+  }
+
+  const parseOptionalNumber = (value: string) => {
+    const trimmed = value.trim();
+    if (!trimmed) return undefined;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const parseRequiredNumber = (value: string) => {
+    const parsed = Number(value.trim());
+    return Number.isFinite(parsed) ? parsed : undefined;
+  };
+
+  const yearNumber = parseRequiredNumber(formData.year);
+  const seatsNumber = parseRequiredNumber(formData.seats);
+  const priceNumber = parseRequiredNumber(formData.price);
+
+  const isCarStepComplete =
+    !!formData.make.trim() &&
+    !!formData.model.trim() &&
+    !!yearNumber &&
+    yearNumber >= 1900 &&
+    yearNumber <= 2100 &&
+    !!seatsNumber &&
+    seatsNumber >= 1 &&
+    formData.features.length > 0 &&
+    Object.values(photos).filter(Boolean).length >= 4;
+
+  const isDocumentsStepComplete =
+    !!documents.ownership && !!documents.insurance;
+
+  const isPricingStepComplete = !!priceNumber && priceNumber >= 0;
+
   const isStepComplete = () => {
     switch (step) {
       case "car":
-        return formData.make && formData.model && formData.year && 
-               Object.values(photos).filter(Boolean).length >= 4;
+        return isCarStepComplete;
       case "documents":
-        return documents.nationalId && documents.ownership && 
-               documents.insurance && documents.license;
-      case "protection":
-        return selectedProtection !== null;
+        return isDocumentsStepComplete;
       case "pricing":
-        return formData.price;
+        return isPricingStepComplete;
+      case "terms":
+        return isCarStepComplete && isDocumentsStepComplete && isPricingStepComplete;
       default:
         return true;
     }
   };
 
-  function handleSubmit() {
-    setIsSubmitted(true);
-    // In real app, send data to API
+  async function handleSubmit() {
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    try {
+      const mileageNumber = parseOptionalNumber(formData.mileage);
+      const weeklyDiscountNumber = parseOptionalNumber(formData.weeklyDiscount);
+      const monthlyDiscountNumber = parseOptionalNumber(formData.monthlyDiscount);
+
+      if (!yearNumber || yearNumber < 1900 || yearNumber > 2100) {
+        throw new Error("Year must be a valid number between 1900 and 2100");
+      }
+      if (!seatsNumber || seatsNumber < 1) {
+        throw new Error("Seats must be at least 1");
+      }
+      if (priceNumber === undefined || priceNumber < 0) {
+        throw new Error("Price must be a valid number");
+      }
+      if (!photos.front || !photos.back || !photos.side || !photos.interior) {
+        throw new Error("Please upload all 4 required car photos");
+      }
+      if (!documents.ownership || !documents.insurance) {
+        throw new Error("Please upload ownership and insurance documents");
+      }
+
+      const payload = {
+        make: formData.make.trim(),
+        model: formData.model.trim(),
+        year: yearNumber,
+        vin: formData.vin.trim() || undefined,
+        plate: formData.plate.trim(),
+
+        mileage: mileageNumber,
+        fuel: formData.fuel || undefined,
+        transmission: formData.transmission || undefined,
+        seats: seatsNumber,
+        features: formData.features,
+        condition: formData.condition.trim() || undefined,
+
+        price: priceNumber,
+        weeklyDiscount: weeklyDiscountNumber,
+        monthlyDiscount: monthlyDiscountNumber,
+        availability: formData.availability.trim() || undefined,
+        delivery: formData.delivery.trim() || undefined,
+
+        photos: {
+          front: photos.front.preview,
+          back: photos.back.preview,
+          side: photos.side.preview,
+          interior: photos.interior.preview,
+        },
+        documents: {
+          ownership: documents.ownership.preview,
+          insurance: documents.insurance.preview,
+        },
+      };
+
+      const response = await fetch(`${apiBaseUrl}/vehicles`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify(payload),
+      });
+
+      const result = await response.json().catch(() => null);
+
+      if (!response.ok || !result?.success) {
+        const detail = result?.error?.details?.[0];
+        const detailMessage =
+          detail && typeof detail.field === "string"
+            ? `${detail.field}: ${detail.message}`
+            : null;
+        throw new Error(
+          detailMessage || result?.error?.message || "Failed to submit vehicle",
+        );
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      setSubmitError(
+        error instanceof Error ? error.message : "Failed to submit vehicle",
+      );
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -257,7 +402,7 @@ export function PeerHostBecomeHostPage() {
                 </h1>
               </div>
               <p className="text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">
-                List your car and start earning in 5 simple steps
+                List your car and start earning in 4 simple steps
               </p>
             </div>
             
@@ -341,6 +486,9 @@ export function PeerHostBecomeHostPage() {
                     <div className="space-y-1 sm:space-y-2">
                       <Label className="text-muted-foreground dark:text-slate-400 text-xs">Year</Label>
                       <Input 
+                        type="number"
+                        min="1900"
+                        max="2100"
                         placeholder="e.g. 2022"
                         value={formData.year}
                         onChange={(e) => setFormData({...formData, year: e.target.value})}
@@ -372,7 +520,7 @@ export function PeerHostBecomeHostPage() {
                   </div>
 
                   {/* Specs with Dropdowns */}
-                  <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-3">
+                  <div className="gap-3 sm:gap-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                     <div className="space-y-1 sm:space-y-2">
                       <Label className="flex items-center gap-1 text-muted-foreground dark:text-slate-400 text-xs">
                         <Gauge className="w-3 h-3" /> Mileage
@@ -425,6 +573,103 @@ export function PeerHostBecomeHostPage() {
                           <SelectItem value="cvt">CVT</SelectItem>
                         </SelectContent>
                       </Select>
+                    </div>
+
+                    {/* Seats */}
+                    <div className="space-y-1 sm:space-y-2">
+                      <Label className="flex items-center gap-1 text-muted-foreground dark:text-slate-400 text-xs">
+                        <Users className="w-3 h-3" /> Seats
+                      </Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        placeholder="e.g. 5"
+                        value={formData.seats}
+                        onChange={(e) => setFormData({...formData, seats: e.target.value})}
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Features */}
+                  <div className="space-y-2 sm:space-y-3">
+                    <div className="flex justify-between items-center">
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">Car Features (at least 1)</Label>
+                      <Badge variant="outline" className={cn(
+                        "text-xs",
+                        formData.features.length > 0
+                          ? "bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950 dark:text-emerald-400 dark:border-emerald-800"
+                          : "dark:border-slate-700 dark:text-slate-400"
+                      )}>
+                        {formData.features.length} added
+                      </Badge>
+                    </div>
+
+                    {formData.features.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {formData.features.map((feature, index) => (
+                          <Badge
+                            key={`${feature}-${index}`}
+                            className="gap-1 bg-slate-100 dark:bg-slate-800 px-2.5 py-1 text-slate-700 dark:text-slate-300"
+                          >
+                            {feature}
+                            <X
+                              className="w-3 h-3 hover:text-red-500 cursor-pointer"
+                              onClick={() => removeFeature(index)}
+                            />
+                          </Badge>
+                        ))}
+                      </div>
+                    )}
+
+                    <div className="flex gap-2">
+                      <Input
+                        placeholder="Add a feature..."
+                        value={newFeature}
+                        onChange={(e) => setNewFeature(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            addFeature(newFeature);
+                          }
+                        }}
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="dark:hover:bg-slate-700 dark:border-slate-700 w-9 sm:w-10 h-9 sm:h-10"
+                        onClick={() => addFeature(newFeature)}
+                      >
+                        <Plus className="w-4 h-4" />
+                      </Button>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {suggestedFeatures.map((feature) => {
+                        const isSelected = formData.features.some(
+                          (item) => item.toLowerCase() === feature.toLowerCase(),
+                        );
+
+                        return (
+                          <Button
+                            key={feature}
+                            type="button"
+                            variant={isSelected ? "default" : "outline"}
+                            size="sm"
+                            disabled={isSelected}
+                            className={cn(
+                              "h-7 rounded-full px-3 text-[10px] sm:text-xs",
+                              isSelected
+                                ? "bg-blue-600 hover:bg-blue-600 text-white"
+                                : "dark:border-slate-700 dark:text-slate-300"
+                            )}
+                            onClick={() => addFeature(feature)}
+                          >
+                            {feature}
+                          </Button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -519,10 +764,8 @@ export function PeerHostBecomeHostPage() {
                   </div>
 
                   {[
-                    { key: "nationalId" as DocumentKey, label: "National ID", description: "Front and back of your ID" },
                     { key: "ownership" as DocumentKey, label: "Vehicle Ownership", description: "Proof of ownership" },
                     { key: "insurance" as DocumentKey, label: "Insurance", description: "Valid insurance policy" },
-                    { key: "license" as DocumentKey, label: "Driver's License", description: "Valid driving license" },
                   ].map(({ key, label, description }) => {
                     const doc = documents[key];
                     
@@ -584,54 +827,6 @@ export function PeerHostBecomeHostPage() {
                   })}
                 </div>
               )}
-
-              {/* STEP 3: Protection */}
-              {step === "protection" && (
-                <div className="space-y-3 sm:space-y-4">
-                  {[
-                    {
-                      id: "standard",
-                      title: "Standard Protection",
-                      desc: "Basic coverage for peace of mind",
-                      features: ["Basic liability", "Roadside assistance", "Theft protection"],
-                      price: "15%"
-                    },
-                    {
-                      id: "premium",
-                      title: "Premium Protection",
-                      desc: "Comprehensive coverage",
-                      features: ["Full liability", "Premium assistance", "Full damage cover"],
-                      price: "20%"
-                    },
-                  ].map((plan) => (
-                    <button
-                      key={plan.id}
-                      onClick={() => setSelectedProtection(plan.id)}
-                      className={cn(
-                        "p-3 sm:p-4 border-2 rounded-xl w-full text-left transition-all",
-                        selectedProtection === plan.id 
-                          ? "border-blue-500 bg-blue-50 dark:border-blue-600 dark:bg-blue-950/50" 
-                          : "border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600"
-                      )}
-                    >
-                      <div className="flex justify-between items-center mb-1 sm:mb-2">
-                        <h3 className="font-semibold dark:text-slate-200 text-sm sm:text-base">{plan.title}</h3>
-                        <Badge variant="outline" className="dark:border-slate-600 dark:text-slate-300 text-xs">{plan.price}</Badge>
-                      </div>
-                      <p className="mb-2 text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">{plan.desc}</p>
-                      <ul className="space-y-0.5 sm:space-y-1">
-                        {plan.features.map((f, i) => (
-                          <li key={i} className="flex items-center gap-1 sm:gap-2 dark:text-slate-300 text-xs sm:text-sm">
-                            <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4 text-emerald-500 dark:text-emerald-400 shrink-0" />
-                            <span>{f}</span>
-                          </li>
-                        ))}
-                      </ul>
-                    </button>
-                  ))}
-                </div>
-              )}
-
               {/* STEP 4: Pricing */}
               {step === "pricing" && (
                 <div className="space-y-4 sm:space-y-6">
@@ -697,10 +892,9 @@ export function PeerHostBecomeHostPage() {
                 <h3 className="font-semibold text-[10px] text-muted-foreground dark:text-slate-400 sm:text-xs uppercase">Completion</h3>
                 
                 {[
-                  { label: "Car Details", complete: formData.make && formData.model && Object.values(photos).filter(Boolean).length >= 4 },
-                  { label: "Documents", complete: documents.nationalId && documents.ownership && documents.insurance },
-                  { label: "Protection", complete: selectedProtection !== null },
-                  { label: "Pricing", complete: !!formData.price },
+                  { label: "Car Details", complete: isCarStepComplete },
+                  { label: "Documents", complete: isDocumentsStepComplete },
+                  { label: "Pricing", complete: isPricingStepComplete },
                 ].map((item, i) => (
                   <div key={i} className="flex justify-between items-center">
                     <span className="dark:text-slate-300 text-xs sm:text-sm">{item.label}</span>
@@ -716,6 +910,11 @@ export function PeerHostBecomeHostPage() {
               </div>
 
               {/* Navigation */}
+              {submitError && (
+                <p className="text-red-600 dark:text-red-400 text-xs sm:text-sm text-center">
+                  {submitError}
+                </p>
+              )}
               <div className="flex gap-2 sm:gap-3 pt-2 sm:pt-4">
                 <Button
                   variant="outline"
@@ -733,10 +932,10 @@ export function PeerHostBecomeHostPage() {
                 {step === "terms" ? (
                   <Button
                     onClick={handleSubmit}
-                    disabled={!isStepComplete()}
+                    disabled={!isStepComplete() || isSubmitting}
                     className="flex-1 gap-1 sm:gap-2 bg-gradient-to-r from-emerald-500 hover:from-emerald-600 dark:from-emerald-600 dark:hover:from-emerald-700 to-green-600 hover:to-green-700 dark:hover:to-green-800 dark:to-green-700 h-8 sm:h-10 text-white text-xs sm:text-sm"
                   >
-                    Submit
+                    {isSubmitting ? "Submitting..." : "Submit"}
                     <CheckCircle2 className="w-3 sm:w-4 h-3 sm:h-4" />
                   </Button>
                 ) : (

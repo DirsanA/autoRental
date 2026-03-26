@@ -85,12 +85,6 @@ const dashboardRoutes: Route[] = [
     link: "/peerhost/reviews",
   },
   {
-    id: "profile-verification",
-    title: "Profile & Verification",
-    icon: <Shield className="size-4" />,
-    link: "/peerhost/profile-verification",
-  },
-  {
     id: "become-a-host",
     title: "Become a Host",
     icon: <MessageSquare className="size-4" />,

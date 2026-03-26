@@ -3,6 +3,7 @@ import { createAuthRoutes } from "./auth.routes.js";
 import { createUserRoutes } from "./user.routes.js";
 import { createCompanyRoutes } from "./company.routes.js";
 import { createVerificationRoutes } from "./verification.routes.js";
+import { createVehicleRoutes } from "./vehicle.routes.js";
 import type { Auth } from "../config/auth.js";
 
 /**
@@ -17,6 +18,7 @@ export function createApiRoutes(auth: Auth): Router {
   router.use("/users", createUserRoutes(auth));
   router.use("/companies", createCompanyRoutes(auth));
   router.use("/verifications", createVerificationRoutes(auth));
+  router.use("/vehicles", createVehicleRoutes(auth));
 
   return router;
 }
