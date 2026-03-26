@@ -1,4 +1,11 @@
-export type VehicleStatus = "available" | "rented" | "maintenance";
+export type VehicleStatus =
+  | "available"
+  | "rented"
+  | "maintenance"
+  | "pending_approval"
+  | "retired";
+
+export type VehicleFilterStatus = "available" | "rented" | "maintenance";
 
 export type Vehicle = {
   id: string;

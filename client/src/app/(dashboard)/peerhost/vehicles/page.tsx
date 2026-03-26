@@ -1,5 +1,5 @@
 import { PeerHostVehiclesPage } from "@/components/peer-host/vehicles/vehicles-page";
-import type { VehicleStatus } from "@/components/peer-host/vehicles/types";
+import type { VehicleFilterStatus } from "@/components/peer-host/vehicles/types";
 
 export default async function PeerHostVehiclesRoute({
   searchParams,
@@ -9,12 +9,11 @@ export default async function PeerHostVehiclesRoute({
   const params = (await searchParams) ?? {};
   const filterRaw = params.filter;
   const filter = (Array.isArray(filterRaw) ? filterRaw[0] : filterRaw) as
-    | VehicleStatus
+    | VehicleFilterStatus
     | undefined;
 
-  const allowed: VehicleStatus[] = ["available", "rented", "maintenance"];
+  const allowed: VehicleFilterStatus[] = ["available", "rented", "maintenance"];
   const safeFilter = filter && allowed.includes(filter) ? filter : undefined;
 
   return <PeerHostVehiclesPage filter={safeFilter} />;
 }
-

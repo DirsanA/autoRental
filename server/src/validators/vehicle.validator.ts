@@ -55,4 +55,15 @@ export const vehicleIdParamsSchema = z.object({
     .regex(/^[a-f\d]{24}$/i, "Vehicle id must be a valid ObjectId"),
 });
 
+export const updateVehicleStatusSchema = z.object({
+  status: z.enum([
+    "AVAILABLE",
+    "BOOKED",
+    "MAINTENANCE",
+    "RETIRED",
+    "PENDING_APPROVAL",
+  ]),
+});
+
 export type CreateVehicleInput = z.infer<typeof createVehicleSchema>;
+export type UpdateVehicleStatusInput = z.infer<typeof updateVehicleStatusSchema>;

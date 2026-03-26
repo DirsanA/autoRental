@@ -1,6 +1,9 @@
 import mongoose from "mongoose";
 import { Vehicle, type VehicleDocument } from "../models/Vehicle.js";
-import type { CreateVehicleInput } from "../validators/vehicle.validator.js";
+import type {
+  CreateVehicleInput,
+  UpdateVehicleStatusInput,
+} from "../validators/vehicle.validator.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiError } from "../utils/ApiError.js";
 
@@ -51,6 +54,23 @@ export class VehicleService {
 
   async getById(id: string) {
     return Vehicle.findById(id);
+  }
+
+  async updateStatus(
+    id: string,
+    status: UpdateVehicleStatusInput["status"],
+  ): Promise<VehicleDocument> {
+    const vehicle = await Vehicle.findByIdAndUpdate(
+      id,
+      { status },
+      { new: true, runValidators: true },
+    );
+
+    if (!vehicle) {
+      throw ApiError.notFound("Vehicle not found");
+    }
+
+    return vehicle;
   }
 
   async create(data: CreateVehicleInput): Promise<VehicleDocument> {

@@ -47,6 +47,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EditVehicleDialog } from "./edit-vehicle-dialog";
 import { createEditableDetails } from "./edit-vehicle-data";
 import type { EditableVehicleDetails } from "./edit-vehicle-types";
+import { updatePeerHostVehicleAvailability } from "./api";
 
 function formatStatus(status: VehicleStatus) {
   switch (status) {
@@ -56,6 +57,10 @@ function formatStatus(status: VehicleStatus) {
       return { text: "Rented", color: "text-blue-600 bg-blue-50 dark:text-blue-400 dark:bg-blue-500/20", dot: "bg-blue-500" };
     case "maintenance":
       return { text: "Maintenance", color: "text-amber-600 bg-amber-50 dark:text-amber-400 dark:bg-amber-500/20", dot: "bg-amber-500" };
+    case "pending_approval":
+      return { text: "Pending approval", color: "text-rose-700 bg-rose-50 dark:text-rose-300 dark:bg-rose-500/20", dot: "bg-rose-500" };
+    case "retired":
+      return { text: "Retired", color: "text-slate-700 bg-slate-100 dark:text-slate-300 dark:bg-slate-800", dot: "bg-slate-500" };
   }
 }
 
@@ -64,6 +69,8 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
   const [activeImage, setActiveImage] = useState(0);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
+  const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
+  const [currentStatus, setCurrentStatus] = useState<VehicleStatus>(vehicle.status);
   const [acceptingBookings, setAcceptingBookings] = useState(
     vehicle.acceptingBookings ?? vehicle.status === "available"
   );
@@ -74,7 +81,7 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     createEditableDetails(vehicle)
   );
   
-  const statusInfo = formatStatus(vehicle.status);
+  const statusInfo = formatStatus(currentStatus);
   
   const galleryImages = (() => {
     const images = [
@@ -144,13 +151,38 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     pushNotice("Vehicle details updated successfully.");
   };
 
-  const handleAvailabilityToggle = (checked: boolean) => {
+  const handleAvailabilityToggle = async (checked: boolean) => {
+    const previousAcceptingBookings = acceptingBookings;
+    const previousStatus = currentStatus;
+    const optimisticStatus: VehicleStatus = checked ? "available" : "maintenance";
+
     setAcceptingBookings(checked);
-    pushNotice(
-      checked
-        ? "Availability is on. New bookings can be accepted."
-        : "Availability is off. New bookings are paused."
-    );
+    setCurrentStatus(optimisticStatus);
+    setIsUpdatingAvailability(true);
+
+    try {
+      const updatedVehicle = await updatePeerHostVehicleAvailability(vehicle.id, checked);
+
+      setCurrentStatus(updatedVehicle.status);
+      setAcceptingBookings(
+        updatedVehicle.acceptingBookings ?? updatedVehicle.status === "available"
+      );
+      pushNotice(
+        checked
+          ? "Availability is on. New bookings can be accepted."
+          : "Availability is off. New bookings are paused."
+      );
+    } catch (error) {
+      setCurrentStatus(previousStatus);
+      setAcceptingBookings(previousAcceptingBookings);
+      pushNotice(
+        error instanceof Error
+          ? error.message
+          : "Failed to update availability. Please try again."
+      );
+    } finally {
+      setIsUpdatingAvailability(false);
+    }
   };
 
   const availabilityTone = acceptingBookings
@@ -158,7 +190,7 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
     : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300";
 
   const availabilityHelperText = acceptingBookings
-    ? vehicle.status === "rented"
+    ? currentStatus === "rented"
       ? "Future dates are open again as soon as the current trip finishes."
       : "Your listing is visible and ready to receive new bookings."
     : "The car stays visible here, but renters cannot book it until you switch availability back on.";
@@ -448,15 +480,6 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
                     ))}
                   </div>
                 </div>
-                
-                <div className="bg-amber-50 dark:bg-amber-950/30 mt-4 p-3 border border-amber-100 dark:border-amber-900 rounded-lg">
-                  <div className="flex gap-2">
-                    <AlertCircle className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0" />
-                    <p className="text-amber-800 dark:text-amber-300 text-xs">
-                      Recommended price: <span className="font-medium">$82/day</span> for next week
-                    </p>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -493,6 +516,7 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
             <Card className="dark:bg-slate-900 shadow-sm dark:border-slate-800">
               <CardContent className="p-4">
                 <h3 className="mb-3 font-semibold dark:text-slate-200">Controls</h3>
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between gap-3 bg-slate-50 dark:bg-slate-800/70 p-3 border dark:border-slate-700 rounded-xl">
                     <div className="min-w-0">
@@ -511,14 +535,11 @@ export function PeerHostVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
                     <Switch
                       checked={acceptingBookings}
                       onCheckedChange={handleAvailabilityToggle}
+                      disabled={isUpdatingAvailability}
                       aria-label="Toggle vehicle availability"
                       className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600"
                     />
                   </div>
-                  <Button variant="outline" className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full dark:text-slate-300" size="sm">
-                    <Wrench className="mr-2 w-4 h-4" />
-                    Maintenance mode
-                  </Button>
                   <Button variant="outline" className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full text-destructive dark:text-red-400" size="sm">
                     <Trash2 className="mr-2 w-4 h-4" />
                     Remove listing

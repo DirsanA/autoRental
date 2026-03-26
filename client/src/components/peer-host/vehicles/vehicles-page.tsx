@@ -5,7 +5,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { cn } from "@/lib/utils";
-import type { VehicleStatus } from "./types";
+import type { VehicleFilterStatus, VehicleStatus } from "./types";
 import { fetchPeerHostVehicles } from "./api";
 
 function statusBadgeVariant(
@@ -16,7 +16,10 @@ function statusBadgeVariant(
       return "default";
     case "rented":
       return "secondary";
+    case "pending_approval":
+      return "destructive";
     case "maintenance":
+    case "retired":
       return "outline";
   }
 }
@@ -29,13 +32,17 @@ function formatStatus(status: VehicleStatus) {
       return "Rented out";
     case "maintenance":
       return "Maintenance";
+    case "pending_approval":
+      return "Pending approval";
+    case "retired":
+      return "Retired";
   }
 }
 
 export async function PeerHostVehiclesPage({
   filter,
 }: {
-  filter?: VehicleStatus;
+  filter?: VehicleFilterStatus;
 }) {
   let vehicles = [] as Awaited<ReturnType<typeof fetchPeerHostVehicles>>;
   let loadError: string | null = null;
@@ -78,9 +85,9 @@ export async function PeerHostVehiclesPage({
             </p>
           </div>
 
-          <Button className="bg-black dark:bg-white shadow-lg text-white dark:text-black hover:scale-105 transition-transform duration-200">
+          {/* <Button className="bg-black dark:bg-white shadow-lg text-white dark:text-black hover:scale-105 transition-transform duration-200">
             + Add Vehicle
-          </Button>
+          </Button> */}
         </div>
 
         {/* ===== SMART STATUS DASHBOARD ===== */}
@@ -177,11 +184,18 @@ export async function PeerHostVehiclesPage({
 
                 {/* STATUS BADGE */}
                 <div className="top-3 right-3 absolute">
-                  <Badge variant={statusBadgeVariant(v.status)} className={cn(
-                    v.status === "available" && "dark:bg-emerald-600 dark:text-white",
-                    v.status === "rented" && "dark:bg-blue-600 dark:text-white",
-                    v.status === "maintenance" && "dark:bg-amber-600 dark:text-white dark:border-amber-500"
-                  )}>
+                  <Badge
+                    variant={statusBadgeVariant(v.status)}
+                    className={cn(
+                      "bg-white text-slate-950 border-slate-200",
+                      "dark:bg-white dark:text-slate-950",
+                      v.status === "available" && "border-emerald-500",
+                      v.status === "rented" && "border-blue-500",
+                      v.status === "maintenance" && "border-amber-500",
+                      v.status === "pending_approval" && "border-red-500",
+                      v.status === "retired" && "border-slate-500"
+                    )}
+                  >
                     {formatStatus(v.status)}
                   </Badge>
                 </div>
