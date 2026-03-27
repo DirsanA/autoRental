@@ -1,221 +1,207 @@
 import type { Request, Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler.js";
 import { fromNodeHeaders } from "better-auth/node";
 import type { AuthService } from "../services/auth.service.js";
-import type { Auth } from "../config/auth.js";
-import { ENV } from "../config/env.js";
 import { AccountType } from "../models/User.js";
-import { companyService } from "../services/company.service.js";
-import { userPersistenceService } from "../services/user.persistence.service.js";
-import { ApiError } from "../utils/ApiError.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+/**
+ *
+ */
+type AuthResultWithHeaders = {
+  headers?: {
+    getSetCookie?: () => string[];
+    get?: (name: string) => string | null;
+    forEach?: (callback: (value: string, key: string) => void) => void;
+    ["set-cookie"]?: string | string[];
+    ["Set-Cookie"]?: string | string[];
+  };
+};
+
+/**
+ * Forwards better-auth Set-Cookie headers to the Express response.
+ */
+function forwardAuthCookies(res: Response, result: unknown): void {
+  const headers = (result as AuthResultWithHeaders | undefined)?.headers;
+  if (!headers) return;
+
+  try {
+    if (typeof headers.getSetCookie === "function") {
+      for (const cookie of headers.getSetCookie()) {
+        res.append("Set-Cookie", cookie);
+      }
+      return;
+    }
+
+    if (
+      typeof headers.forEach === "function" &&
+      typeof headers.get === "function"
+    ) {
+      const rawCookie = headers.get("set-cookie");
+      if (rawCookie) {
+        res.append("Set-Cookie", rawCookie);
+      }
+      return;
+    }
+
+    const rawCookie = headers["set-cookie"] ?? headers["Set-Cookie"];
+    if (Array.isArray(rawCookie)) {
+      for (const cookie of rawCookie) {
+        res.append("Set-Cookie", cookie);
+      }
+      return;
+    }
+
+    if (typeof rawCookie === "string" && rawCookie) {
+      res.append("Set-Cookie", rawCookie);
+    }
+  } catch {
+    // Cookie forwarding is best-effort.
+  }
+}
+
+/**
+ * Converts Express request headers into the format expected by better-auth.
+ */
+function toNodeHeaders(req: Request): Headers {
+  return fromNodeHeaders(req.headers);
+}
 
 /**
  * Creates authentication-related route handlers.
- * Handles custom registration flows for different user types and login.
  */
-export function createAuthController(auth: Auth, authService: AuthService) {
+export function createAuthController(authService: AuthService) {
+  /**
+   * Creates a portal-specific login handler.
+   */
+  const loginFor = (accountType: AccountType) =>
+    asyncHandler(async (req: Request, res: Response) => {
+      const { email, password } = req.body;
+      const result = await authService.login(
+        email,
+        password,
+        toNodeHeaders(req),
+        accountType,
+      );
+
+      forwardAuthCookies(res, result.cookieSource);
+
+      res.json({
+        success: true,
+        data: result.body,
+      });
+    });
+
   return {
     /**
      * POST /api/auth/register
-     * Register a new base user.
+     * Registers a base user account.
      */
     registerUser: asyncHandler(async (req: Request, res: Response) => {
-      // Delegates user sign-up to the auth service so controller logic stays transport-focused.
-      const existingUser = await userPersistenceService.findByEmail(
-        req.body.email as string,
-      );
-      if (existingUser) {
-        throw ApiError.conflict("User already exists");
-      }
+      const result = await authService.registerUser(req.body, toNodeHeaders(req));
 
-      const result = await authService.registerUser(
-        req.body,
-        fromNodeHeaders(req.headers),
-      );
+      forwardAuthCookies(res, result.cookieSource);
 
       res.status(201).json({
         success: true,
-        data: {
-          user: result.user,
-          message:
-            "Account created successfully. Please check your email to verify your account.",
-        },
+        data: result.body,
       });
     }),
 
     /**
      * POST /api/auth/register/company
-     * Register a new company admin + create company profile.
+     * Registers a company account and profile in one flow.
      */
     registerCompany: asyncHandler(async (req: Request, res: Response) => {
-      // add check for existing company with the same email
-      const existingCompany = await companyService.findByEmail(
-        req.body.email as string,
-      );
-      if (existingCompany) {
-        throw ApiError.conflict("Company already exists");
-      }
-
-      // Runs the combined company-account onboarding flow through the auth service.
       const result = await authService.registerCompany(
         req.body,
-        fromNodeHeaders(req.headers),
+        toNodeHeaders(req),
       );
+
+      forwardAuthCookies(res, result.cookieSource);
 
       res.status(201).json({
         success: true,
-        data: {
-          user: result.user,
-          company: result.company,
-          message:
-            "Company account registered successfully. Your company is pending admin approval. Please verify your email.",
-        },
+        data: result.body,
       });
     }),
 
     /**
      * POST /api/auth/login
-     * Login a user account with email and password.
+     * Logs a renter into the user portal.
      */
-    loginUser: asyncHandler(async (req: Request, res: Response) => {
-      const { email, password } = req.body;
-
-      // Signs the user into the user portal only.
-      const result = await authService.login(
-        email,
-        password,
-        fromNodeHeaders(req.headers),
-        AccountType.USER,
-      );
-
-      res.json({
-        success: true,
-        data: {
-          user: result.user,
-          token: result.token,
-          message: "Login successful",
-        },
-      });
-    }),
+    loginUser: loginFor(AccountType.USER),
 
     /**
      * POST /api/auth/login/company
-     * Login a company account with email and password.
+     * Logs a company account into the company portal.
      */
-    loginCompany: asyncHandler(async (req: Request, res: Response) => {
-      const { email, password } = req.body;
+    loginCompany: loginFor(AccountType.COMPANY),
 
-      // Signs the company into the company portal only.
-      const result = await authService.login(
-        email,
-        password,
-        fromNodeHeaders(req.headers),
-        AccountType.COMPANY,
-      );
-
-      res.json({
-        success: true,
-        data: {
-          user: result.user,
-          token: result.token,
-          message: "Login successful",
-        },
-      });
-    }),
+    /**
+     * POST /api/auth/login/admin
+     * Logs an admin into the admin portal.
+     */
+    loginAdmin: loginFor(AccountType.ADMIN),
 
     /**
      * POST /api/auth/logout
-     * Invalidate the current session.
+     * Invalidates the current session.
      */
     logout: asyncHandler(async (req: Request, res: Response) => {
-      // Invalidates the active session using the same request headers that created it.
-      await auth.api.signOut({
-        headers: fromNodeHeaders(req.headers),
-      });
+      const result = await authService.logout(toNodeHeaders(req));
+
+      forwardAuthCookies(res, result.cookieSource);
 
       res.json({
         success: true,
-        data: { message: "Logged out successfully" },
+        data: result.body,
       });
     }),
 
     /**
      * GET /api/auth/session
-     * Get the current session and user data.
+     * Returns the current session and user data.
      */
     getSession: asyncHandler(async (req: Request, res: Response) => {
-      // Reads the current session directly from better-auth to reflect the latest auth state.
-      const session = await auth.api.getSession({
-        headers: fromNodeHeaders(req.headers),
-      });
-
-      // Returns a standard unauthorized response when the caller has no active session.
-      if (!session) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "No active session",
-          },
-        });
-        return;
-      }
+      const data = await authService.getSession(toNodeHeaders(req));
 
       res.json({
         success: true,
-        data: {
-          user: session.user,
-          session: session.session,
-          company:
-            session.user.accountType === AccountType.COMPANY
-              ? await companyService.getByAuthUserId(session.user.id)
-              : null,
-        },
+        data,
       });
     }),
 
     /**
      * POST /api/auth/forgot-password
-     * Request a password reset email.
+     * Requests a password reset email.
      */
     forgotPassword: asyncHandler(async (req: Request, res: Response) => {
       const { email } = req.body;
+      const data = await authService.requestPasswordReset(
+        email,
+        toNodeHeaders(req),
+      );
 
-      // Requests a reset email without exposing whether the submitted address exists in the system.
-      await auth.api.requestPasswordReset({
-        headers: fromNodeHeaders(req.headers),
-        body: { email, redirectTo: `${ENV.FRONTEND_URL}/reset-password` },
-      });
-
-      // Always return success to prevent email enumeration
       res.json({
         success: true,
-        data: {
-          message:
-            "If an account with that email exists, a password reset link has been sent.",
-        },
+        data,
       });
     }),
 
     /**
      * POST /api/auth/reset-password
-     * Reset password using the token from the email.
+     * Resets a password using the email token.
      */
     resetPassword: asyncHandler(async (req: Request, res: Response) => {
       const { token, newPassword } = req.body;
-
-      // Completes the password reset through better-auth once the reset token is presented.
-      await auth.api.resetPassword({
-        headers: fromNodeHeaders(req.headers),
-        body: { token, newPassword },
-      });
+      const data = await authService.resetPassword(
+        token,
+        newPassword,
+        toNodeHeaders(req),
+      );
 
       res.json({
         success: true,
-        data: {
-          message:
-            "Password reset successfully. You can now log in with your new password.",
-        },
+        data,
       });
     }),
   };
