@@ -1,22 +1,26 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
-import { ApiError } from "../utils/ApiError.js";
 import type { VerificationService } from "../services/verification.service.js";
+import { requireRequestUser } from "../utils/requestContext.js";
+
+/**
+ * Returns the current authenticated user id or throws a route-specific 401.
+ */
+function requireAuthenticatedUserId(req: Request, message: string): string {
+  return requireRequestUser(req, message).id;
+}
 
 export function createVerificationController(service: VerificationService) {
   return {
-    // Submits a renter verification for the authenticated user through the service layer.
+    /**
+     * Submits a renter verification for the current user.
+     */
     submitRenter: asyncHandler(async (req: Request, res: Response) => {
-      const user = (req as any).user;
-      // Double-checks authentication before tying the submission to a user account.
-      if (!user?.id) {
-        throw ApiError.unauthorized(
-          "Authentication required to submit verification",
-        );
-      }
-
       const verification = await service.submitRenterVerification(
-        user.id,
+        requireAuthenticatedUserId(
+          req,
+          "Authentication required to submit verification",
+        ),
         req.body,
       );
 
@@ -29,18 +33,15 @@ export function createVerificationController(service: VerificationService) {
       });
     }),
 
-    // Submits a peerhost verification using the same authenticated-user handoff pattern.
+    /**
+     * Submits a peerhost verification for the current user.
+     */
     submitPeerhost: asyncHandler(async (req: Request, res: Response) => {
-      const user = (req as any).user;
-      // Ensures the peerhost request cannot proceed without a signed-in user.
-      if (!user?.id) {
-        throw ApiError.unauthorized(
-          "Authentication required to submit verification",
-        );
-      }
-
       const verification = await service.submitPeerhostVerification(
-        user.id,
+        requireAuthenticatedUserId(
+          req,
+          "Authentication required to submit verification",
+        ),
         req.body,
       );
 
@@ -53,17 +54,16 @@ export function createVerificationController(service: VerificationService) {
       });
     }),
 
-    // Returns every verification record associated with the current authenticated user.
+    /**
+     * Returns every verification record owned by the current user.
+     */
     getMyVerifications: asyncHandler(async (req: Request, res: Response) => {
-      const user = (req as any).user;
-      // Blocks anonymous access so verification history stays private to its owner.
-      if (!user?.id) {
-        throw ApiError.unauthorized(
+      const verifications = await service.getMyVerifications(
+        requireAuthenticatedUserId(
+          req,
           "Authentication required to view verifications",
-        );
-      }
-
-      const verifications = await service.getMyVerifications(user.id);
+        ),
+      );
 
       res.json({
         success: true,
@@ -71,23 +71,19 @@ export function createVerificationController(service: VerificationService) {
       });
     }),
 
-    // Lets an authorized reviewer approve or reject a specific verification request.
+    /**
+     * Approves or rejects a verification request.
+     */
     reviewVerification: asyncHandler(async (req: Request, res: Response) => {
-      const reviewer = (req as any).user;
-      // Requires the reviewer identity so the service can record who made the decision.
-      if (!reviewer?.id) {
-        throw ApiError.unauthorized(
-          "Authentication required to review verifications",
-        );
-      }
-
       const result = await service.reviewVerification(
         req.params.id as string,
-        reviewer.id,
+        requireAuthenticatedUserId(
+          req,
+          "Authentication required to review verifications",
+        ),
         req.body,
       );
 
-      // Tailors the success message to the moderation outcome that was just applied.
       res.json({
         success: true,
         data: {

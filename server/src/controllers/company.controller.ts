@@ -1,16 +1,36 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { companyService } from "../services/company.service.js";
+import { ApiError } from "../utils/ApiError.js";
+import { requireRequestUser } from "../utils/requestContext.js";
+
+/**
+ * Parses company list query params into service options.
+ */
+function buildListOptions(query: Request["query"]) {
+  const { status, page, limit, search } = query;
+  const options: {
+    status?: string;
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {};
+
+  if (typeof status === "string") options.status = status;
+  if (typeof page === "string") options.page = Number.parseInt(page, 10);
+  if (typeof limit === "string") options.limit = Number.parseInt(limit, 10);
+  if (typeof search === "string") options.search = search;
+
+  return options;
+}
 
 export const companyController = {
   /**
    * POST /api/companies
-   * Create a company profile for the authenticated company account.
-   * Company starts in PENDING_APPROVAL state.
+   * Creates a company profile for the authenticated company account.
    */
   create: asyncHandler(async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    // Creates a company record owned by the authenticated company account through the company service.
+    const user = requireRequestUser(req);
     const company = await companyService.create(user.id, req.body);
 
     res.status(201).json({
@@ -25,23 +45,14 @@ export const companyController = {
 
   /**
    * GET /api/companies/me
-   * Get the company owned by the authenticated company account.
+   * Returns the company owned by the authenticated company account.
    */
   getMyCompany: asyncHandler(async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    // Looks up the company currently associated with the signed-in company account.
+    const user = requireRequestUser(req);
     const company = await companyService.getByAuthUserId(user.id);
 
-    // Returns a not-found response instead of an empty object when the user has no company.
     if (!company) {
-      res.status(404).json({
-        success: false,
-        error: {
-          code: "NOT_FOUND",
-          message: "You don't have a registered company account",
-        },
-      });
-      return;
+      throw ApiError.notFound("You don't have a registered company account");
     }
 
     res.json({
@@ -52,10 +63,9 @@ export const companyController = {
 
   /**
    * GET /api/companies/:id
-   * Get a company by ID. Public endpoint.
+   * Returns a single company by id.
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
-    // Fetches a single company by route id for public or internal detail views.
     const company = await companyService.getById(req.params.id as string);
 
     res.json({
@@ -66,11 +76,10 @@ export const companyController = {
 
   /**
    * PATCH /api/companies/:id
-   * Update company profile. Only the authenticated company account can update.
+   * Updates the authenticated company's profile.
    */
   update: asyncHandler(async (req: Request, res: Response) => {
-    const user = (req as any).user;
-    // Delegates ownership checks and partial update rules to the company service.
+    const user = requireRequestUser(req);
     const company = await companyService.update(
       req.params.id as string,
       user.id,
@@ -85,19 +94,10 @@ export const companyController = {
 
   /**
    * GET /api/companies
-   * Admin: List all companies with filters and pagination.
+   * Lists companies with admin filters and pagination.
    */
   list: asyncHandler(async (req: Request, res: Response) => {
-    const { status, page, limit, search } = req.query;
-
-    // Builds filter and pagination options from query params before calling the service layer.
-    const options: any = {};
-    if (status) options.status = status as string;
-    if (page) options.page = parseInt(page as string, 10);
-    if (limit) options.limit = parseInt(limit as string, 10);
-    if (search) options.search = search as string;
-
-    const result = await companyService.list(options);
+    const result = await companyService.list(buildListOptions(req.query));
 
     res.json({
       success: true,
@@ -107,10 +107,9 @@ export const companyController = {
 
   /**
    * PATCH /api/companies/:id/approve
-   * Admin: Approve a pending company.
+   * Approves a pending company.
    */
   approve: asyncHandler(async (req: Request, res: Response) => {
-    // Approves a pending company through the admin-facing company service workflow.
     const company = await companyService.approve(req.params.id as string);
 
     res.json({
@@ -124,23 +123,15 @@ export const companyController = {
 
   /**
    * PATCH /api/companies/:id/suspend
-   * Admin: Suspend a company with a reason.
+   * Suspends a company with a required reason.
    */
   suspend: asyncHandler(async (req: Request, res: Response) => {
     const { reason } = req.body;
-    // Requires an explicit suspension reason so administrative actions remain explainable.
+
     if (!reason || typeof reason !== "string") {
-      res.status(400).json({
-        success: false,
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Suspension reason is required",
-        },
-      });
-      return;
+      throw ApiError.badRequest("Suspension reason is required");
     }
 
-    // Applies the suspension through the service once the controller-level input check passes.
     const company = await companyService.suspend(req.params.id as string, reason);
 
     res.json({

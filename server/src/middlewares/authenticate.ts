@@ -1,48 +1,87 @@
 import type { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import type { Auth } from "../config/auth.js";
+import mongoose from "mongoose";
+import { getMongoClient } from "../config/database.js";
+import { userPersistenceService } from "../services/user.persistence.service.js";
+import {
+  getBearerToken,
+  setRequestAuth,
+  type RequestUser,
+} from "../utils/requestContext.js";
+
+type TokenSession = {
+  userId?: string;
+} & Record<string, unknown>;
 
 /**
- * Creates an authentication middleware that uses better-auth's getSession.
- *
- * Attaches `req.user` and `req.session` if authenticated.
- * Returns 401 if no valid session exists.
+ * Sends the shared unauthorized response payload.
+ */
+function sendUnauthorized(res: Response, message: string): void {
+  res.status(401).json({
+    success: false,
+    error: {
+      code: "UNAUTHORIZED",
+      message,
+    },
+  });
+}
+
+/**
+ * Resolves a persisted session directly from a bearer token.
+ */
+async function findSessionByToken(token: string): Promise<TokenSession | null> {
+  const db = getMongoClient().db();
+  const sessionCollection = db.collection("session");
+  const filters: Array<Record<string, unknown>> = [
+    { token },
+    { sessionToken: token },
+    { id: token },
+    { _id: token },
+  ];
+
+  if (mongoose.Types.ObjectId.isValid(token)) {
+    filters.push({ _id: new mongoose.Types.ObjectId(token) });
+  }
+
+  return sessionCollection.findOne({ $or: filters }) as Promise<TokenSession | null>;
+}
+
+/**
+ * Creates an authentication middleware that resolves better-auth sessions.
  */
 export function createAuthMiddleware(auth: Auth) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      // Resolves the caller's session on every protected request using better-auth headers.
       const session = await auth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
 
-      // Rejects the request immediately when there is no active authenticated session.
-      if (!session) {
-        res.status(401).json({
-          success: false,
-          error: {
-            code: "UNAUTHORIZED",
-            message: "Authentication required",
-          },
-        });
+      if (session) {
+        setRequestAuth(req, session.user as RequestUser, session.session);
+        next();
         return;
       }
 
-      // Attach to request for downstream use
-      (req as any).user = session.user;
-      (req as any).session = session.session;
+      const token = getBearerToken(req);
+      const tokenSession = token ? await findSessionByToken(token) : null;
+      const userId = tokenSession?.userId;
 
-      // Passes the authenticated user context to downstream middleware and controllers.
+      if (!userId) {
+        sendUnauthorized(res, "Authentication required");
+        return;
+      }
+
+      const user = await userPersistenceService.findByAuthId(userId);
+      if (!user) {
+        sendUnauthorized(res, "Authentication required");
+        return;
+      }
+
+      setRequestAuth(req, user.toJSON() as unknown as RequestUser, tokenSession);
       next();
-    } catch (error) {
-      // Treats lookup failures as invalid authentication rather than exposing internals.
-      res.status(401).json({
-        success: false,
-        error: {
-          code: "UNAUTHORIZED",
-          message: "Invalid or expired session",
-        },
-      });
+    } catch {
+      sendUnauthorized(res, "Invalid or expired session");
     }
   };
 }
