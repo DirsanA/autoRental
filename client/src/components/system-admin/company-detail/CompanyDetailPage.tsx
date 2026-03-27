@@ -1,294 +1,448 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Building2, Car, Star, DollarSign } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import {
+  ArrowLeft,
+  Ban,
+  CheckCircle2,
+  Globe,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldCheck,
+} from "lucide-react";
+import {
+  approveAdminCompany,
+  fetchAdminCompanyDetail,
+  type AdminCompanyDetail,
+  suspendAdminCompany,
+} from "@/lib/admin-companies-api";
 
-// Components
-import { CompanyHeader } from "./CompanyHeader";
-import { OverviewTab } from "./OverviewTab";
-import { VehiclesTab } from "./VehiclesTab";
-import { ReviewsTab } from "./ReviewsTab";
-import { FinancialsTab } from "./FinancialsTab";
-import { ToastContainer } from "./ToastContainer";
-import { ConfirmationModal } from "./ConfirmationModal";
-import { useToast } from "./useToast";
-
-// Data
-import { getCompanyData } from "./data";
-import type { Review, Vehicle, ConfirmationConfig } from "./types";
-
-interface CompanyDetailPageProps {
-  companyId: string;
+function formatDateTime(value: string | null) {
+  return value ? new Date(value).toLocaleString() : "Not available";
 }
 
+function formatMoney(value: number | null) {
+  if (typeof value !== "number") return "Not available";
+
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatLabel(value: string | null | undefined) {
+  if (!value) return "Not available";
+
+  return value
+    .toLowerCase()
+    .split("_")
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
+    .join(" ");
+}
+
+/**
+ * Live company detail page for system-admin moderation workflows.
+ */
 export default function CompanyDetailPage({
   companyId,
-}: CompanyDetailPageProps) {
+}: {
+  companyId: string;
+}) {
   const router = useRouter();
+  const { toast } = useToast();
 
-  // ─── Local State hooks (simulating API state) ────────────────────────────────
+  const [company, setCompany] = useState<AdminCompanyDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [suspendOpen, setSuspendOpen] = useState(false);
+  const [suspendReason, setSuspendReason] = useState("");
 
-  // We initialize the "database state" from our static mock data.
-  // We use useMemo to only initialize once per component mount.
-  const initialData = useMemo(() => getCompanyData(companyId), [companyId]);
+  useEffect(() => {
+    let cancelled = false;
 
-  const [company, setCompany] = useState(initialData.company);
-  const [vehicles, setVehicles] = useState(initialData.vehicles);
-  const [reviews, setReviews] = useState(initialData.reviews);
-  const [financials] = useState(initialData.financials);
+    setLoading(true);
 
-  // ─── Ephemeral UI State (Toasts & Modals) ──────────────────────────────────
-
-  const { toasts, addToast, removeToast } = useToast();
-  const [modalConfig, setModalConfig] = useState<ConfirmationConfig | null>(
-    null,
-  );
-
-  // Helper macro for showing success easily
-  const showSuccess = (title: string, msg: string) =>
-    addToast("success", title, msg);
-
-  // Simulates network latency (800ms)
-  const wait = () => new Promise((resolve) => setTimeout(resolve, 800));
-
-  // ─── Company Handlers ────────────────────────────────────────────────────────
-
-  const handleCompanyEdit = () => {
-    addToast("info", "Edit Mode", "Feature coming soon.");
-  };
-
-  const handleCompanySuspend = () => {
-    setModalConfig({
-      title: "Suspend Company",
-      description: `Are you sure you want to suspend ${company.name}? This will hide all their vehicles and halt new bookings.`,
-      confirmLabel: "Suspend",
-      variant: "destructive",
-      onConfirm: async () => {
-        await wait();
-        setCompany((c) => ({ ...c, status: "suspended" }));
-        showSuccess("Company Suspended", `${company.name} is now suspended.`);
-      },
-    });
-  };
-
-  const handleCompanyReactivate = () => {
-    setModalConfig({
-      title: "Reactivate Company",
-      description: `Reactivate ${company.name}? Their vehicles will be visible to renters again.`,
-      confirmLabel: "Reactivate",
-      variant: "default",
-      onConfirm: async () => {
-        await wait();
-        setCompany((c) => ({ ...c, status: "active" }));
-        showSuccess(
-          "Company Reactivated",
-          `${company.name} is active and their fleet is online.`,
+    fetchAdminCompanyDetail(companyId)
+      .then((data) => {
+        if (cancelled) return;
+        setCompany(data);
+        setError(null);
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setError(
+          cause instanceof Error ? cause.message : "Failed to load company",
         );
-      },
-    });
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [companyId]);
+
+  const handleApprove = async () => {
+    if (!company) return;
+
+    const actionLabel =
+      company.statusValue === "SUSPENDED" ? "reactivate" : "approve";
+    if (!window.confirm(`Do you want to ${actionLabel} ${company.name}?`)) {
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const updated = await approveAdminCompany(company.id);
+      setCompany((current) =>
+        current ? { ...current, ...updated, rejectionReason: null } : current,
+      );
+      toast({
+        title:
+          company.statusValue === "SUSPENDED"
+            ? "Company reactivated"
+            : "Company approved",
+        description: `${updated.name} is now active.`,
+      });
+    } catch (cause: unknown) {
+      toast({
+        title: "Company update failed",
+        description:
+          cause instanceof Error ? cause.message : "Failed to update company",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleCompanyDelete = () => {
-    setModalConfig({
-      title: "Delete Company",
-      description:
-        "This action is permanent and cannot be undone. All vehicles, reviews, and bookings associated with this company will be removed.",
-      confirmLabel: "Delete Permanently",
-      variant: "destructive",
-      onConfirm: async () => {
-        await wait();
-        addToast(
-          "success",
-          "Company Deleted",
-          "The company has been permanently removed.",
-        );
-        // Simulate redirecting away after deleting
-        setTimeout(() => router.push("/sysadmin/companies"), 1000);
-      },
-    });
+  const handleSuspend = async () => {
+    if (!company) return;
+    if (!suspendReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a suspension reason for the company.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const updated = await suspendAdminCompany(company.id, suspendReason.trim());
+      setCompany((current) =>
+        current
+          ? { ...current, ...updated, rejectionReason: suspendReason.trim() }
+          : current,
+      );
+      toast({
+        title: "Company suspended",
+        description: `${updated.name} is now suspended.`,
+      });
+      setSuspendOpen(false);
+      setSuspendReason("");
+    } catch (cause: unknown) {
+      toast({
+        title: "Suspension failed",
+        description:
+          cause instanceof Error ? cause.message : "Failed to suspend company",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
   };
-
-  // ─── Vehicle Handlers ────────────────────────────────────────────────────────
-
-  const handleVehicleView = (v: Vehicle) => {
-    addToast("info", "View Details", `Opening details for ${v.name}`);
-  };
-
-  const handleVehicleSuspend = (v: Vehicle) => {
-    setModalConfig({
-      title: "Suspend Vehicle",
-      description: `Are you sure you want to suspend the ${v.name}? It will no longer be available for rent.`,
-      confirmLabel: "Suspend",
-      variant: "destructive",
-      onConfirm: async () => {
-        await wait();
-        setVehicles((prev) =>
-          prev.map((item) =>
-            item.id === v.id ? { ...item, status: "maintenance" } : item,
-          ),
-        );
-        showSuccess(
-          "Vehicle Suspended",
-          `${v.name} status updated to maintenance.`,
-        );
-      },
-    });
-  };
-
-  const handleVehicleDelete = (v: Vehicle) => {
-    setModalConfig({
-      title: "Delete Vehicle",
-      description: `Are you sure you want to delete ${v.name} (${v.plateNumber})? This is irreversible.`,
-      confirmLabel: "Delete",
-      variant: "destructive",
-      onConfirm: async () => {
-        await wait();
-        setVehicles((prev) => prev.filter((item) => item.id !== v.id));
-        showSuccess("Vehicle Deleted", `${v.name} removed from fleet.`);
-      },
-    });
-  };
-
-  // ─── Review Handlers ─────────────────────────────────────────────────────────
-
-  const handleReviewFlag = (r: Review) => {
-    const isCurrentlyFlagged = r.flagged;
-    const actionName = isCurrentlyFlagged ? "Unflag" : "Flag";
-
-    setModalConfig({
-      title: `${actionName} Review`,
-      description: `Are you sure you want to ${isCurrentlyFlagged ? "remove the flag from" : "flag"} this review by ${r.customerName}?`,
-      confirmLabel: actionName,
-      variant: "default",
-      onConfirm: async () => {
-        await wait();
-        setReviews((prev) =>
-          prev.map((item) =>
-            item.id === r.id ? { ...item, flagged: !isCurrentlyFlagged } : item,
-          ),
-        );
-        showSuccess(
-          "Review Updated",
-          `The review has been ${isCurrentlyFlagged ? "unflagged" : "flagged successfully"}.`,
-        );
-      },
-    });
-  };
-
-  const handleReviewDelete = (r: Review) => {
-    setModalConfig({
-      title: "Delete Review",
-      description: "Permanently delete this review? This cannot be undone.",
-      confirmLabel: "Delete",
-      variant: "destructive",
-      onConfirm: async () => {
-        await wait();
-        setReviews((prev) => prev.filter((item) => item.id !== r.id));
-        showSuccess("Review Deleted", "The review has been removed.");
-      },
-    });
-  };
-
-  // ─── Render ──────────────────────────────────────────────────────────────────
 
   return (
     <div className="relative flex h-dvh w-full">
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
 
-        {/* Main scrollable body */}
-        <Main className="p-6 md:p-8 overflow-y-auto">
-          <div className="mx-auto flex w-full max-w-6xl flex-col gap-8">
-            {/* Header section */}
-            <CompanyHeader
-              company={company}
-              onBack={() => router.push("/sysadmin/companies")}
-              onEdit={handleCompanyEdit}
-              onSuspend={handleCompanySuspend}
-              onReactivate={handleCompanyReactivate}
-              onDelete={handleCompanyDelete}
-            />
-
-            {/* Content Tabs */}
-            <Tabs defaultValue="overview" className="w-full">
-              {/* Tab trigger list */}
-              <TabsList className="grid w-full grid-cols-4 sm:w-auto p-1 mb-6 bg-muted/60">
-                <TabsTrigger value="overview" className="gap-2">
-                  <Building2 className="h-4 w-4 hidden sm:block" />
-                  Overview
-                </TabsTrigger>
-                <TabsTrigger value="vehicles" className="gap-2">
-                  <Car className="h-4 w-4 hidden sm:block" />
-                  Vehicles
-                  <span className="ml-1.5 hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary sm:inline-block">
-                    {vehicles.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="reviews" className="gap-2">
-                  <Star className="h-4 w-4 hidden sm:block" />
-                  Reviews
-                  <span className="ml-1.5 hidden rounded-full bg-primary/10 px-2 py-0.5 text-xs text-primary sm:inline-block">
-                    {reviews.length}
-                  </span>
-                </TabsTrigger>
-                <TabsTrigger value="financials" className="gap-2">
-                  <DollarSign className="h-4 w-4 hidden sm:block" />
-                  Financials
-                </TabsTrigger>
-              </TabsList>
-
-              {/* Tab Panels */}
-              <TabsContent
-                value="overview"
-                className="mt-0 focus-visible:ring-0"
+        <Main className="overflow-y-auto p-6 md:p-8">
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-6">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <button
+                onClick={() => router.push("/sysadmin/companies")}
+                className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                <OverviewTab company={company} financials={financials} />
-              </TabsContent>
+                <ArrowLeft className="h-4 w-4" />
+                Back to Company Management
+              </button>
 
-              <TabsContent
-                value="vehicles"
-                className="mt-0 focus-visible:ring-0"
-              >
-                <VehiclesTab
-                  vehicles={vehicles}
-                  onView={handleVehicleView}
-                  onSuspend={handleVehicleSuspend}
-                  onDelete={handleVehicleDelete}
-                />
-              </TabsContent>
+              {company ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  {company.statusValue !== "ACTIVE" ? (
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={handleApprove}
+                      disabled={busy}
+                    >
+                      <CheckCircle2 className="h-4 w-4" />
+                      {company.statusValue === "SUSPENDED"
+                        ? "Reactivate"
+                        : "Approve"}
+                    </Button>
+                  ) : null}
+                  {company.statusValue !== "SUSPENDED" ? (
+                    <Button
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => setSuspendOpen(true)}
+                      disabled={busy}
+                    >
+                      <Ban className="h-4 w-4" />
+                      Suspend
+                    </Button>
+                  ) : null}
+                </div>
+              ) : null}
+            </div>
 
-              <TabsContent
-                value="reviews"
-                className="mt-0 focus-visible:ring-0"
-              >
-                <ReviewsTab
-                  reviews={reviews}
-                  onFlag={handleReviewFlag}
-                  onDelete={handleReviewDelete}
-                />
-              </TabsContent>
+            {loading ? (
+              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
+                Loading company...
+              </div>
+            ) : error ? (
+              <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
+                {error}
+              </div>
+            ) : company ? (
+              <>
+                <div className="grid gap-4 md:grid-cols-4">
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Company Status
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-lg font-semibold">
+                      {formatLabel(company.statusValue)}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Verification
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="flex items-center gap-2 text-lg font-semibold">
+                      <ShieldCheck className="h-5 w-5 text-primary" />
+                      {company.isVerified ? "Verified" : "Not verified"}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Wallet Balance
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-lg font-semibold">
+                      {formatMoney(company.walletBalance)}
+                    </CardContent>
+                  </Card>
+                  <Card>
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground">
+                        Auth Account
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="text-lg font-semibold">
+                      {company.authAccount?.name || "Not linked"}
+                    </CardContent>
+                  </Card>
+                </div>
 
-              <TabsContent
-                value="financials"
-                className="mt-0 focus-visible:ring-0"
-              >
-                <FinancialsTab financials={financials} />
-              </TabsContent>
-            </Tabs>
+                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Company Profile</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-4 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Name</div>
+                        <div className="font-medium">{company.name}</div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">TIN number</div>
+                        <div className="font-medium">
+                          {company.tinNumber || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Contact email</div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <Mail className="h-4 w-4 text-muted-foreground" />
+                          {company.contactEmail || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Contact phone</div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <Phone className="h-4 w-4 text-muted-foreground" />
+                          {company.contactPhone || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Website</div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <Globe className="h-4 w-4 text-muted-foreground" />
+                          {company.website || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Address</div>
+                        <div className="flex items-center gap-2 font-medium">
+                          <MapPin className="h-4 w-4 text-muted-foreground" />
+                          {company.address || "Not provided"}
+                        </div>
+                      </div>
+                      <div className="space-y-1 md:col-span-2">
+                        <div className="text-sm text-muted-foreground">Bio</div>
+                        <div className="font-medium">
+                          {company.bio || "No company bio on file."}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Lifecycle And Compliance</CardTitle>
+                    </CardHeader>
+                    <CardContent className="grid gap-4">
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Created at</div>
+                        <div className="font-medium">
+                          {formatDateTime(company.createdAt)}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Updated at</div>
+                        <div className="font-medium">
+                          {formatDateTime(company.updatedAt)}
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">Verified at</div>
+                        <div className="font-medium">
+                          {formatDateTime(company.verifiedAt)}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <div className="text-sm text-muted-foreground">
+                          Moderation markers
+                        </div>
+                        <div className="flex flex-wrap gap-2">
+                          <Badge variant="secondary" className="font-normal">
+                            {company.isVerified ? "Verified" : "Pending verification"}
+                          </Badge>
+                          <Badge variant="outline" className="font-normal">
+                            {formatLabel(company.authAccount?.status)}
+                          </Badge>
+                          <Badge variant="outline" className="font-normal">
+                            {formatLabel(company.authAccount?.accountType)}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <div className="text-sm text-muted-foreground">
+                          Suspension or rejection reason
+                        </div>
+                        <div className="font-medium">
+                          {company.rejectionReason || "No reason recorded"}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Admin Notes</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-3 text-sm text-muted-foreground">
+                    <div className="rounded-lg border bg-muted/10 p-4">
+                      This view is backed by current company records and live
+                      moderation actions.
+                    </div>
+                    <div className="rounded-lg border bg-muted/10 p-4">
+                      Related company analytics such as fleet metrics, bookings,
+                      and financial rollups should move into dedicated admin
+                      endpoints before they are shown here.
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : null}
           </div>
         </Main>
       </div>
 
-      {/* Ephemeral UI Layer */}
-      <ToastContainer toasts={toasts} onDismiss={removeToast} />
-      <ConfirmationModal
-        config={modalConfig}
-        onClose={() => setModalConfig(null)}
-      />
+      <Dialog
+        open={suspendOpen}
+        onOpenChange={(open) => {
+          setSuspendOpen(open);
+          if (!open) {
+            setSuspendReason("");
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Suspend Company</DialogTitle>
+            <DialogDescription>
+              Provide the moderation reason for suspending this company.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="grid gap-2">
+            <Label htmlFor="company-suspend-reason">Suspension reason</Label>
+            <Textarea
+              id="company-suspend-reason"
+              value={suspendReason}
+              onChange={(event) => setSuspendReason(event.target.value)}
+              placeholder="Explain why this company is being suspended..."
+              rows={5}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSuspendOpen(false)}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={handleSuspend} disabled={busy}>
+              {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+              Suspend company
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

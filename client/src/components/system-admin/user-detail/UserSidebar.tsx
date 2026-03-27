@@ -1,20 +1,21 @@
 "use client";
 
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 import {
-  Mail,
+  Ban,
   Calendar,
   CheckCircle2,
   Clock,
-  Ban,
+  Mail,
   MoreVertical,
-  Briefcase,
+  Phone,
   ShieldAlert,
-  Edit,
   UserCircle,
+  Wallet,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -39,25 +40,28 @@ const statusConfig: Record<
     label: "Active",
     icon: CheckCircle2,
     color:
-      "text-green-600 dark:text-green-400 bg-green-100 dark:bg-green-900/30",
+      "bg-green-100 text-green-600 dark:bg-green-900/30 dark:text-green-400",
   },
   invited: {
     label: "Invited",
     icon: Clock,
-    color: "text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30",
+    color: "bg-blue-100 text-blue-600 dark:bg-blue-900/30 dark:text-blue-400",
   },
   inactive: {
     label: "Inactive",
     icon: Ban,
-    color: "text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-800",
+    color: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
   },
   suspended: {
     label: "Suspended",
     icon: ShieldAlert,
-    color: "text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-900/30",
+    color: "bg-red-100 text-red-600 dark:bg-red-900/30 dark:text-red-400",
   },
 };
 
+/**
+ * Renders the admin user detail sidebar.
+ */
 export function UserSidebar({
   user,
   onStatusChange,
@@ -68,34 +72,27 @@ export function UserSidebar({
 
   const initials = user.name
     .split(" ")
-    .map((w) => w[0])
+    .map((word) => word[0])
     .join("")
-    .substring(0, 2)
+    .slice(0, 2)
     .toUpperCase();
 
   return (
-    <Card className="shadow-sm sticky top-24 overflow-hidden border-t-4 border-t-primary">
-      <div className="absolute top-4 right-4">
+    <Card className="sticky top-24 overflow-hidden border-t-4 border-t-primary shadow-sm">
+      <div className="absolute right-4 top-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-            >
+            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem>
-              <Edit className="mr-2 h-4 w-4" /> Edit Profile
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => onStatusChange("active")}>
               Mark as Active
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onStatusChange("inactive")}>
-              Mark as Inactive
+              Mark as Pending
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onStatusChange("suspended")}>
               Suspend Account
@@ -111,64 +108,100 @@ export function UserSidebar({
         </DropdownMenu>
       </div>
 
-      <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
-        {/* Avatar */}
-        <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-muted-foreground/30 to-muted flex items-center justify-center shadow-lg mb-4 text-foreground text-3xl font-semibold border-2 border-background">
-          {initials}
-        </div>
+      <CardContent className="flex flex-col items-center pb-6 pt-8 text-center">
+        <Avatar className="mb-4 h-24 w-24 border-2 border-background shadow-lg">
+          <AvatarImage src={user.image || undefined} alt={user.name} />
+          <AvatarFallback className="bg-gradient-to-tr from-muted-foreground/30 to-muted text-3xl font-semibold text-foreground">
+            {initials}
+          </AvatarFallback>
+        </Avatar>
 
-        {/* Identity */}
-        <h2 className="text-xl font-bold tracking-tight mb-1">{user.name}</h2>
-        <p className="text-sm font-medium text-muted-foreground mb-3">
+        <h2 className="mb-1 text-xl font-bold tracking-tight">{user.name}</h2>
+        <p className="mb-3 text-sm font-medium text-muted-foreground">
           @{user.username}
         </p>
 
-        {/* Status Badge */}
-        <Badge
-          variant="outline"
-          className={cn("mb-2 border-0 gap-1", status.color)}
-        >
+        <Badge variant="outline" className={cn("mb-2 gap-1 border-0", status.color)}>
           <StatusIcon className="h-3.5 w-3.5" />
           {status.label}
         </Badge>
-        <Badge variant="secondary" className="font-normal capitalize mt-1">
-          {user.role}
-        </Badge>
 
-        <div className="w-full border-t border-muted my-6" />
+        <div className="mt-1 flex flex-wrap justify-center gap-2">
+          <Badge variant="secondary" className="font-normal">
+            {user.role}
+          </Badge>
+          <Badge variant="secondary" className="font-normal">
+            {user.accountType ? user.accountType.toLowerCase() : "unknown"}
+          </Badge>
+        </div>
 
-        {/* Contact & Meta Info */}
-        <div className="flex flex-col gap-3 w-full text-left">
+        <div className="my-6 w-full border-t border-muted" />
+
+        <div className="flex w-full flex-col gap-3 text-left">
           <div className="flex items-center gap-3 text-sm text-foreground">
-            <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
+            <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
             <span className="truncate">{user.email}</span>
           </div>
+
           <div className="flex items-center gap-3 text-sm text-foreground">
-            <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="truncate">{user.department}</span>
+            <Phone className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>{user.phoneNumber || "Phone not provided"}</span>
           </div>
+
           <div className="flex items-center gap-3 text-sm text-foreground">
-            <UserCircle className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="truncate">Manager: {user.manager || "N/A"}</span>
+            <ShieldAlert className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>
+              Verification: {user.verificationLevel || "Not available"}
+            </span>
           </div>
+
           <div className="flex items-center gap-3 text-sm text-foreground">
-            <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span>Joined {new Date(user.joined).toLocaleDateString()}</span>
+            <UserCircle className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>Email verified: {user.emailVerified ? "Yes" : "No"}</span>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm text-foreground">
+            <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>
+              Joined{" "}
+              {user.joined ? new Date(user.joined).toLocaleDateString() : "Unknown"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-3 text-sm text-foreground">
+            <Wallet className="h-4 w-4 shrink-0 text-muted-foreground" />
+            <span>
+              Wallet:{" "}
+              {typeof user.walletBalance === "number"
+                ? new Intl.NumberFormat("en-US", {
+                    style: "currency",
+                    currency: "USD",
+                    maximumFractionDigits: 2,
+                  }).format(user.walletBalance)
+                : "Not available"}
+            </span>
           </div>
         </div>
 
-        <div className="w-full border-t border-muted my-6" />
+        <div className="my-6 w-full border-t border-muted" />
 
-        {/* Admin Quick Facts */}
-        <div className="flex flex-col gap-2 w-full text-left">
-          <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        <div className="flex w-full flex-col gap-2 text-left">
+          <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
             Last Login
           </span>
           <span className="text-sm">
-            {user.lastLogin === "Never"
-              ? "Never logged in"
-              : new Date(user.lastLogin).toLocaleString()}
+            {user.lastLogin
+              ? new Date(user.lastLogin).toLocaleString()
+              : "Never logged in"}
           </span>
+        </div>
+
+        <div className="mt-6 flex w-full flex-wrap gap-2 text-left">
+          {(user.roles.length > 0 ? user.roles : [user.role]).map((role) => (
+            <Badge key={role} variant="outline" className="font-normal">
+              {role}
+            </Badge>
+          ))}
         </div>
       </CardContent>
     </Card>

@@ -25,8 +25,8 @@ const statusConfig: Record<
     className:
       "bg-yellow-100 text-yellow-800 hover:bg-yellow-100 dark:bg-yellow-900/30 dark:text-yellow-400",
   },
-  expired: {
-    label: "Expired",
+  rejected: {
+    label: "Rejected",
     icon: AlertCircle,
     className:
       "bg-gray-100 text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-400",

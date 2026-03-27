@@ -9,5 +9,5 @@ export const metadata: Metadata = {
 };
 
 export default function AuthPage() {
-  redirect('/auth/sign-in');
+  redirect('/auth/signin');
 }
