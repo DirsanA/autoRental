@@ -81,14 +81,30 @@ export class VehicleService {
     const ownerType = data.ownerType ?? "User";
     const folder = `auto-rental/vehicles/${data.plate.replace(/\s+/g, "-").toLowerCase()}`;
 
-    const [front, back, side, interior, ownership, insurance] = await Promise.all([
+    const [front, back, side, interior] = await Promise.all([
       resolveUploadValue(data.photos.front, folder, "front"),
       resolveUploadValue(data.photos.back, folder, "back"),
       resolveUploadValue(data.photos.side, folder, "side"),
       resolveUploadValue(data.photos.interior, folder, "interior"),
-      resolveUploadValue(data.documents.ownership, folder, "ownership"),
-      resolveUploadValue(data.documents.insurance, folder, "insurance"),
     ]);
+
+    const documents = data.documents
+      ? {
+          ownership: await resolveUploadValue(
+            data.documents.ownership,
+            folder,
+            "ownership",
+          ),
+          insurance: await resolveUploadValue(
+            data.documents.insurance,
+            folder,
+            "insurance",
+          ),
+        }
+      : undefined;
+
+    const initialStatus =
+      ownerType === "Company" && data.status ? data.status : "PENDING_APPROVAL";
 
     const vehicle = await Vehicle.create({
       ownerId,
@@ -121,11 +137,8 @@ export class VehicleService {
         interior,
         gallery: [front, back, side, interior],
       },
-      documents: {
-        ownership,
-        insurance,
-      },
-      status: "PENDING_APPROVAL",
+      documents,
+      status: initialStatus,
     });
 
     return vehicle;
