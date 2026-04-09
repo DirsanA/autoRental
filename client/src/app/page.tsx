@@ -4,9 +4,12 @@ import { LandingSearch } from "@/components/marketing/laning-search";
 import { LandingFeatures } from "@/components/marketing/landing-features";
 import { LandingFooter } from "@/components/marketing/landing-footer";
 
+
 export default function HomePage() {
+
   return (
-    <div className="min-h-screen bg-white text-gray-900">
+    <div className="min-h-screen bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+
       <Navbar />
 
       <main>
@@ -18,7 +21,7 @@ export default function HomePage() {
           <LandingSearch />
         </section>
 
-        <section className="py-20 px-6 lg:px-20 bg-gray-50">
+        <section id="cars-section" className="py-20 px-6 lg:px-20 dark:bg-gray-900 bg-gray-50">
           <LandingFeatures />
         </section>
 

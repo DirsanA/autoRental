@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { Card } from "../ui/card";
 import Image from "next/image";
+import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import carImage from "@/assets/image.jpg";
 import car2 from "@/assets/car-1.jpg";
@@ -24,7 +25,7 @@ const COMPANY_SECTIONS = [
     subtitle: "Fresh arrivals from Auto Rent Ethiopia's official fleet.",
     badge: "Official",
     cars: Array(6).fill({
-      image:car2,
+      image: car2,
       vechile_name: "Toyota Camry",
       year: 2024,
       rating: 4.9,
@@ -39,7 +40,7 @@ const COMPANY_SECTIONS = [
     subtitle: "Rent directly from trusted local owners in Addis.",
     badge: "User Post",
     cars: Array(6).fill({
-      image:car3,
+      image: car3,
       vechile_name: "Hyundai Tucson",
       year: 2021,
       rating: 4.5,
@@ -54,7 +55,7 @@ const COMPANY_SECTIONS = [
     subtitle: "Convenient car rentals for arrivals and departures.",
     badge: "Airport",
     cars: Array(6).fill({
-      image:car4,
+      image: car4,
       vechile_name: "Mercedes-Benz E-Class",
       year: 2023,
       rating: 4.8,
@@ -69,7 +70,7 @@ const COMPANY_SECTIONS = [
     subtitle: "Experience the finest in Ethiopian car rentals.",
     badge: "Luxury",
     cars: Array(6).fill({
-      image:car5,
+      image: car5,
       vechile_name: "BMW 5 Series",
       year: 2023,
       rating: 4.9,
@@ -97,7 +98,7 @@ const COMPANY_SECTIONS = [
 
 export function LandingFeatures() {
   return (
- <SectionContainer  className="py-0 space-y-0">
+    <SectionContainer className="py-0 space-y-0 bg-white dark:bg-gray-900 transition-colors duration-300">
       {COMPANY_SECTIONS.map((section) => (
         <CarRow key={section.id} section={section} />
       ))}
@@ -126,17 +127,19 @@ function CarRow({ section }: { section: (typeof COMPANY_SECTIONS)[0] }) {
       <div className="mb-1 flex items-end justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="bg-primary/10 text-primary text-[10px] font-bold uppercase px-2 py-0.5 rounded">
+            <span className="bg-primary/10 text-primary dark:bg-primary/30 dark:text-primary/80 text-[10px] font-bold uppercase px-2 py-0.5 rounded">
               {section.badge}
             </span>
-            <span className="text-muted-foreground text-xs">
+            <span className="text-muted-foreground dark:text-gray-400 text-xs">
               • Updated today
             </span>
           </div>
-          <h2 className="text-2xl font-bold tracking-tight text-foreground">
+          <h2 className="text-2xl font-bold tracking-tight text-foreground dark:text-gray-100">
             {section.title}
           </h2>
-          <p className="text-muted-foreground text-sm">{section.subtitle}</p>
+          <p className="text-muted-foreground dark:text-gray-300 text-sm">
+            {section.subtitle}
+          </p>
         </div>
 
         <div className="hidden md:flex gap-2">
@@ -144,7 +147,7 @@ function CarRow({ section }: { section: (typeof COMPANY_SECTIONS)[0] }) {
             onClick={() =>
               scrollRef.current?.scrollBy({ left: -380, behavior: "smooth" })
             }
-            className="p-2 border rounded-full hover:bg-accent"
+            className="p-2 border rounded-full hover:bg-accent dark:hover:bg-accent/20 transition-colors"
           >
             <ChevronLeft size={20} />
           </button>
@@ -152,7 +155,7 @@ function CarRow({ section }: { section: (typeof COMPANY_SECTIONS)[0] }) {
             onClick={() =>
               scrollRef.current?.scrollBy({ left: 380, behavior: "smooth" })
             }
-            className="p-2 border rounded-full hover:bg-accent"
+            className="p-2 border rounded-full hover:bg-accent dark:hover:bg-accent/20 transition-colors"
           >
             <ChevronRight size={20} />
           </button>
@@ -177,64 +180,74 @@ function CarRow({ section }: { section: (typeof COMPANY_SECTIONS)[0] }) {
           style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
         >
           {section.cars.map((car, idx) => (
-            <Card
-              key={idx}
-              className="min-w-[250px] md:min-w-[340px] snap-start overflow-hidden border-none shadow-none bg-transparent hover:bg-accent/5 transition-colors p-2"
-            >
-              <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden mb-3 shadow-sm">
-                <Image src={car.image} alt="car" fill className="object-cover" />
-              </div>
-
-              <div className="px-1">
-                <div className="flex justify-between items-center mb-1">
-                  <h3 className="font-bold text-lg flex items-center gap-1">
-                    {car.vechile_name}
-                    {car.isOfficial && (
-                      <BadgeCheck size={16} className="text-blue-500" />
-                    )}
-                  </h3>
-                  <div className="flex items-center gap-1 text-sm font-semibold">
-                    <Star
-                      size={14}
-                      className="fill-yellow-500 text-yellow-500"
-                    />{" "}
-                    {car.rating}
-                  </div>
+            <Link href={`/cars/${idx + 1}`} key={idx + 1}>
+              <Card
+                key={idx}
+                className="min-w-[250px] md:min-w-[340px] snap-start overflow-hidden border-none shadow-none bg-transparent dark:bg-gray-800 hover:bg-accent/5 dark:hover:bg-accent/20 transition-colors p-2"
+              >
+                <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden mb-3 shadow-sm">
+                  <Image
+                    src={car.image}
+                    alt="car"
+                    fill
+                    className="object-cover"
+                  />
                 </div>
 
-                <div className="flex gap-3 text-muted-foreground text-xs mb-4">
-                  <span className="flex items-center gap-1">
-                    <Calendar size={12} /> {car.year}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <MapPin size={12} /> Addis Ababa
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <div>
-                    <span className="text-xl font-black text-primary">
-                      ${car.price}
-                    </span>
-                    <span className="text-[10px] text-muted-foreground ml-1 uppercase">
-                      / Day
-                    </span>
-                  </div>
-                  <div className="text-right">
-                    <span className="text-[10px] text-muted-foreground line-through block">
-                      ${car.price + car.discount}
-                    </span>
-                    <span className="text-[10px] font-bold text-green-600 bg-green-50 px-1 rounded">
-                      -
-                      {Math.round(
-                        (car.discount / (car.price + car.discount)) * 100,
+                <div className="px-1">
+                  <div className="flex justify-between items-center mb-1">
+                    <h3 className="font-bold text-lg flex items-center gap-1 text-foreground dark:text-gray-100">
+                      {car.vechile_name}
+                      {car.isOfficial && (
+                        <BadgeCheck
+                          size={16}
+                          className="text-blue-500 dark:text-blue-400"
+                        />
                       )}
-                      % Off
+                    </h3>
+                    <div className="flex items-center gap-1 text-sm font-semibold">
+                      <Star
+                        size={14}
+                        className="fill-yellow-500 dark:fill-yellow-400 text-yellow-500 dark:text-yellow-400"
+                      />{" "}
+                      {car.rating}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3 text-muted-foreground dark:text-gray-400 text-xs mb-4">
+                    <span className="flex items-center gap-1">
+                      <Calendar size={12} /> {car.year}
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <MapPin size={12} /> Addis Ababa
                     </span>
                   </div>
+
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <span className="text-xl font-black text-primary dark:text-primary/80">
+                        ${car.price}
+                      </span>
+                      <span className="text-[10px] text-muted-foreground dark:text-gray-400 ml-1 uppercase">
+                        / Day
+                      </span>
+                    </div>
+                    <div className="text-right">
+                      <span className="text-[10px] text-muted-foreground dark:text-gray-400 line-through block">
+                        ${car.price + car.discount}
+                      </span>
+                      <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900 px-1 rounded">
+                        -
+                        {Math.round(
+                          (car.discount / (car.price + car.discount)) * 100,
+                        )}
+                        % Off
+                      </span>
+                    </div>
+                  </div>
                 </div>
-              </div>
-            </Card>
+              </Card>
+            </Link>
           ))}
         </div>
       </div>
