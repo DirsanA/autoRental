@@ -69,17 +69,10 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-<<<<<<< HEAD
-                className="flex items-center gap-3 hover:shadow-md px-3 py-6 border-gray-300 rounded-full transition-all"
-              >
-                <Menu size={20} />
-                <div className="bg-zinc-800 p-1 rounded-full text-white">
-=======
                 className="flex items-center gap-3 rounded-full dark:bg-zinc-900 border-gray-300 py-6 px-3 hover:shadow-md transition-all"
               >
                 <Menu size={20} />
                 <div className="bg-zinc-800 dark:bg-zinc-900 text-white p-1 rounded-full">
->>>>>>> 35d030b (fix:dark mode)
                   <User size={18} />
                 </div>
               </Button>
