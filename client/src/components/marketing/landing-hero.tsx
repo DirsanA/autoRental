@@ -55,7 +55,6 @@ export function LandingHero() {
   return (
     <SectionContainer className="pt-16 md:pt-20">
       <div className="relative z-40 w-full min-h-[380px] md:h-[300px] flex flex-col items-center justify-center rounded-[2rem] md:rounded-[1.5rem] overflow-visible shadow-2xl px-4 md:px-2">
-
         <Image
           src={carImage}
           alt="Auto Rent Ethiopia"
@@ -76,7 +75,7 @@ export function LandingHero() {
 
           {/* Search Card */}
           {/* FIX: Increased z-index from z-20 to z-50 */}
-          <Card className="w-full max-w-5xl h-auto bg-white border-none shadow-2xl rounded-2xl md:absolute md:-bottom-12 z-50">
+          <Card className="w-full max-w-5xl h-auto bg-[var(--card)] text-[var(--card-foreground)] border-none shadow-2xl rounded-2xl md:absolute md:-bottom-12 z-50">
             <CardContent className="p-4 md:p-3">
               <div className="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-2 items-end text-left">
                 {/* Location */}
@@ -92,7 +91,7 @@ export function LandingHero() {
                       placeholder="City or Airport"
                       onFocus={() => setOpen(true)}
                       onChange={(e) => setQuery(e.target.value)}
-                      className="bg-gray-50 h-12 pl-10 rounded-xl border-none font-medium text-sm"
+                      className="bg-[var(--input)] text-[var(--foreground)] h-12 pl-10 rounded-xl border-none font-medium text-sm"
                     />
                   </div>
                 </div>
@@ -164,7 +163,7 @@ export function LandingHero() {
 
                 {/* Submit */}
                 <div className="md:col-span-2">
-                  <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl transition-transform active:scale-95 md:hover:scale-105">
+                  <Button className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-xl bg-[var(--primary)] text-[var(--primary-foreground)] transition-transform active:scale-95 md:hover:scale-105">
                     <Search className="w-5 h-5 mr-2 md:mr-0" />
                     <span className="md:hidden">Search Cars</span>
                   </Button>
