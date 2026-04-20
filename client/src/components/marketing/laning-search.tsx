@@ -2,8 +2,7 @@
 
 import Image from "next/image";
 import { Card } from "../ui/card";
-import { Button } from "../ui/button";
-import { Star, Users, Calendar, } from "lucide-react";
+import { Star } from "lucide-react";
 import Link from "next/link";
 import carImage from "@/assets/image.jpg";
 import car2 from "@/assets/car-1.jpg";
@@ -83,7 +82,7 @@ export function LandingSearch() {
 
   return (
     <section className="py-0 px-4 max-w-5xl mx-auto">
-      <h2 className="text-2xl font-bold mb-6">
+      <h2 className="text-2xl font-bold mb-6 text-foreground dark:text-gray-100">
         Inspired by your recent search
       </h2>
 
@@ -91,45 +90,37 @@ export function LandingSearch() {
         {cars.map(
           (car, idx) =>
             car.car_name && (
-              <Card
-                key={idx}
-                className="flex flex-row overflow-hidden p-4 gap-4 items-center border-none shadow-sm bg-gray-100 hover:bg-accent/10 transition-colors"
-              >
-                <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-lg">
-                  <Image
-                    src={car.image}
-                    alt={car.car_name}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+              <Link key={idx} href={`/cars/${car.id}`}>
+                <Card className="flex flex-row overflow-hidden p-4 gap-4 items-center border-none shadow-sm bg-gray-100 dark:bg-gray-800 hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors cursor-pointer">
+                  <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-lg">
+                    <Image
+                      src={car.image}
+                      alt={car.car_name}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
 
-                <div className="flex flex-col flex-grow justify-between py-1">
-                  <div>
-                    <h3 className="font-bold text-lg leading-tight capitalize">
-                      {car.car_name}
-                    </h3>
-                    <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground">
-                      <span className="flex items-center gap-1">
-                        {car.year}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        {car.rating}
-                        <Star className="w-3.5 h-4.5 fill-blue-500 text-primary" />
-                      </span>
-                      <span className="flex items-center">
-                        ({car.number_of_people})
-                      </span>
+                  <div className="flex flex-col flex-grow justify-between py-1">
+                    <div>
+                      <h3 className="font-bold text-lg leading-tight capitalize text-foreground dark:text-gray-100">
+                        {car.car_name}
+                      </h3>
+
+                      <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground dark:text-gray-400">
+                        <span>{car.year}</span>
+
+                        <span className="flex items-center gap-1">
+                          {car.rating}
+                          <Star className="w-3.5 h-4.5 fill-blue-500 dark:fill-blue-400 text-primary" />
+                        </span>
+
+                        <span>({car.number_of_people})</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="mt-3">
-                   
-                      <Link href={`/cars/${car.id}`}  className="p-0 h-auto underline-offset-4 hover:underline">View details</Link>
-                 
-                  </div>
-                </div>
-              </Card>
+                </Card>
+              </Link>
             ),
         )}
       </div>

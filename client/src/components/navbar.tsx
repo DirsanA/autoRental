@@ -29,7 +29,7 @@ const Navbar = () => {
   const isWhyChoosePage = pathname === "/why-choose-us";
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 mx-auto h-16 w-full border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
+    <nav className="fixed inset-x-0 top-0 z-50 mx-auto h-16 w-full dark:bg-gray-900/80 dark:border-gray-700/50 border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
         {/* Logo */}
         <div className="flex items-center gap-6">
@@ -69,10 +69,10 @@ const Navbar = () => {
             <DropdownMenuTrigger asChild>
               <Button
                 variant="outline"
-                className="flex items-center gap-3 hover:shadow-md px-3 py-6 border-gray-300 rounded-full transition-all"
+                className="flex items-center gap-3 rounded-full dark:bg-zinc-900 border-gray-300 py-6 px-3 hover:shadow-md transition-all"
               >
                 <Menu size={20} />
-                <div className="bg-zinc-800 p-1 rounded-full text-white">
+                <div className="bg-zinc-800 dark:bg-zinc-900 text-white p-1 rounded-full">
                   <User size={18} />
                 </div>
               </Button>
