@@ -2,6 +2,7 @@ import type { Vehicle as CompanyVehicle } from "@/app/(dashboard)/company/types"
 
 type ApiVehicle = {
   id: string;
+  ownerType?: string;
   make?: string;
   model?: string;
   year?: number;
@@ -23,6 +24,24 @@ type ApiVehicle = {
     gallery?: string[];
   };
 };
+
+export type UpdateCompanyVehiclePayload = Partial<{
+  make: string;
+  model: string;
+  year: number;
+  vin: string;
+  plate: string;
+  mileage: number;
+  fuel: "petrol" | "diesel" | "hybrid" | "electric";
+  transmission: "manual" | "automatic" | "cvt";
+  seats: number;
+  features: string[];
+  condition: string;
+  price: number;
+  availability: string;
+  delivery: string;
+  status: "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "RETIRED" | "PENDING_APPROVAL";
+}>;
 
 export type CreateCompanyVehiclePayload = {
   ownerId?: string;
@@ -173,4 +192,126 @@ export async function submitCompanyVehicle(
   }
 
   return mapApiVehicleToCompanyVehicle(vehicle);
+}
+
+export async function fetchCompanyVehicleById(id: string): Promise<CompanyVehicle | null> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (response.status === 404) return null;
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to load vehicle details (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { vehicle?: ApiVehicle };
+  };
+  const vehicle = payload.data?.vehicle;
+  return vehicle ? mapApiVehicleToCompanyVehicle(vehicle) : null;
+}
+
+export async function fetchCompanyVehicles(): Promise<CompanyVehicle[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles`, {
+      cache: "no-store",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to load fleet vehicles (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { vehicles?: ApiVehicle[] };
+  };
+
+  const vehicles = Array.isArray(payload.data?.vehicles) ? payload.data.vehicles : [];
+
+  return vehicles
+    .filter((vehicle) => vehicle.ownerType === "Company")
+    .map(mapApiVehicleToCompanyVehicle);
+}
+
+export async function updateCompanyVehicleById(
+  id: string,
+  updates: UpdateCompanyVehiclePayload,
+): Promise<CompanyVehicle> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify(updates),
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to update vehicle (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { vehicle?: ApiVehicle };
+  };
+  const vehicle = payload.data?.vehicle;
+  if (!vehicle) {
+    throw new Error("Vehicle updated but no vehicle data was returned.");
+  }
+  return mapApiVehicleToCompanyVehicle(vehicle);
+}
+
+export async function deleteCompanyVehicleById(id: string): Promise<void> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to delete vehicle (HTTP ${response.status})`,
+    );
+  }
 }

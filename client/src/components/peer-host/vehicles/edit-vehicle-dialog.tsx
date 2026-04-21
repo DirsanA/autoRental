@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Save, X, Plus, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,23 +32,32 @@ interface EditVehicleDialogProps {
   onOpenChange: (open: boolean) => void;
   vehicleDetails: EditableVehicleDetails;
   onSave: (updatedDetails: EditableVehicleDetails) => Promise<void>;
+  isSaving?: boolean;
 }
 
 export function EditVehicleDialog({ 
   open, 
   onOpenChange, 
   vehicleDetails, 
-  onSave 
+  onSave,
+  isSaving = false,
 }: EditVehicleDialogProps) {
-  const [isSaving, setIsSaving] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [newFeature, setNewFeature] = useState("");
   const [editableDetails, setEditableDetails] = useState<EditableVehicleDetails>(vehicleDetails);
 
+  useEffect(() => {
+    setEditableDetails(vehicleDetails);
+  }, [vehicleDetails]);
+
   const handleSave = async () => {
-    setIsSaving(true);
-    await onSave(editableDetails);
-    setIsSaving(false);
-    onOpenChange(false);
+    setIsSubmitting(true);
+    try {
+      await onSave(editableDetails);
+      onOpenChange(false);
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddFeature = () => {
@@ -282,10 +291,10 @@ export function EditVehicleDialog({
           </Button>
           <Button
             onClick={handleSave}
-            disabled={isSaving}
+            disabled={isSaving || isSubmitting}
             className="dark:bg-blue-600 dark:hover:bg-blue-700"
           >
-            {isSaving ? (
+            {isSaving || isSubmitting ? (
               <>Saving...</>
             ) : (
               <>

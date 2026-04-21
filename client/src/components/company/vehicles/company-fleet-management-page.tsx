@@ -14,6 +14,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 import { AddCompanyVehicleDialog } from "./add-company-vehicle-dialog";
+import { fetchCompanyVehicles } from "./api";
 import {
   persistCompanyFleetVehicles,
   readCompanyFleetVehicles,
@@ -64,6 +65,26 @@ export function CompanyFleetManagementPage({
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FleetFilter>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadVehicles() {
+      try {
+        const backendVehicles = await fetchCompanyVehicles();
+        if (cancelled) return;
+        setVehicles(backendVehicles);
+      } catch {
+        // Keep cached/mock vehicles when the backend is unavailable.
+      }
+    }
+
+    void loadVehicles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     persistCompanyFleetVehicles(vehicles);
