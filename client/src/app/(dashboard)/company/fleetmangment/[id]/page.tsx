@@ -1,4 +1,3 @@
-import { MOCK_VEHICLES } from "../../types";
 import { CompanyVehicleDetailEntry } from "@/components/company/vehicles/company-vehicle-detail-entry";
 
 interface PageProps {
@@ -11,7 +10,5 @@ export default async function CompanyFleetVehicleDetailRoute({
   params,
 }: PageProps) {
   const { id } = await params;
-  return (
-    <CompanyVehicleDetailEntry id={id} initialVehicles={MOCK_VEHICLES} />
-  );
+  return <CompanyVehicleDetailEntry id={id} />;
 }

@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Vehicle, type VehicleDocument } from "../models/Vehicle.js";
 import type {
   CreateVehicleInput,
+  UpdateVehicleInput,
   UpdateVehicleStatusInput,
 } from "../validators/vehicle.validator.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
@@ -71,6 +72,32 @@ export class VehicleService {
     }
 
     return vehicle;
+  }
+
+  async update(id: string, data: UpdateVehicleInput): Promise<VehicleDocument> {
+    const updateData: UpdateVehicleInput = { ...data };
+    if (Array.isArray(updateData.features)) {
+      updateData.features = normalizeFeatures(updateData.features);
+    }
+
+    const vehicle = await Vehicle.findByIdAndUpdate(
+      id,
+      updateData,
+      { new: true, runValidators: true },
+    );
+
+    if (!vehicle) {
+      throw ApiError.notFound("Vehicle not found");
+    }
+
+    return vehicle;
+  }
+
+  async remove(id: string): Promise<void> {
+    const deleted = await Vehicle.findByIdAndDelete(id);
+    if (!deleted) {
+      throw ApiError.notFound("Vehicle not found");
+    }
   }
 
   async create(data: CreateVehicleInput): Promise<VehicleDocument> {

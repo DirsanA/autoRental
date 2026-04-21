@@ -1,12 +1,10 @@
-import {
-  MOCK_VEHICLES,
-  type Vehicle as CompanyVehicle,
-} from "@/app/(dashboard)/company/types";
+import type { Vehicle as CompanyVehicle } from "@/app/(dashboard)/company/types";
 import type {
   Vehicle as DashboardVehicle,
   VehicleStatus,
 } from "@/components/peer-host/vehicles/types";
-import { patchCompanyFleetVehicleStatus } from "./storage";
+import { updateCompanyVehicleById } from "./api";
+import { upsertCompanyFleetVehicle } from "./storage";
 
 function mapCompanyStatus(status: CompanyVehicle["status"]): VehicleStatus {
   switch (status) {
@@ -35,6 +33,23 @@ function mapDashboardStatus(status: VehicleStatus): CompanyVehicle["status"] {
       return "pending_approval";
     case "retired":
       return "retired";
+  }
+}
+
+function toApiStatus(
+  status: CompanyVehicle["status"],
+): "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "RETIRED" | "PENDING_APPROVAL" {
+  switch (status) {
+    case "available":
+      return "AVAILABLE";
+    case "booked":
+      return "BOOKED";
+    case "maintenance":
+      return "MAINTENANCE";
+    case "pending_approval":
+      return "PENDING_APPROVAL";
+    case "retired":
+      return "RETIRED";
   }
 }
 
@@ -78,23 +93,15 @@ export async function updateCompanyVehicleAvailability(
     throw new Error("Retired vehicles cannot accept bookings.");
   }
 
-  await new Promise((resolve) => globalThis.setTimeout(resolve, 250));
-
   const nextStatus: VehicleStatus = acceptingBookings
     ? vehicle.status === "rented"
       ? "rented"
       : "available"
     : "maintenance";
+  const updated = await updateCompanyVehicleById(vehicle.id, {
+    status: toApiStatus(mapDashboardStatus(nextStatus)),
+  });
+  upsertCompanyFleetVehicle(updated);
 
-  patchCompanyFleetVehicleStatus(
-    vehicle.id,
-    mapDashboardStatus(nextStatus),
-    MOCK_VEHICLES,
-  );
-
-  return {
-    ...vehicle,
-    acceptingBookings,
-    status: nextStatus,
-  };
+  return mapCompanyVehicleToDashboardVehicle(updated);
 }

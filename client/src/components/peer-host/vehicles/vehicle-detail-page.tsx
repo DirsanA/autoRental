@@ -73,6 +73,11 @@ type PeerHostVehicleDetailPageProps = {
     vehicle: Vehicle,
     acceptingBookings: boolean,
   ) => Promise<Vehicle>;
+  onSaveDetails?: (
+    vehicleId: string,
+    updatedDetails: EditableVehicleDetails,
+  ) => Promise<Vehicle>;
+  onRemoveVehicle?: (vehicleId: string) => Promise<void>;
 };
 
 export function PeerHostVehicleDetailPage({
@@ -82,6 +87,8 @@ export function PeerHostVehicleDetailPage({
   controlsTitle = "Controls",
   removeActionLabel = "Remove listing",
   onUpdateAvailability,
+  onSaveDetails,
+  onRemoveVehicle,
 }: PeerHostVehicleDetailPageProps) {
   const router = useRouter();
   const [editableRate, setEditableRate] = useState(vehicle.dailyRate);
@@ -89,6 +96,8 @@ export function PeerHostVehicleDetailPage({
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
+  const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isRemovingVehicle, setIsRemovingVehicle] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<VehicleStatus>(vehicle.status);
   const [acceptingBookings, setAcceptingBookings] = useState(
     vehicle.acceptingBookings ?? vehicle.status === "available"
@@ -160,14 +169,60 @@ export function PeerHostVehicleDetailPage({
   };
 
   const handleSaveDetails = async (updatedDetails: EditableVehicleDetails) => {
-    // Simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    
-    // Update the local state
-    setEditableDetails(updatedDetails);
-    
-    // Show success message
-    pushNotice("Vehicle details updated successfully.");
+    setIsSavingDetails(true);
+    try {
+      if (!onSaveDetails) {
+        await new Promise((resolve) => setTimeout(resolve, 400));
+        setEditableDetails(updatedDetails);
+        setEditableRate(updatedDetails.dailyRate);
+        pushNotice("Vehicle details updated successfully.");
+        return;
+      }
+
+      const updatedVehicle = await onSaveDetails(vehicle.id, updatedDetails);
+      setEditableDetails(createEditableDetails(updatedVehicle));
+      setEditableRate(updatedVehicle.dailyRate);
+      setCurrentStatus(updatedVehicle.status);
+      setAcceptingBookings(
+        updatedVehicle.acceptingBookings ?? updatedVehicle.status === "available",
+      );
+      pushNotice("Vehicle details updated successfully.");
+    } catch (error) {
+      pushNotice(
+        error instanceof Error
+          ? error.message
+          : "Failed to update vehicle details. Please try again.",
+      );
+      throw error;
+    } finally {
+      setIsSavingDetails(false);
+    }
+  };
+
+  const handleRemoveVehicle = async () => {
+    const confirmed = window.confirm(
+      "Are you sure you want to remove this vehicle? This action cannot be undone.",
+    );
+    if (!confirmed) return;
+
+    if (!onRemoveVehicle) {
+      pushNotice("Remove action is not configured for this page.");
+      return;
+    }
+
+    setIsRemovingVehicle(true);
+    try {
+      await onRemoveVehicle(vehicle.id);
+      pushNotice("Vehicle removed successfully.");
+    } catch (error) {
+      pushNotice(
+        error instanceof Error
+          ? error.message
+          : "Failed to remove vehicle. Please try again.",
+      );
+    } finally {
+      setIsRemovingVehicle(false);
+    }
   };
 
   const handleAvailabilityToggle = async (checked: boolean) => {
@@ -209,6 +264,14 @@ export function PeerHostVehicleDetailPage({
     } finally {
       setIsUpdatingAvailability(false);
     }
+  };
+
+  const handleSaveRate = async () => {
+    const payload: EditableVehicleDetails = {
+      ...editableDetails,
+      dailyRate: editableRate,
+    };
+    await handleSaveDetails(payload);
   };
 
   const availabilityTone = acceptingBookings
@@ -286,9 +349,13 @@ export function PeerHostVehicleDetailPage({
                 <Copy className="mr-2 w-4 h-4" />
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem className="dark:focus:bg-slate-800 text-destructive dark:text-red-400 cursor-pointer">
+              <DropdownMenuItem
+                className="dark:focus:bg-slate-800 text-destructive dark:text-red-400 cursor-pointer"
+                onClick={handleRemoveVehicle}
+                disabled={isRemovingVehicle}
+              >
                 <Trash2 className="mr-2 w-4 h-4" />
-                Remove
+                {isRemovingVehicle ? "Removing..." : "Remove"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -468,7 +535,12 @@ export function PeerHostVehicleDetailPage({
                       onChange={(e) => setEditableRate(Number(e.target.value))}
                       className="dark:bg-slate-800 dark:border-slate-700 h-9 dark:text-slate-200"
                     />
-                    <Button size="sm" className="dark:bg-blue-600 dark:hover:bg-blue-700 px-4 h-9">
+                    <Button
+                      size="sm"
+                      className="dark:bg-blue-600 dark:hover:bg-blue-700 px-4 h-9"
+                      onClick={handleSaveRate}
+                      disabled={isSavingDetails}
+                    >
                       Save
                     </Button>
                   </div>
@@ -550,9 +622,15 @@ export function PeerHostVehicleDetailPage({
                     className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600"
                   />
                 </div>
-                <Button variant="outline" className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full text-destructive dark:text-red-400" size="sm">
+                <Button
+                  variant="outline"
+                  className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full text-destructive dark:text-red-400"
+                  size="sm"
+                  onClick={handleRemoveVehicle}
+                  disabled={isRemovingVehicle}
+                >
                   <Trash2 className="mr-2 w-4 h-4" />
-                  {removeActionLabel}
+                  {isRemovingVehicle ? "Removing..." : removeActionLabel}
                 </Button>
               </div>
             </CardContent>
@@ -565,6 +643,7 @@ export function PeerHostVehicleDetailPage({
         onOpenChange={setIsEditDialogOpen}
         vehicleDetails={editableDetails}
         onSave={handleSaveDetails}
+        isSaving={isSavingDetails}
       />
     </>
   );

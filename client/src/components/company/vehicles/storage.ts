@@ -22,7 +22,7 @@ export function readCompanyFleetVehicles(
     }
 
     const parsed = JSON.parse(raw) as CompanyVehicle[];
-    return Array.isArray(parsed) && parsed.length > 0 ? parsed : fallbackVehicles;
+    return Array.isArray(parsed) ? parsed : fallbackVehicles;
   } catch {
     return fallbackVehicles;
   }
@@ -49,4 +49,34 @@ export function patchCompanyFleetVehicleStatus(
   );
 
   persistCompanyFleetVehicles(vehicles);
+}
+
+export function upsertCompanyFleetVehicle(
+  nextVehicle: CompanyVehicle,
+  fallbackVehicles: CompanyVehicle[] = [],
+) {
+  const vehicles = readCompanyFleetVehicles(fallbackVehicles);
+  const existingIndex = vehicles.findIndex((vehicle) => vehicle.id === nextVehicle.id);
+
+  if (existingIndex === -1) {
+    persistCompanyFleetVehicles([nextVehicle, ...vehicles]);
+    return;
+  }
+
+  const nextVehicles = [...vehicles];
+  nextVehicles[existingIndex] = nextVehicle;
+  persistCompanyFleetVehicles(nextVehicles);
+}
+
+export function removeCompanyFleetVehicle(
+  id: string,
+  fallbackVehicles: CompanyVehicle[] = [],
+) {
+  const currentVehicles = readCompanyFleetVehicles(fallbackVehicles);
+  const vehicles = currentVehicles.filter(
+    (vehicle) => vehicle.id !== id,
+  );
+
+  persistCompanyFleetVehicles(vehicles);
+  return vehicles.length !== currentVehicles.length;
 }

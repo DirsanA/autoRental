@@ -19,7 +19,10 @@ const HostSection = ({ host }: { host: Host }) => {
           <Image
             src={host.image}
             alt={host.name}
+            width={64}
+            height={64}
             className="w-16 h-16 rounded-full object-cover"
+            unoptimized
           />
           <div className="absolute -bottom-1 -right-1 bg-background rounded-full p-0.5">
             <div className="flex items-center gap-0.5 bg-foreground text-primary-foreground rounded-full px-1.5 py-0.5 text-xs font-bold">

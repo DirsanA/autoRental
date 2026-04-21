@@ -14,9 +14,19 @@ import {
   Usb,
   Locate,
   KeyRound,
+  type LucideIcon,
 } from "lucide-react";
 
-const features = {
+type FeatureItem = {
+  icon: LucideIcon;
+  name: string;
+};
+
+type CarFeaturesProps = {
+  features?: string[];
+};
+
+const DEFAULT_FEATURES = {
   Safety: [
     { icon: Eye, name: "Backup camera" },
     { icon: AlertTriangle, name: "Blind spot warning" },
@@ -42,10 +52,90 @@ const features = {
   ],
 };
 
-const CarFeatures = () => {
+const FEATURE_ICON_MAP: Record<string, LucideIcon> = {
+  "backup camera": Eye,
+  "blind spot warning": AlertTriangle,
+  "brake assist": Shield,
+  "lane departure warning": AlertTriangle,
+  "lane keeping assist": Shield,
+  "android auto": Smartphone,
+  "apple carplay": Smartphone,
+  bluetooth: Bluetooth,
+  "usb charger": Usb,
+  "usb input": Usb,
+  gps: Locate,
+  navigation: Navigation,
+  "keyless entry": KeyRound,
+  "heated seats": Thermometer,
+  sunroof: Sun,
+  "toll pass": Navigation,
+};
+
+const CATEGORY_RULES: Array<{
+  category: string;
+  keywords: string[];
+}> = [
+  {
+    category: "Safety",
+    keywords: ["safety", "camera", "blind", "lane", "brake", "airbag", "assist"],
+  },
+  {
+    category: "Device connectivity",
+    keywords: ["carplay", "android", "bluetooth", "usb", "wifi", "audio", "screen"],
+  },
+  {
+    category: "Convenience",
+    keywords: ["gps", "navigation", "keyless", "remote", "cruise", "parking"],
+  },
+];
+
+function normalizeFeatureName(name: string) {
+  return name.trim().replace(/\s+/g, " ");
+}
+
+function getFeatureCategory(featureName: string) {
+  const normalized = featureName.toLowerCase();
+  const match = CATEGORY_RULES.find((rule) =>
+    rule.keywords.some((keyword) => normalized.includes(keyword)),
+  );
+  return match?.category || "Additional features";
+}
+
+function getFeatureIcon(featureName: string) {
+  const normalized = featureName.toLowerCase();
+  return FEATURE_ICON_MAP[normalized] || Check;
+}
+
+function buildFeatureGroups(featureNames?: string[]): Record<string, FeatureItem[]> {
+  const cleaned = Array.isArray(featureNames)
+    ? featureNames.map(normalizeFeatureName).filter(Boolean)
+    : [];
+
+  if (!cleaned.length) {
+    return DEFAULT_FEATURES;
+  }
+
+  const grouped: Record<string, FeatureItem[]> = {};
+
+  for (const featureName of cleaned) {
+    const category = getFeatureCategory(featureName);
+    const item: FeatureItem = {
+      icon: getFeatureIcon(featureName),
+      name: featureName,
+    };
+    if (!grouped[category]) grouped[category] = [];
+    grouped[category].push(item);
+  }
+
+  return grouped;
+}
+
+const CarFeatures = ({ features }: CarFeaturesProps) => {
   const [expanded, setExpanded] = useState(false);
-  const allCategories = Object.entries(features);
+  const groupedFeatures = buildFeatureGroups(features);
+  const allCategories = Object.entries(groupedFeatures);
   const visibleCategories = expanded ? allCategories : allCategories.slice(0, 2);
+  const totalFeatureCount = Object.values(groupedFeatures).flat().length;
 
   return (
     <div className="py-2">
@@ -70,7 +160,7 @@ const CarFeatures = () => {
         onClick={() => setExpanded(!expanded)}
         className="mt-5 flex items-center gap-1 text-sm font-semibold text-foreground hover:underline"
       >
-        {expanded ? "Show less" : `See all ${Object.values(features).flat().length} features`}
+        {expanded ? "Show less" : `See all ${totalFeatureCount} features`}
         {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       </button>
     </div>

@@ -1,23 +1,14 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Star,
   Users,
-  MapPin,
   Grid,
   Heart,
-  X,
   Fuel,
   Settings2,
   Gauge,
-  Shield,
-  Smartphone,
-  Navigation,
-  Thermometer,
-  Sun,
-  Check,
   Award,
-  ChevronDown,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -36,36 +27,122 @@ import PhotoModal from "@/components/PhototModal";
 import Navbar from "@/components/navbar";
 import Image from "next/image";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
+import { fetchPeerHostVehicleById } from "@/components/peer-host/vehicles/api";
+import type { Vehicle } from "@/components/peer-host/vehicles/types";
 
-const car = {
-  name: "BMW 5 Series",
-  subtitle: "2025 530i",
-  rating: 5.0,
-  trips: 33,
-  seats: 5,
-  fuel: "Hybrid",
-  mpg: 32,
-  transmission: "Automatic",
-  location: "Miami, FL 33142",
-  pricePerMonth: 1841,
-  originalPrice: 2549,
-  monthlyDiscount: 708,
-  images: [carMain, car2, car3, car4, car5],
-  host: {
-    name: "Kyrylo",
-    rating: 4.9,
-    trips: 34889,
-    joined: "Dec 2017",
-    allStar: true,
-    image: car2,
-  },
-};
+const FALLBACK_IMAGES = [carMain.src, car2.src, car3.src, car4.src, car5.src];
 
 const Index = () => {
   const [showPhotos, setShowPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
+  const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const params = useParams<{ id: string }>();
   const router = useRouter();
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadVehicle() {
+      const vehicleId = params?.id;
+      if (!vehicleId || Array.isArray(vehicleId)) {
+        setError("Invalid vehicle id");
+        setLoading(false);
+        return;
+      }
+
+      setLoading(true);
+      setError(null);
+
+      try {
+        const data = await fetchPeerHostVehicleById(vehicleId);
+        if (cancelled) return;
+
+        if (!data) {
+          setError("Vehicle not found");
+          setVehicle(null);
+          return;
+        }
+
+        setVehicle(data);
+      } catch (err) {
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : "Failed to load vehicle");
+        setVehicle(null);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    }
+
+    void loadVehicle();
+    return () => {
+      cancelled = true;
+    };
+  }, [params?.id]);
+
+  const car = useMemo(() => {
+    const name = vehicle ? `${vehicle.make} ${vehicle.model}` : "Vehicle";
+    const photosFromApi = [
+      ...(vehicle?.galleryImages ?? []),
+      ...(vehicle?.imageUrl ? [vehicle.imageUrl] : []),
+    ].filter(Boolean) as string[];
+    const images = photosFromApi.length > 0 ? Array.from(new Set(photosFromApi)) : FALLBACK_IMAGES;
+    const dailyRate = vehicle?.dailyRate ?? 0;
+    const monthlyDiscount = Math.round(dailyRate * 30 * 0.12);
+    const originalPrice = Math.round(dailyRate * 30 + monthlyDiscount);
+
+    return {
+      name,
+      subtitle: vehicle ? `${vehicle.year} ${vehicle.model}` : "Vehicle details",
+      rating: vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
+      trips: vehicle?.ratingCount ?? 0,
+      seats: vehicle?.seats ?? 5,
+      fuel: vehicle?.fuel ?? "Petrol",
+      mpg: 32,
+      transmission: vehicle?.transmission ?? "Automatic",
+      location: vehicle?.location ?? "Addis Ababa",
+      pricePerMonth: dailyRate * 30,
+      originalPrice,
+      monthlyDiscount,
+      images,
+      description:
+        vehicle?.description ||
+        "A clean, comfortable rental car suitable for city rides, airport pickups, and long drives.",
+      host: {
+        name: "Verified Host",
+        rating: 4.9,
+        trips: 120,
+        joined: "Dec 2024",
+        allStar: true,
+        image: car2.src,
+      },
+    };
+  }, [vehicle]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+        <Navbar />
+        <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
+          <p className="text-lg font-medium">Loading vehicle details...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+        <Navbar />
+        <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 space-y-4">
+          <p className="text-lg font-medium text-red-600">{error}</p>
+          <Button onClick={() => router.push("/#cars-section")}>Back to cars</Button>
+        </main>
+      </div>
+    );
+  }
 
   return (
   <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
@@ -78,22 +155,26 @@ const Index = () => {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 rounded-2xl overflow-hidden shadow-lg">
             <div
               onClick={() => setShowPhotos(true)}
-              className="md:col-span-2 aspect-[16/10] overflow-hidden rounded-2xl cursor-pointer group"
+              className="relative md:col-span-2 aspect-[16/10] overflow-hidden rounded-2xl cursor-pointer group"
             >
               <Image
                 src={car.images[0]}
                 alt={car.name}
+                fill
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
+                unoptimized
               />
             </div>
 
             <div className="hidden md:grid grid-rows-2 gap-2">
               {car.images.slice(1, 3).map((img, i) => (
-                <div key={i} className="overflow-hidden rounded-2xl">
+                <div key={i} className="relative overflow-hidden rounded-2xl">
                   <Image
                     src={img}
                     alt={`${car.name} view ${i + 2}`}
+                    fill
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 rounded-2xl"
+                    unoptimized
                   />
                 </div>
               ))}
@@ -174,7 +255,7 @@ const Index = () => {
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
             <HostSection host={car.host} />
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
-            <CarFeatures />
+            <CarFeatures features={vehicle?.features} />
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
 
             {/* Description */}
@@ -183,13 +264,7 @@ const Index = () => {
                 Description
               </h2>
               <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
-                Experience the pinnacle of luxury and performance with the 2025
-                BMW 530i. This hybrid sedan combines cutting-edge technology
-                with refined elegance. Features include premium leather
-                interior, panoramic sunroof, advanced driver assistance systems,
-                and the latest iDrive infotainment system with wireless Apple
-                CarPlay and Android Auto. Perfect for business trips, weekend
-                getaways, or exploring Miami in style.
+                {car.description}
               </p>
             </div>
 
