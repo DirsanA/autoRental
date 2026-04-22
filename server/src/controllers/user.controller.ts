@@ -3,7 +3,10 @@ import { fromNodeHeaders } from "better-auth/node";
 import type { UserService } from "../services/user.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireRequestUser } from "../utils/requestContext.js";
-import type { AdminUserListQueryInput } from "../validators/user.admin.validator.js";
+import type {
+  AdminUserListQueryInput,
+  AdminUserVerificationLevelInput,
+} from "../validators/user.admin.validator.js";
 
 /**
  * Creates user-related route handlers.
@@ -75,6 +78,23 @@ export function createUserController(userService: UserService) {
         requireRequestUser(req),
         String(req.params.id),
         req.body,
+      );
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * PATCH /api/users/:id/verification-level
+     * Applies an admin-managed verification level transition.
+     */
+    updateVerificationLevel: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.updateVerificationLevel(
+        requireRequestUser(req),
+        String(req.params.id),
+        req.body as AdminUserVerificationLevelInput,
       );
 
       res.json({

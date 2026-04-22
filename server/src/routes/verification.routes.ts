@@ -10,7 +10,8 @@ import { AccountType } from "../models/User.js";
 import {
   reviewVerificationSchema,
   submitPeerhostVerificationSchema,
-  submitRenterVerificationSchema,
+  submitRenterIdVerificationSchema,
+  submitRenterLicenseVerificationSchema,
   verificationIdParamsSchema,
 } from "../validators/verification.validator.js";
 
@@ -21,24 +22,36 @@ export function createVerificationRoutes(auth: Auth): Router {
     createVerificationController(verificationService);
 
   router.use(authenticate);
-  router.use(requireAccountType(AccountType.USER));
+  router.post(
+    "/renter/id",
+    requireAccountType(AccountType.USER),
+    validate({ body: submitRenterIdVerificationSchema }),
+    verificationController.submitRenterId,
+  );
 
   router.post(
-    "/renter",
-    validate({ body: submitRenterVerificationSchema }),
-    verificationController.submitRenter,
+    "/renter/license",
+    requireAccountType(AccountType.USER),
+    validate({ body: submitRenterLicenseVerificationSchema }),
+    verificationController.submitRenterLicense,
   );
 
   router.post(
     "/peerhost",
+    requireAccountType(AccountType.USER),
     validate({ body: submitPeerhostVerificationSchema }),
     verificationController.submitPeerhost,
   );
 
-  router.get("/me", verificationController.getMyVerifications);
+  router.get(
+    "/me",
+    requireAccountType(AccountType.USER),
+    verificationController.getMyVerifications,
+  );
 
   router.patch(
     "/:id",
+    requireAccountType(AccountType.ADMIN),
     authorize("manage", "all"),
     validate({
       params: verificationIdParamsSchema,

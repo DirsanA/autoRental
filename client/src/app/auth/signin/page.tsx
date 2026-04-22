@@ -2,16 +2,17 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useMemo, useState, type FormEvent } from "react";
+import { Suspense, useMemo, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
 import { loginWithEmail, type LoginPortal } from "@/lib/auth-api";
 import { writeAuthToken } from "@/lib/auth-token";
+import { buildUserRoleState, writeUserRoleState } from "@/lib/role-store";
 import { useToast } from "@/hooks/use-toast";
 
-const SignIn = () => {
+function SignInContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { toast } = useToast();
@@ -47,6 +48,9 @@ const SignIn = () => {
         password,
       });
       writeAuthToken(data.token || null);
+      if (portal === "user") {
+        writeUserRoleState(buildUserRoleState(data.user as Record<string, unknown>));
+      }
       toast({
         title: "Signed in",
         description: data.message || "Login successful",
@@ -208,6 +212,12 @@ const SignIn = () => {
       </div>
     </div>
   );
-};
+}
 
-export default SignIn;
+export default function SignInPage() {
+  return (
+    <Suspense fallback={null}>
+      <SignInContent />
+    </Suspense>
+  );
+}

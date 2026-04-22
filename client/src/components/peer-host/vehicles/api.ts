@@ -1,4 +1,6 @@
 import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
+import { buildAuthHeader } from "@/lib/auth-token";
+import { resolveApiBaseUrl } from "@/lib/api-base-url";
 
 type ApiVehicle = {
   id: string;
@@ -76,13 +78,16 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
   };
 }
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = resolveApiBaseUrl();
 
 export async function fetchPeerHostVehicles(filter?: VehicleFilterStatus) {
   const query = filter ? `?filter=${encodeURIComponent(filter)}` : "";
-  const response = await fetch(`${API_BASE_URL}/vehicles${query}`, {
+  const response = await fetch(`${API_BASE_URL}/vehicles/mine${query}`, {
     cache: "no-store",
+    credentials: "include",
+    headers: {
+      ...buildAuthHeader(),
+    },
   });
 
   if (!response.ok) {

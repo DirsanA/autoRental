@@ -38,6 +38,9 @@ import {
   Users
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { resolveApiBaseUrl } from "@/lib/api-base-url";
+import { buildAuthHeader } from "@/lib/auth-token";
+import Image from "next/image";
 
 type HostStep = "car" | "documents" | "pricing" | "terms";
 type PhotoKey = "front" | "back" | "side" | "interior";
@@ -63,8 +66,7 @@ const suggestedFeatures = [
 ];
 
 export function PeerHostBecomeHostPage() {
-  const apiBaseUrl =
-    process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+  const apiBaseUrl = resolveApiBaseUrl();
   const [step, setStep] = useState<HostStep>("car");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -356,6 +358,7 @@ export function PeerHostBecomeHostPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
+          ...buildAuthHeader(),
         },
         credentials: "include",
         body: JSON.stringify(payload),
@@ -698,7 +701,7 @@ export function PeerHostBecomeHostPage() {
                           <div key={key} className="group relative">
                             {photo ? (
                               <div className="relative bg-slate-100 dark:bg-slate-800 rounded-lg sm:rounded-xl aspect-[4/3] overflow-hidden">
-                                <img 
+                                <Image 
                                   src={photo.preview} 
                                   alt={label}
                                   className="dark:brightness-90 w-full h-full object-cover"

@@ -7,47 +7,99 @@ import type {
   UpdateCompanyInput,
 } from "../validators/company.validator.js";
 
+type CompanyRegistrationAvailabilityInput = {
+  authUserId?: string;
+  loginEmail?: string;
+  contactEmail: string;
+  tinNumber: string;
+  phoneNumber: string;
+};
+
+/**
+ * Normalizes company emails before they are compared or queried.
+ */
+function normalizeEmail(email: string): string {
+  return email.trim().toLowerCase();
+}
+
 export class CompanyService {
   /**
-   * Register a new company under the authenticated company account.
-   * Companies start in PENDING_APPROVAL status until admin approves.
+   * Validates company uniqueness constraints shared across onboarding flows.
+   */
+  async assertRegistrationAvailability(
+    input: CompanyRegistrationAvailabilityInput,
+  ): Promise<void> {
+    const loginEmail = input.loginEmail ? normalizeEmail(input.loginEmail) : undefined;
+    const contactEmail = normalizeEmail(input.contactEmail);
+    const reservedEmails = Array.from(
+      new Set([loginEmail, contactEmail].filter((email): email is string => !!email)),
+    );
+
+    const [
+      existingCompanyForOwner,
+      companiesByEmail,
+      existingCompanyByTin,
+      existingCompanyByPhone,
+    ] = await Promise.all([
+      input.authUserId
+        ? Company.findOne({ authUserId: input.authUserId }).lean()
+        : Promise.resolve(null),
+      reservedEmails.length > 0
+        ? Company.find({ "contactInfo.email": { $in: reservedEmails } })
+            .select("contactInfo.email")
+            .lean()
+        : Promise.resolve([]),
+      Company.findOne({ tinNumber: input.tinNumber }).lean(),
+      Company.findOne({ "contactInfo.phoneNumber": input.phoneNumber }).lean(),
+    ]);
+
+    if (existingCompanyForOwner) {
+      throw ApiError.conflict("You already have a registered company");
+    }
+
+    const usedCompanyEmails = new Set(
+      companiesByEmail
+        .map((company) => company.contactInfo?.email)
+        .filter((email): email is string => typeof email === "string")
+        .map(normalizeEmail),
+    );
+
+    if (loginEmail && usedCompanyEmails.has(loginEmail)) {
+      throw ApiError.conflict(
+        "This login email is already used as another company's contact email",
+      );
+    }
+
+    if (usedCompanyEmails.has(contactEmail)) {
+      throw ApiError.conflict("A company with this contact email already exists");
+    }
+
+    if (existingCompanyByTin) {
+      throw ApiError.conflict("A company with this TIN number already exists");
+    }
+
+    if (existingCompanyByPhone) {
+      throw ApiError.conflict(
+        "A company with this contact phone number already exists",
+      );
+    }
+  }
+
+  /**
+   * Registers a new company under the authenticated company account.
    */
   async create(
     authUserId: string,
     data: CreateCompanyInput,
   ): Promise<CompanyDocument> {
-    // Prevents one auth account from owning multiple company profiles inside the platform.
-    const existing = await Company.findOne({ authUserId });
-    if (existing) {
-      throw ApiError.conflict("You already have a registered company");
-    }
-
-    // Guards the TIN as a unique business identifier before the company is created.
-    // Check if TIN is already taken
-    const tinExists = await Company.findOne({ tinNumber: data.tinNumber });
-    if (tinExists) {
-      throw ApiError.conflict("A company with this TIN number already exists");
-    }
-
-    const companyEmailExists = await Company.findOne({
-      "contactInfo.email": data.contactInfo.email,
+    await this.assertRegistrationAvailability({
+      authUserId,
+      contactEmail: data.contactInfo.email,
+      tinNumber: data.tinNumber,
+      phoneNumber: data.contactInfo.phoneNumber,
     });
-    if (companyEmailExists) {
-      throw ApiError.conflict(
-        "A company with this contact email already exists",
-      );
-    }
 
-    const companyPhoneExists = await Company.findOne({
-      "contactInfo.phoneNumber": data.contactInfo.phoneNumber,
-    });
-    if (companyPhoneExists) {
-      throw ApiError.conflict(
-        "A company with this contact phone number already exists",
-      );
-    }
-
-    const company = await Company.create({
+    return Company.create({
       authUserId,
       name: data.name,
       tinNumber: data.tinNumber,
@@ -57,55 +109,45 @@ export class CompanyService {
       contactInfo: data.contactInfo,
       location: data.location,
       socialLinks: data.socialLinks,
-      // Defaults applied by schema:
-      // status: "PENDING_APPROVAL"
-      // isVerified: false
-      // walletBalance: 0
     });
-
-    return company;
   }
 
   /**
-   * Get a company by its ID.
+   * Returns a company by its id.
    */
   async getById(companyId: string): Promise<CompanyDocument> {
-    // Loads a company by id and fails loudly when the requested record does not exist.
     const company = await Company.findById(companyId);
     if (!company) {
       throw ApiError.notFound("Company not found");
     }
+
     return company;
   }
 
   /**
-   * Get the company owned by a specific auth account.
+   * Returns the company owned by a specific auth account.
    */
   async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
     return Company.findOne({ authUserId });
   }
 
   /**
-   * Update company profile. Only the company owner can update.
+   * Updates company profile data for the owning account only.
    */
   async update(
     companyId: string,
     authUserId: string,
     data: UpdateCompanyInput,
   ): Promise<CompanyDocument> {
-    // Loads the target company first so ownership and partial field updates can be checked safely.
     const company = await Company.findById(companyId);
     if (!company) {
       throw ApiError.notFound("Company not found");
     }
 
-    // Restricts profile edits to the user who owns the company record.
     if (company.authUserId !== authUserId) {
       throw ApiError.forbidden("You can only update your own company");
     }
 
-    // Applies only the submitted fields so partial updates do not wipe untouched company data.
-    // Apply partial updates
     if (data.name !== undefined) company.name = data.name;
     if (data.website !== undefined) company.website = data.website ?? undefined;
     if (data.bio !== undefined) company.bio = data.bio ?? undefined;
@@ -115,12 +157,15 @@ export class CompanyService {
     }
 
     if (data.contactInfo) {
-      if (data.contactInfo.email)
+      if (data.contactInfo.email) {
         company.contactInfo.email = data.contactInfo.email;
-      if (data.contactInfo.phoneNumber)
+      }
+      if (data.contactInfo.phoneNumber) {
         company.contactInfo.phoneNumber = data.contactInfo.phoneNumber;
-      if (data.contactInfo.address !== undefined)
+      }
+      if (data.contactInfo.address !== undefined) {
         company.contactInfo.address = data.contactInfo.address ?? undefined;
+      }
     }
 
     if (data.location !== undefined) {
@@ -139,7 +184,7 @@ export class CompanyService {
   }
 
   /**
-   * Admin: List all companies with optional status filter and pagination.
+   * Lists companies with optional filters and pagination.
    */
   async list(options: {
     status?: string;
@@ -147,7 +192,6 @@ export class CompanyService {
     limit?: number;
     search?: string;
   }) {
-    // Builds a Mongo filter and pagination window for admin company listings.
     const { status, page = 1, limit = 20, search } = options;
     const filter: Record<string, any> = {};
 
@@ -156,7 +200,6 @@ export class CompanyService {
 
     const skip = (page - 1) * limit;
 
-    // Fetches the current page and total count together so pagination metadata stays consistent.
     const [companies, total] = await Promise.all([
       Company.find(filter)
         .sort({ createdAt: -1 })
@@ -200,10 +243,9 @@ export class CompanyService {
   }
 
   /**
-   * Admin: Approve a company — sets status to ACTIVE, isVerified to true.
+   * Approves a pending company.
    */
   async approve(companyId: string): Promise<CompanyDocument> {
-    // Approves a pending company and marks its verification metadata in the same write flow.
     const company = await Company.findById(companyId);
     if (!company) {
       throw ApiError.notFound("Company not found");
@@ -223,10 +265,9 @@ export class CompanyService {
   }
 
   /**
-   * Admin: Suspend a company with a reason.
+   * Suspends a company with a required reason.
    */
   async suspend(companyId: string, reason: string): Promise<CompanyDocument> {
-    // Suspends the company and records the reason that explains the administrative action.
     const company = await Company.findById(companyId);
     if (!company) {
       throw ApiError.notFound("Company not found");
@@ -242,9 +283,12 @@ export class CompanyService {
     await company.save();
     return company;
   }
-  //check existing company with the same email
+
+  /**
+   * Finds a company by its contact email.
+   */
   async findByEmail(email: string): Promise<CompanyDocument | null> {
-    return Company.findOne({ "contactInfo.email": email });
+    return Company.findOne({ "contactInfo.email": normalizeEmail(email) });
   }
 }
 

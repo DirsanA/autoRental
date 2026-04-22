@@ -88,9 +88,9 @@ export function UserTable({
       : user.accountType === "USER"
         ? "User"
         : "Unknown";
-
+  console.log("Rendering UserTable with users:", users);
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow className="hover:bg-transparent">
@@ -126,7 +126,10 @@ export function UserTable({
                     <div className="flex items-center gap-3">
                       <Avatar className="h-9 w-9 border">
                         <AvatarFallback
-                          className={cn("text-white", getAvatarColor(user.name))}
+                          className={cn(
+                            "text-white",
+                            getAvatarColor(user.name),
+                          )}
                         >
                           {getInitials(user.name)}
                         </AvatarFallback>

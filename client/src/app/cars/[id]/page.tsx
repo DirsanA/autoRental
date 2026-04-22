@@ -49,14 +49,14 @@ const car = {
   pricePerMonth: 1841,
   originalPrice: 2549,
   monthlyDiscount: 708,
-  images: [carMain, car2, car3, car4, car5],
+  images: [carMain.src, car2.src, car3.src, car4.src, car5.src],
   host: {
     name: "Kyrylo",
     rating: 4.9,
     trips: 34889,
     joined: "Dec 2017",
     allStar: true,
-    image: car2,
+    image: car2.src,
   },
 };
 
@@ -123,13 +123,19 @@ const Index = () => {
           <div className="lg:col-span-2 space-y-8">
             {/* Title Section */}
             <div className="animate-fade-in space-y-2">
-              <h1 className="text-4xl font-extrabold text-gray-900">{car.name}</h1>
+              <h1 className="text-4xl font-extrabold text-gray-900">
+                {car.name}
+              </h1>
               <div className="flex flex-wrap items-center gap-3 text-sm text-gray-600">
-                <span className="font-semibold text-gray-800">{car.subtitle}</span>
+                <span className="font-semibold text-gray-800">
+                  {car.subtitle}
+                </span>
                 <span>•</span>
                 <div className="flex items-center gap-1">
                   <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold text-gray-800">{car.rating}</span>
+                  <span className="font-semibold text-gray-800">
+                    {car.rating}
+                  </span>
                   <span className="text-gray-500">({car.trips} trips)</span>
                 </div>
                 <span>•</span>
@@ -165,7 +171,9 @@ const Index = () => {
 
             {/* Description */}
             <div className="py-2">
-              <h2 className="text-2xl font-bold text-gray-900 mb-3">Description</h2>
+              <h2 className="text-2xl font-bold text-gray-900 mb-3">
+                Description
+              </h2>
               <p className="text-gray-700 leading-relaxed text-lg">
                 Experience the pinnacle of luxury and performance with the 2025
                 BMW 530i. This hybrid sedan combines cutting-edge technology
@@ -199,7 +207,9 @@ const Index = () => {
         {/* Similar Cars */}
         <div className="mt-10">
           <div className="border-t border-gray-200 mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Similar Cars You Might Like</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Similar Cars You Might Like
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
               { name: "Audi A6", price: 1650, image: car2 },
@@ -232,8 +242,12 @@ const Index = () => {
         {/* Browse Cars CTA */}
         <div className="mt-10 flex items-center justify-between p-6 rounded-2xl border border-gray-200 bg-white shadow hover:shadow-lg transition-shadow">
           <div>
-            <h3 className="text-lg font-bold text-gray-900">Looking for more cars?</h3>
-            <p className="text-sm text-gray-600">Browse all available cars in your area.</p>
+            <h3 className="text-lg font-bold text-gray-900">
+              Looking for more cars?
+            </h3>
+            <p className="text-sm text-gray-600">
+              Browse all available cars in your area.
+            </p>
           </div>
           <Button variant="default" className="font-semibold">
             Browse Cars
@@ -261,7 +275,9 @@ const Index = () => {
             <ul className="space-y-1">
               <li className="hover:underline cursor-pointer">Help Center</li>
               <li className="hover:underline cursor-pointer">FAQs</li>
-              <li className="hover:underline cursor-pointer">Terms & Conditions</li>
+              <li className="hover:underline cursor-pointer">
+                Terms & Conditions
+              </li>
             </ul>
           </div>
         </div>
