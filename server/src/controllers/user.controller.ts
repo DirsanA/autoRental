@@ -1,61 +1,121 @@
 import type { Request, Response } from "express";
-import { asyncHandler } from "../utils/asyncHandler.js";
 import { fromNodeHeaders } from "better-auth/node";
-import type { Auth } from "../config/auth.js";
+import type { UserService } from "../services/user.service.js";
+import { asyncHandler } from "../utils/asyncHandler.js";
+import { requireRequestUser } from "../utils/requestContext.js";
+import type {
+  AdminUserListQueryInput,
+  AdminUserVerificationLevelInput,
+} from "../validators/user.admin.validator.js";
 
 /**
  * Creates user-related route handlers.
- * The auth instance is injected so we can call auth.api methods.
  */
-export function createUserController(auth: Auth) {
+export function createUserController(userService: UserService) {
   return {
     /**
      * GET /api/users/me
      * Returns the currently authenticated user's profile.
      */
     getMe: asyncHandler(async (req: Request, res: Response) => {
-      const user = (req as any).user;
+      const data = userService.getMe(requireRequestUser(req));
 
-      // Returns the authenticated user object already attached by the auth middleware.
       res.json({
         success: true,
-        data: { user },
+        data,
       });
     }),
 
     /**
      * PATCH /api/users/me
      * Updates the authenticated user's profile fields.
-     * Delegates to better-auth's updateUser for fields it manages,
-     * and can be extended for custom fields.
      */
     updateMe: asyncHandler(async (req: Request, res: Response) => {
-      const { firstName, lastName, phoneNumber } = req.body;
-      const user = (req as any).user;
-
-      // Builds a partial update payload so omitted fields do not overwrite existing values.
-      // Build the update payload for better-auth
-      const updateData: Record<string, any> = {};
-
-      if (firstName !== undefined) updateData.firstName = firstName;
-      if (lastName !== undefined) updateData.lastName = lastName;
-      if (phoneNumber !== undefined) updateData.phoneNumber = phoneNumber;
-
-      // Keeps the aggregate display name in sync when either first or last name changes.
-      // Update name in better-auth's core user field as well
-      if (firstName !== undefined || lastName !== undefined) {
-        updateData.name = `${firstName ?? user.firstName} ${lastName ?? user.lastName}`;
-      }
-
-      // Persists the profile edit through better-auth so auth-owned user fields stay authoritative.
-      const updatedUser = await auth.api.updateUser({
-        headers: fromNodeHeaders(req.headers),
-        body: updateData,
-      });
+      const data = await userService.updateMe(
+        requireRequestUser(req),
+        req.body,
+        fromNodeHeaders(req.headers),
+      );
 
       res.json({
         success: true,
-        data: { user: updatedUser },
+        data,
+      });
+    }),
+
+    /**
+     * GET /api/users
+     * Lists users for the admin experience.
+     */
+    listUsers: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.listUsers(req.query as AdminUserListQueryInput);
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * GET /api/users/:id
+     * Returns a single user by id for admins.
+     */
+    getById: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.getById(String(req.params.id));
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * PATCH /api/users/:id/status
+     * Updates a user's status.
+     */
+    updateStatus: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.updateStatus(
+        requireRequestUser(req),
+        String(req.params.id),
+        req.body,
+      );
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * PATCH /api/users/:id/verification-level
+     * Applies an admin-managed verification level transition.
+     */
+    updateVerificationLevel: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.updateVerificationLevel(
+        requireRequestUser(req),
+        String(req.params.id),
+        req.body as AdminUserVerificationLevelInput,
+      );
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * DELETE /api/users/:id
+     * Deletes a user and their auth artifacts.
+     */
+    deleteUser: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.deleteUser(
+        requireRequestUser(req),
+        String(req.params.id),
+      );
+
+      res.json({
+        success: true,
+        data,
       });
     }),
   };

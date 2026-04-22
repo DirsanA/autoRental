@@ -1,50 +1,60 @@
 import type { Request, Response, NextFunction } from "express";
-import { authPermissionService, type AppActions, type AppSubjects } from "../services/auth.permission.service.js";
+import {
+  authPermissionService,
+  type AppActions,
+  type AppSubjects,
+} from "../services/auth.permission.service.js";
+import { userPersistenceService } from "../services/user.persistence.service.js";
+import { SYSTEM_ROLES } from "../config/constants.js";
+import { ApiError } from "../utils/ApiError.js";
+import { getRequestUser, setRequestAbility } from "../utils/requestContext.js";
+
+async function requestUserIsAdmin(authUserId: string): Promise<boolean> {
+  const user = await userPersistenceService.findByAuthIdWithRoles(authUserId);
+  if (!user) {
+    return false;
+  }
+
+  if (String(user.accountType || "").toUpperCase() === "ADMIN") {
+    return true;
+  }
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  return roles.some((role) => {
+    const name = (role as { name?: string } | undefined)?.name;
+    return String(name || "").toLowerCase() === SYSTEM_ROLES.ADMIN;
+  });
+}
 
 /**
- * Authorization middleware.
- * Checks if the authenticated user has permission for a specific action on a subject.
- *
- * Usage:
- *   router.get("/:id", authenticate, authorize("read", "Company"), controller.get)
+ * Checks whether the current user can perform an action on a subject.
  */
 export function authorize(action: AppActions, subject: AppSubjects) {
-  return async (req: Request, res: Response, next: NextFunction) => {
-    const user = (req as any).user;
-    // Fails fast when authentication has not attached a current user to the request.
-    if (!user) {
-      res.status(401).json({
-        success: false,
-        error: { code: "UNAUTHORIZED", message: "Authentication required" },
-      });
+  return async (req: Request, _res: Response, next: NextFunction) => {
+    const user = getRequestUser(req);
+    if (!user?.id) {
+      next(ApiError.unauthorized());
       return;
     }
 
     try {
-      // Loads the user's permission set so this request can be checked against centralized rules.
-      const ability = await authPermissionService.getAbilityForUser(user.id);
-
-      if (ability.can(action, subject)) {
-        // Attach ability to request in case it's needed in the controller
-        (req as any).ability = ability;
+      if (await requestUserIsAdmin(user.id)) {
         next();
         return;
       }
 
-      res.status(403).json({
-        success: false,
-        error: {
-          code: "FORBIDDEN",
-          message: `Insufficient permissions to ${action} ${subject}`,
-        },
-      });
+      const ability = await authPermissionService.getAbilityForUser(user.id);
+
+      if (!ability.can(action, subject)) {
+        next(ApiError.forbidden(`Insufficient permissions to ${action} ${subject}`));
+        return;
+      }
+
+      setRequestAbility(req, ability);
+      next();
     } catch (error) {
-       // Converts unexpected permission lookup failures into a safe generic server response.
-       console.error("Authorization check failed:", error);
-       res.status(500).json({
-         success: false,
-         error: { code: "INTERNAL_ERROR", message: "Failed to verify permissions" },
-       });
+      console.error("Authorization check failed:", error);
+      next(ApiError.internal("Failed to verify permissions"));
     }
   };
 }

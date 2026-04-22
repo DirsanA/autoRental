@@ -1,11 +1,10 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 export function RecentBooking() {
   return (
     <div className="space-y-8">
       <div className="flex items-center">
         <Avatar className="w-9 h-9">
-          <AvatarImage src="/avatars/01.png" alt="Avatar" />
           <AvatarFallback>OM</AvatarFallback>
         </Avatar>
         <div className="space-y-1 ml-4">
@@ -18,7 +17,6 @@ export function RecentBooking() {
       </div>
       <div className="flex items-center">
         <Avatar className="flex justify-center items-center space-y-0 border w-9 h-9">
-          <AvatarImage src="/avatars/02.png" alt="Avatar" />
           <AvatarFallback>JL</AvatarFallback>
         </Avatar>
         <div className="space-y-1 ml-4">
@@ -29,7 +27,6 @@ export function RecentBooking() {
       </div>
       <div className="flex items-center">
         <Avatar className="w-9 h-9">
-          <AvatarImage src="/avatars/03.png" alt="Avatar" />
           <AvatarFallback>IN</AvatarFallback>
         </Avatar>
         <div className="space-y-1 ml-4">
@@ -42,7 +39,6 @@ export function RecentBooking() {
       </div>
       <div className="flex items-center">
         <Avatar className="w-9 h-9">
-          <AvatarImage src="/avatars/04.png" alt="Avatar" />
           <AvatarFallback>WK</AvatarFallback>
         </Avatar>
         <div className="space-y-1 ml-4">
@@ -53,7 +49,6 @@ export function RecentBooking() {
       </div>
       <div className="flex items-center">
         <Avatar className="w-9 h-9">
-          <AvatarImage src="/avatars/05.png" alt="Avatar" />
           <AvatarFallback>SD</AvatarFallback>
         </Avatar>
         <div className="space-y-1 ml-4">

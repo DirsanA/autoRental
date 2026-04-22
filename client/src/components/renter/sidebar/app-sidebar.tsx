@@ -32,12 +32,6 @@ export function RenterSidebar() {
   }
 
   function becomePeerHost() {
-    const next = {
-      ...roleState,
-      roles: { ...roleState.roles, peerhost: true },
-      activeRole: "peerhost" as const,
-    };
-    writeUserRoleState(next);
     router.push("/peerhost/become-host");
   }
 
@@ -157,21 +151,31 @@ export function RenterSidebar() {
             <SidebarMenuButton
               size="lg"
               onClick={() => {
-                const next = {
-                  ...roleState,
-                  activeRole: "peerhost" as const,
-                };
-                // If they tap the footer action, just switch to peerhost dashboard.
-                writeUserRoleState(next);
-                router.push("/peerhost/dashboard");
+                if (roleState.roles.peerhost) {
+                  const next = {
+                    ...roleState,
+                    activeRole: "peerhost" as const,
+                  };
+                  writeUserRoleState(next);
+                  router.push("/peerhost/dashboard");
+                  return;
+                }
+
+                router.push("/peerhost/become-host");
               }}
             >
               <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-background text-foreground">
                 <ArrowLeftRight className="size-4" />
               </div>
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-semibold">Switch Role</span>
-                <span className="truncate text-xs">Go to peer host</span>
+                <span className="truncate font-semibold">
+                  {roleState.roles.peerhost ? "Switch Role" : "Become Host"}
+                </span>
+                <span className="truncate text-xs">
+                  {roleState.roles.peerhost
+                    ? "Go to peer host"
+                    : "Open host application"}
+                </span>
               </div>
             </SidebarMenuButton>
           </SidebarMenuItem>

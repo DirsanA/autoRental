@@ -1,5 +1,7 @@
 import { Router } from "express";
 import type { Auth } from "../config/auth.js";
+import { createAuthMiddleware } from "../middlewares/authenticate.js";
+import { requireAccountType } from "../middlewares/requireAccountType.js";
 import { validate } from "../middlewares/validate.js";
 import { vehicleController } from "../controllers/vehicle.controller.js";
 import {
@@ -8,11 +10,19 @@ import {
   updateVehicleStatusSchema,
   vehicleIdParamsSchema,
 } from "../validators/vehicle.validator.js";
+import { AccountType } from "../models/User.js";
 
-export function createVehicleRoutes(_auth: Auth): Router {
+export function createVehicleRoutes(auth: Auth): Router {
   const router = Router();
+  const authenticate = createAuthMiddleware(auth);
 
   router.get("/", vehicleController.list);
+  router.get(
+    "/mine",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    vehicleController.listMine,
+  );
   router.get(
     "/:id",
     validate({ params: vehicleIdParamsSchema }),
@@ -42,8 +52,13 @@ export function createVehicleRoutes(_auth: Auth): Router {
     vehicleController.remove,
   );
 
-  // Temporary open endpoint for local dashboard testing.
-  router.post("/", validate({ body: createVehicleSchema }), vehicleController.create);
+  router.post(
+    "/",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    validate({ body: createVehicleSchema }),
+    vehicleController.create,
+  );
 
   return router;
 }

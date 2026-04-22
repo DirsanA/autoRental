@@ -9,28 +9,30 @@ import {
   Mail,
   Phone,
   Calendar,
-  Star,
-  DollarSign,
-  Car,
-  Ban,
   CheckCircle2,
+  Ban,
   Clock,
-  User,
-  MoreVertical,
+  ThumbsUp,
+  ThumbsDown,
 } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import type { HostInfo, HostStatus } from "./types";
+import type { HostStatus } from "./types";
 
 interface HostSidebarProps {
-  host: HostInfo;
-  onStatusChange: (status: HostStatus) => void;
-  onDelete: () => void;
+  host: {
+    id: string;
+    name: string;
+    email: string;
+    phone: string;
+    address: string;
+    joinDate: string;
+    status: HostStatus;
+    verificationLevel: string;
+    accountStatus: string;
+  };
+  canPromote: boolean;
+  blockers: string[];
+  onApprove: () => void;
+  onReject: () => void;
 }
 
 const statusConfig: Record<
@@ -63,8 +65,10 @@ const statusConfig: Record<
 
 export function HostSidebar({
   host,
-  onStatusChange,
-  onDelete,
+  canPromote,
+  blockers,
+  onApprove,
+  onReject,
 }: HostSidebarProps) {
   const status = statusConfig[host.status];
   const StatusIcon = status.icon;
@@ -76,37 +80,10 @@ export function HostSidebar({
     .substring(0, 2)
     .toUpperCase();
 
+  const isPending = host.status === "pending";
+
   return (
     <Card className="shadow-sm sticky top-24 overflow-hidden border-t-4 border-t-primary">
-      <div className="absolute top-4 right-4">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 rounded-full"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48">
-            <DropdownMenuItem onClick={() => onStatusChange("active")}>
-              Mark as Active
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onStatusChange("suspended")}>
-              Suspend Host
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onStatusChange("rejected")}>
-              Reject Application
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onDelete} className="text-red-600">
-              Delete Host Profile
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-
       <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
         {/* Avatar */}
         <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-primary/80 to-primary/40 flex items-center justify-center shadow-lg mb-4 text-white text-3xl font-semibold">
@@ -147,41 +124,61 @@ export function HostSidebar({
           </div>
         </div>
 
+        {isPending && (
+          <>
+            <div className="w-full border-t border-muted my-6" />
+
+            {/* Action Buttons */}
+            <div className="flex flex-col gap-2 w-full">
+              <Button
+                onClick={onApprove}
+                disabled={!canPromote}
+                className="w-full gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <ThumbsUp className="h-4 w-4" />
+                Promote to Peer Host
+              </Button>
+              <Button
+                onClick={onReject}
+                variant="outline"
+                className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+              >
+                <ThumbsDown className="h-4 w-4" />
+                Reject Application
+              </Button>
+            </div>
+
+            {blockers.length > 0 && (
+              <div className="mt-4 w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+                <p className="font-semibold">Promotion blockers</p>
+                <div className="mt-2 space-y-1">
+                  {blockers.map((blocker) => (
+                    <p key={blocker}>{blocker}</p>
+                  ))}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+
         <div className="w-full border-t border-muted my-6" />
 
         {/* Host Stats */}
         <div className="grid grid-cols-2 gap-4 w-full text-left">
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Star className="h-3 w-3 fill-amber-400 text-amber-400" /> Rating
+            <span className="text-xs font-medium text-muted-foreground">
+              Verification Level
             </span>
-            <span className="text-lg font-bold">
-              {host.rating.toFixed(1)}{" "}
-              <span className="text-xs font-normal text-muted-foreground">
-                ({host.reviewCount})
-              </span>
+            <span className="text-sm font-bold">
+              {host.verificationLevel.replaceAll("_", " ")}
             </span>
           </div>
           <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <DollarSign className="h-3 w-3 text-emerald-500" /> Earnings
+            <span className="text-xs font-medium text-muted-foreground">
+              Account Status
             </span>
-            <span className="text-lg font-bold">
-              ${host.totalEarnings.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <Car className="h-3 w-3 text-blue-500" /> Trips
-            </span>
-            <span className="text-lg font-bold">{host.totalTrips}</span>
-          </div>
-          <div className="flex flex-col gap-1">
-            <span className="text-xs font-medium text-muted-foreground flex items-center gap-1">
-              <User className="h-3 w-3 text-purple-500" /> Status
-            </span>
-            <span className="text-lg font-bold truncate capitalize">
-              {host.status}
+            <span className="text-sm font-bold capitalize">
+              {host.accountStatus.toLowerCase()}
             </span>
           </div>
         </div>

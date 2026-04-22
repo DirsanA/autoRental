@@ -1,0 +1,105 @@
+
+# OCR models help on extracting textual information and puting 
+in key-value pair so that it is easier to cross-check and make decision.
+
+
+### would be prefered to use message based verification during authentication.
+
+
+
+### system admin side :  There should be dedicated vehicles page on which there is no decision made about 
+whether this vehicle are approved to be listed by the PeerHost who applied. (notificaton available)
+
+
+### There are two duplicated company registeration in the api : 1 . in auth service      , 2 . in company service . so make 
+the company registeration in the company service protected for admin only operation or there should be done some thing.
+
+
+
+### The app should store the location coordinate of a Company and User based on the address(city) given in the form.
+
+
+### amharic will be provided with google translae or r***International
+
+
+
+
+
+###Renter :  with driver , self-drive 
+
+
+# with driver : National ID 
+
+
+
+
+# self-drive (with out driver) : National ID , Driver License
+
+
+
+*** verification-mode : with driver | self-drive
+
+
+
+
+
+### PeerHost (Become Host):
+
+ifAndOnlyIf(verified_user)
+**** he has to upload vehicle informations to become host
+otherwise user can't be PeerHost
+
+
+
+
+# becomehost button should be expressive of the status of user and possible profile updates
+
+
+# the verified user become peerhost when one upload and verify vehicle information by the admin(sys_admin)
+
+# to be peerhost the verified user reqired to have libre and insurrance documents.
+
+# for (sys_admin) user management sidebar button will show notification count , and ther user table lists are recongnizabel and filterable for 
+those needing admin action reated with verification.
+
+
+# system admin perform both user verification and peerhost verification
+
+#### User and PeerHost information update permissions
+
+** user should be allowed to update his profile from with-driver kind of verified status to self-drive verification status by
+allowing the user to upload driver license
+** password update
+** add phone number not deletion or replacement
+
+
+# user need warning regarding the arrival of expiry of associated verification documents user. 
+-> the user will be blocked navigated to a page to fix the verification , status "expired_document" . will become activated by admin again.
+
+
+
+
+
+# PeerHost -> verified_user  profile downgrade
+
+
+# possible role creation with some specified permissions issued by the admin(sys_admin)
+
+# display logging for operations made in the admin side.
+
+# once admin approve the verified user to  peerhost through vehicle verification then the vehicle will be listed on vehicle listing page.
+
+
+
+### Company
+
+-> Company will be separate of any User Info for simplicity purpose so that we will be concerned with renter and peerhost when it compares
+to User  and Company is separarate and Independent.
+
+-> registeration form and liscense uploaded and then it will be approved by admin.
+
+--> there will be dedicated page that the company in pending state navigated until the sys_admin take 
+   this page will have verification document and details page and displayed to wait until the admin approve 
+   before accessing the dashboard so this page will used to update the verification documents and details based 
+   on the admin comment when regected
+--> rejection of company can be both termporary and permanent

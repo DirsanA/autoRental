@@ -367,6 +367,9 @@ const Index = () => {
               <li className="hover:underline cursor-pointer">
                 Terms & Conditions
               </li>
+              <li className="hover:underline cursor-pointer">
+                Terms & Conditions
+              </li>
             </ul>
           </div>
         </div>
@@ -387,3 +390,4 @@ const Index = () => {
 };
 
 export default Index;
+
