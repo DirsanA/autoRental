@@ -10,22 +10,23 @@ interface SendEmailOptions {
 }
 
 /**
- * Service to handle all outbound email logic.
- * Wraps nodemailer and adds templates if needed.
+ * Service to handle outbound email delivery.
  */
 export class EmailService {
   /**
-   * Send a general email.
-   * Logs send result in dev; suppresses failures to avoid blocking the main user flow.
+   * Resolves the sender address used for outbound emails.
+   */
+  private resolveFromAddress(from?: string): string {
+    return from || process.env.EMAIL_FROM || "noreply@autorental.com";
+  }
+
+  /**
+   * Sends a general email without leaking transport errors to callers.
    */
   async send(options: SendEmailOptions): Promise<boolean> {
-    // Falls back to a default sender so transactional emails still render without explicit overrides.
-    const from = options.from || process.env.EMAIL_FROM || "noreply@autorental.com";
-
-    // Sends the message through the shared transport and keeps callers insulated from nodemailer details.
     try {
-      const info = await transport.sendMail({
-        from,
+      await transport.sendMail({
+        from: this.resolveFromAddress(options.from),
         to: options.to,
         subject: options.subject,
         text: options.text,
@@ -33,25 +34,20 @@ export class EmailService {
       });
 
       if (ENV.NODE_ENV === "development") {
-        console.log(`📧 Email sent to ${options.to}: ${options.subject}`);
-        if ((info as any).envelope) {
-           // If using streamTransport (mock), check the buffer
-           // info.message is the buffer
-        }
+        console.log(`Email sent to ${options.to}: ${options.subject}`);
       }
 
       return true;
     } catch (error) {
-      console.error(`❌ Failed to send email to ${options.to}:`, error);
+      console.error(`Failed to send email to ${options.to}:`, error);
       return false;
     }
   }
 
   /**
-   * Verification email for better-auth
+   * Sends the better-auth verification email template.
    */
   async sendVerificationEmail(to: string, url: string): Promise<boolean> {
-    // Builds the account activation email body expected by the verification flow.
     const html = `
       <div style="font-family: sans-serif; padding: 20px; color: #333;">
         <h2>Welcome to AutoRental!</h2>
@@ -75,10 +71,9 @@ export class EmailService {
   }
 
   /**
-   * Password reset email for better-auth
+   * Sends the better-auth password reset email template.
    */
   async sendPasswordResetEmail(to: string, url: string): Promise<boolean> {
-    // Builds the password reset email body expected by the recovery flow.
     const html = `
       <div style="font-family: sans-serif; padding: 20px; color: #333;">
         <h2>Reset Your Password</h2>

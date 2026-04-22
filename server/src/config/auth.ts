@@ -99,7 +99,7 @@ export function createAuth() {
         verificationLevel: {
           type: "string",
           required: false,
-          defaultValue: "BASIC",
+          defaultValue: "NONE",
           input: false,
         },
         status: {

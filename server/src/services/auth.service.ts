@@ -1,43 +1,141 @@
 import mongoose from "mongoose";
 import type { Auth } from "../config/auth.js";
 import { AccountType, User } from "../models/User.js";
-import { Company } from "../models/Company.js";
 import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { ENV } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
-  RegisterUserInput,
   RegisterCompanyInput,
+  RegisterUserInput,
 } from "../validators/auth.validator.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { companyService } from "./company.service.js";
 
+type AuthResponse<T> = {
+  body: T;
+  cookieSource?: unknown;
+};
+
 /**
- * Auth service — business logic for registration, role assignment, and login helpers.
- *
- * better-auth already manages:
- *   - Password hashing (bcrypt)
- *   - Session/token creation
- *   - Email verification flow
- *   - Password reset flow
- *
- * This service wraps those flows with our domain-specific logic
- * (role assignment, company creation, etc.)
+ * Auth service business logic for registration, session flows, and portal login.
  */
 export class AuthService {
-  private auth: Auth;
+  constructor(private readonly auth: Auth) {}
 
-  constructor(auth: Auth) {
-    this.auth = auth;
+  /**
+   * Normalizes emails before uniqueness or portal checks.
+   */
+  private normalizeEmail(email: string): string {
+    return email.trim().toLowerCase();
   }
 
   /**
-   * Register a base user account (no rental abilities yet).
-   * 1. Call better-auth sign-up (creates user + session)
+   * Resolves a role name into its Mongo id.
    */
-  async registerUser(data: RegisterUserInput, headers: Headers) {
-    // Creates the base auth account and seeds the domain fields needed by the platform.
+  private async getRoleId(
+    roleName: string,
+  ): Promise<mongoose.Types.ObjectId | null> {
+    const role = await Role.findOne({ name: roleName }).select("_id").lean();
+    if (!role) {
+      console.error(`Role "${roleName}" not found. Did you run the seed script?`);
+      return null;
+    }
+
+    return role._id;
+  }
+
+  /**
+   * Assigns a system role to a user by role name.
+   */
+  private async assignRoleToUser(
+    authUserId: string,
+    roleName: string,
+  ): Promise<void> {
+    const roleId = await this.getRoleId(roleName);
+    if (!roleId) return;
+
+    await userPersistenceService.addRole(authUserId, roleId);
+  }
+
+  /**
+   * Rejects registration when the user login email already exists.
+   */
+  private async assertUserRegistrationAvailability(email: string): Promise<void> {
+    const existingUser = await userPersistenceService.findByEmail(
+      this.normalizeEmail(email),
+    );
+
+    if (existingUser) {
+      throw ApiError.conflict("User already exists");
+    }
+  }
+
+  /**
+   * Rejects company registration when any linked identity is already in use.
+   */
+  private async assertCompanyRegistrationAvailability(
+    data: RegisterCompanyInput,
+  ): Promise<void> {
+    const accountEmail = this.normalizeEmail(data.email);
+    const companyEmail = this.normalizeEmail(data.companyEmail);
+
+    const [existingAuthAccountForLoginEmail, existingAuthAccountForCompanyEmail] =
+      await Promise.all([
+        userPersistenceService.findByEmail(accountEmail),
+        accountEmail === companyEmail
+          ? Promise.resolve(null)
+          : userPersistenceService.findByEmail(companyEmail),
+      ]);
+
+    if (existingAuthAccountForLoginEmail) {
+      throw ApiError.conflict(
+        "An account with this login email already exists",
+      );
+    }
+
+    if (existingAuthAccountForCompanyEmail) {
+      throw ApiError.conflict(
+        "This company contact email is already used by another account",
+      );
+    }
+
+    await companyService.assertRegistrationAvailability({
+      loginEmail: accountEmail,
+      contactEmail: companyEmail,
+      tinNumber: data.tinNumber,
+      phoneNumber: data.companyPhone,
+    });
+  }
+
+  /**
+   * Ensures the caller is logging into the correct account portal.
+   */
+  private async assertLoginPortal(
+    email: string,
+    expectedAccountType: AccountType,
+  ): Promise<void> {
+    const account = await User.findOne({ email }).select("accountType").lean();
+
+    if (!account || account.accountType !== expectedAccountType) {
+      throw ApiError.unauthorized("Invalid credentials for this portal");
+    }
+  }
+
+  /**
+   * Registers a base user account.
+   */
+  async registerUser(
+    data: RegisterUserInput,
+    headers: Headers,
+  ): Promise<
+    AuthResponse<{
+      user: unknown;
+      message: string;
+    }>
+  > {
+    await this.assertUserRegistrationAvailability(data.email);
+
     const result = await this.auth.api.signUpEmail({
       headers,
       body: {
@@ -56,23 +154,33 @@ export class AuthService {
       AccountType.USER,
     );
 
-    return result;
+    return {
+      cookieSource: result,
+      body: {
+        user: result.user,
+        message:
+          "Account created successfully. Please check your email to verify your account.",
+      },
+    };
   }
 
   /**
-   * Register a COMPANY ADMIN account + create the Company document.
-   * This is an atomic-ish flow:
-   * 1. Validate that TIN doesn't already exist
-   * 2. Create user via better-auth
-   * 3. Assign "renter" + "company_admin" roles
-   * 4. Create Company document linked to the new user
+   * Registers a company account and creates its company profile.
    */
-  async registerCompany(data: RegisterCompanyInput, headers: Headers) {
+  async registerCompany(
+    data: RegisterCompanyInput,
+    headers: Headers,
+  ): Promise<
+    AuthResponse<{
+      user: unknown;
+      company: unknown;
+      message: string;
+    }>
+  > {
     await this.assertCompanyRegistrationAvailability(data);
 
     let userId: string | null = null;
 
-    // Creates the independent auth account first so the company can sign into its own portal.
     const result = await this.auth.api.signUpEmail({
       headers,
       body: {
@@ -108,15 +216,18 @@ export class AuthService {
       });
 
       return {
-        ...result,
-        user: {
-          ...result.user,
-          accountType: AccountType.COMPANY,
+        cookieSource: result,
+        body: {
+          user: {
+            ...result.user,
+            accountType: AccountType.COMPANY,
+          },
+          company,
+          message:
+            "Company account registered successfully. Your company is pending admin approval. Please verify your email.",
         },
-        company,
       };
     } catch (error) {
-      // Rolls back auth-side artifacts when the domain-specific company setup fails partway through.
       if (userId) {
         await userPersistenceService.cleanupAuthArtifacts(userId, data.email);
       }
@@ -124,143 +235,129 @@ export class AuthService {
     }
   }
 
-  private async assertCompanyRegistrationAvailability(
-    data: RegisterCompanyInput,
-  ): Promise<void> {
-    const accountEmail = data.email.trim().toLowerCase();
-    const companyEmail = data.companyEmail.trim().toLowerCase();
-
-    const [
-      existingAuthAccountForLoginEmail,
-      existingAuthAccountForCompanyEmail,
-      existingCompanyByLoginEmail,
-      existingCompanyByCompanyEmail,
-      existingCompanyByTin,
-      existingCompanyByPhone,
-    ] = await Promise.all([
-      userPersistenceService.findByEmail(accountEmail),
-      accountEmail === companyEmail
-        ? Promise.resolve(null)
-        : userPersistenceService.findByEmail(companyEmail),
-      Company.findOne({ "contactInfo.email": accountEmail }).lean(),
-      Company.findOne({ "contactInfo.email": companyEmail }).lean(),
-      Company.findOne({ tinNumber: data.tinNumber }).lean(),
-      Company.findOne({ "contactInfo.phoneNumber": data.companyPhone }).lean(),
-    ]);
-
-    if (existingAuthAccountForLoginEmail) {
-      throw ApiError.conflict(
-        "An account with this login email already exists",
-      );
-    }
-
-    if (existingCompanyByLoginEmail) {
-      throw ApiError.conflict(
-        "This login email is already used as another company's contact email",
-      );
-    }
-
-    if (existingAuthAccountForCompanyEmail) {
-      throw ApiError.conflict(
-        "This company contact email is already used by another account",
-      );
-    }
-
-    if (existingCompanyByCompanyEmail) {
-      throw ApiError.conflict(
-        "A company with this contact email already exists",
-      );
-    }
-
-    if (existingCompanyByTin) {
-      throw ApiError.conflict("A company with this TIN number already exists");
-    }
-
-    if (existingCompanyByPhone) {
-      throw ApiError.conflict(
-        "A company with this contact phone number already exists",
-      );
-    }
-  }
-
   /**
-   * Login with email and password.
-   * Delegates to better-auth sign-in and updates lastLogin timestamp.
+   * Logs a user into the expected account portal.
    */
   async login(
     email: string,
     password: string,
     headers: Headers,
     expectedAccountType: AccountType,
-  ) {
-    await this.assertLoginPortal(email, expectedAccountType);
+  ): Promise<
+    AuthResponse<{
+      user: unknown;
+      token: unknown;
+      message: string;
+    }>
+  > {
+    const normalizedEmail = this.normalizeEmail(email);
+    await this.assertLoginPortal(normalizedEmail, expectedAccountType);
 
-    // Delegates credential validation to better-auth and then records the user's latest login time.
     const result = await this.auth.api.signInEmail({
       headers,
-      body: { email, password },
+      body: { email: normalizedEmail, password },
     });
 
-    // Update lastLogin on the better-auth user record
     if (result.user) {
       try {
         await userPersistenceService.markLastLogin(result.user.id);
       } catch (err) {
-        // Leaves login successful even if the non-critical audit-style timestamp update fails.
-        // Don't fail the login if lastLogin update fails
         console.error("Failed to update lastLogin:", err);
       }
     }
 
-    return result;
+    return {
+      cookieSource: result,
+      body: {
+        user: result.user,
+        token: result.token,
+        message: "Login successful",
+      },
+    };
   }
 
-  private async assertLoginPortal(
+  /**
+   * Invalidates the current session.
+   */
+  async logout(
+    headers: Headers,
+  ): Promise<AuthResponse<{ message: string }>> {
+    const result = await this.auth.api.signOut({ headers });
+
+    return {
+      cookieSource: result,
+      body: { message: "Logged out successfully" },
+    };
+  }
+
+  /**
+   * Returns the current session payload expected by the frontend.
+   */
+  async getSession(headers: Headers): Promise<{
+    user: unknown;
+    session: unknown;
+    company: unknown;
+  }> {
+    const session = await this.auth.api.getSession({ headers });
+    if (!session) {
+      throw ApiError.unauthorized("No active session");
+    }
+
+    const company =
+      session.user.accountType === AccountType.COMPANY
+        ? await companyService.getByAuthUserId(session.user.id)
+        : null;
+
+    return {
+      user: session.user,
+      session: session.session,
+      company,
+    };
+  }
+
+  /**
+   * Requests a password reset email without leaking account existence.
+   */
+  async requestPasswordReset(
     email: string,
-    expectedAccountType: AccountType,
-  ): Promise<void> {
-    const account = await User.findOne({ email }).select("accountType").lean();
+    headers: Headers,
+  ): Promise<{ message: string }> {
+    await this.auth.api.requestPasswordReset({
+      headers,
+      body: {
+        email,
+        redirectTo: `${ENV.FRONTEND_URL}/reset-password`,
+      },
+    });
 
-    if (!account || account.accountType !== expectedAccountType) {
-      throw ApiError.unauthorized("Invalid credentials for this portal");
-    }
+    return {
+      message:
+        "If an account with that email exists, a password reset link has been sent.",
+    };
   }
 
   /**
-   * Assign a system role to a user.
-   * Stores the role ObjectId in the better-auth user's `roles` array field.
+   * Resets a password using a reset token.
    */
-  private async assignRoleToUser(
-    userId: string,
-    roleName: string,
-  ): Promise<void> {
-    // Resolves the role document first so the user record stores the role ObjectId, not the name.
-    const roleId = await this.getRoleId(roleName);
-    if (!roleId) return;
+  async resetPassword(
+    token: string,
+    newPassword: string,
+    headers: Headers,
+  ): Promise<{ message: string }> {
+    await this.auth.api.resetPassword({
+      headers,
+      body: { token, newPassword },
+    });
 
-    await userPersistenceService.addRole(userId, roleId);
-  }
-
-  /**
-   * Helper to retrieve Role ObjectId by name string
-   */
-  private async getRoleId(
-    roleName: string,
-  ): Promise<mongoose.Types.ObjectId | null> {
-    // Looks up the persisted role id so higher-level flows can attach roles safely by name.
-    const role = await Role.findOne({ name: roleName });
-    if (!role) {
-      console.error(
-        `Role "${roleName}" not found. Did you run the seed script?`,
-      );
-      return null;
-    }
-    return role._id;
+    return {
+      message:
+        "Password reset successfully. You can now log in with your new password.",
+    };
   }
 }
 
 /**
- * Factory function — called after auth is initialized.
+ * Factory function called after auth is initialized.
  */
 export function createAuthService(auth: Auth): AuthService {
   return new AuthService(auth);

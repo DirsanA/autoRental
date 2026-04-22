@@ -1,53 +1,108 @@
 import mongoose from "mongoose";
-import { Role } from "../models/Role.js";
-import { Verification, type VerificationDocument } from "../models/Verification.js";
-import { SYSTEM_ROLES } from "../config/constants.js";
+import {
+  Verification,
+  type VerificationDocument,
+} from "../models/Verification.js";
 import { VerificationLevel } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import type {
   ReviewVerificationInput,
   SubmitPeerhostVerificationInput,
-  SubmitRenterVerificationInput,
+  SubmitRenterIdVerificationInput,
+  SubmitRenterLicenseVerificationInput,
 } from "../validators/verification.validator.js";
 
-type RequestedRole = typeof SYSTEM_ROLES.RENTER | typeof SYSTEM_ROLES.PEERHOST;
-
 type VerificationMetadata = {
-  requestedRole: RequestedRole;
-  licenseNumber: string;
+  targetVerificationLevel:
+    | VerificationLevel.ID_VERIFIED
+    | VerificationLevel.LICENSE_VERIFIED;
+  documentNumber: string;
   dateOfBirth: string;
-  licenseExpiry: string;
+  documentExpiry: string;
   address?: string | undefined;
 };
 
+type VerificationSubmission = {
+  documentType: "NATIONAL_ID" | "DRIVER_LICENSE";
+  targetVerificationLevel:
+    | VerificationLevel.ID_VERIFIED
+    | VerificationLevel.LICENSE_VERIFIED;
+};
+
+const VERIFICATION_LEVEL_ORDER: Record<VerificationLevel, number> = {
+  [VerificationLevel.NONE]: 0,
+  [VerificationLevel.ID_VERIFIED]: 1,
+  [VerificationLevel.LICENSE_VERIFIED]: 2,
+  [VerificationLevel.PEER_HOST]: 3,
+};
+
+/**
+ * Preserves the user's highest achieved level when an older document is approved.
+ */
+function mergeVerificationLevel(
+  currentLevel: VerificationLevel,
+  approvedLevel:
+    | VerificationLevel.ID_VERIFIED
+    | VerificationLevel.LICENSE_VERIFIED,
+) {
+  return VERIFICATION_LEVEL_ORDER[currentLevel] >=
+    VERIFICATION_LEVEL_ORDER[approvedLevel]
+    ? currentLevel
+    : approvedLevel;
+}
+
 export class VerificationService {
-  async submitRenterVerification(
+  /**
+   * Submits the identity document used for ID verification (With-Driver).
+   */
+  async submitRenterIdVerification(
     authUserId: string,
-    data: SubmitRenterVerificationInput,
+    data: SubmitRenterIdVerificationInput,
   ): Promise<VerificationDocument> {
-    // Routes renter verification requests through the shared submission workflow.
-    return this.submitVerification(authUserId, SYSTEM_ROLES.RENTER, data);
+    return this.submitVerification(authUserId, data, {
+      documentType: "NATIONAL_ID",
+      targetVerificationLevel: VerificationLevel.ID_VERIFIED,
+    });
   }
 
+  /**
+   * Submits the driver's license used for license verification (Self-Drive).
+   */
+  async submitRenterLicenseVerification(
+    authUserId: string,
+    data: SubmitRenterLicenseVerificationInput,
+  ): Promise<VerificationDocument> {
+    return this.submitVerification(authUserId, data, {
+      documentType: "DRIVER_LICENSE",
+      targetVerificationLevel: VerificationLevel.LICENSE_VERIFIED,
+    });
+  }
+
+  /**
+   * Submits the driving license used for license verification.
+   */
   async submitPeerhostVerification(
     authUserId: string,
     data: SubmitPeerhostVerificationInput,
   ): Promise<VerificationDocument> {
-    // Routes peerhost verification requests through the same shared submission workflow.
-    return this.submitVerification(authUserId, SYSTEM_ROLES.PEERHOST, data);
+    return this.submitVerification(authUserId, data, {
+      documentType: "DRIVER_LICENSE",
+      targetVerificationLevel: VerificationLevel.LICENSE_VERIFIED,
+    });
   }
 
+  /**
+   * Returns every verification owned by the current user.
+   */
   async getMyVerifications(authUserId: string): Promise<VerificationDocument[]> {
-    // Resolves the caller's user record first so verification queries use the persisted Mongo id.
-    const user = await userPersistenceService.findByAuthId(authUserId);
-    if (!user) {
-      throw ApiError.notFound("User not found");
-    }
-
+    const user = await this.findUserByAuthIdOrThrow(authUserId);
     return Verification.find({ userId: user._id }).sort({ createdAt: -1 });
   }
 
+  /**
+   * Approves or rejects a verification request.
+   */
   async reviewVerification(
     verificationId: string,
     adminUserId: string,
@@ -56,24 +111,20 @@ export class VerificationService {
     verification: VerificationDocument;
     user: NonNullable<Awaited<ReturnType<typeof userPersistenceService.findByMongoId>>>;
   }> {
-    // Loads the pending verification record that an admin is attempting to review.
     const verification = await Verification.findById(verificationId);
     if (!verification) {
       throw ApiError.notFound("Verification not found");
     }
 
-    // Rejects duplicate moderation actions once a verification has already been processed.
     if (verification.status !== "PENDING") {
       throw ApiError.unprocessable("Verification has already been reviewed");
     }
 
-    // Loads the target user so approval or rejection can update both verification and account state.
     const user = await userPersistenceService.findByMongoId(verification.userId);
     if (!user) {
       throw ApiError.notFound("User not found");
     }
 
-    // Persists a rejection without changing user roles or verification level.
     if (data.status === "REJECTED") {
       verification.status = "REJECTED";
       verification.adminComment = data.adminComment;
@@ -84,99 +135,123 @@ export class VerificationService {
       return { verification, user };
     }
 
-    // Reads the submission metadata that tells the service which role the approval should unlock.
     const metadata = verification.extractedData as VerificationMetadata | undefined;
-    if (!metadata?.requestedRole) {
-      throw ApiError.internal("Verification metadata is missing the requested role");
-    }
+    const approvedLevel = this.resolveApprovedVerificationLevel(
+      verification.documentType,
+      metadata,
+    );
 
-    // Marks the verification approved before applying the corresponding user upgrades.
     verification.status = "APPROVED";
     verification.adminComment = data.adminComment;
+
     const adminPrimaryKey =
       await userPersistenceService.resolveUserPrimaryKey(adminUserId);
-    if (adminPrimaryKey && adminPrimaryKey instanceof mongoose.Types.ObjectId) {
-      verification.verifiedBy = adminPrimaryKey;
+    if (adminPrimaryKey && mongoose.Types.ObjectId.isValid(adminPrimaryKey)) {
+      verification.verifiedBy = new mongoose.Types.ObjectId(adminPrimaryKey);
     }
     verification.verifiedAt = new Date();
 
-    // Resolves the requested role id so the approved capability can be attached to the user.
-    const roleId = await this.getRoleId(metadata.requestedRole);
-    if (!roleId) {
-      throw ApiError.internal(`Role "${metadata.requestedRole}" is not available`);
-    }
-
-    // Copies verified identity data onto the user record and elevates their verification level.
-    user.verificationLevel = VerificationLevel.LICENSE_VERIFIED;
-    user.idNumber = metadata.licenseNumber;
+    user.verificationLevel = mergeVerificationLevel(
+      user.verificationLevel,
+      approvedLevel,
+    );
+    user.idNumber = metadata?.documentNumber ?? user.idNumber;
     user.idImageUrl = verification.documentFrontUrl;
-    if (metadata.address) {
+    if (metadata?.address) {
       user.address = metadata.address;
     }
 
     await user.save();
-    await userPersistenceService.addRole(String(user._id), roleId);
-    // Reloads the user after role assignment so the response reflects the latest persisted state.
-    const refreshedUser = await userPersistenceService.findByMongoId(user._id);
-
     await verification.save();
+
+    const refreshedUser = await userPersistenceService.findByMongoId(user._id);
 
     return { verification, user: refreshedUser ?? user };
   }
 
-  private async submitVerification(
-    authUserId: string,
-    requestedRole: RequestedRole,
-    data: SubmitRenterVerificationInput | SubmitPeerhostVerificationInput,
-  ): Promise<VerificationDocument> {
-    // Resolves the submitting user before checking duplicate roles or pending verification requests.
+  /**
+   * Finds a user by auth id or throws a not-found error.
+   */
+  private async findUserByAuthIdOrThrow(authUserId: string) {
     const user = await userPersistenceService.findByAuthId(authUserId);
     if (!user) {
       throw ApiError.notFound("User not found");
     }
 
-    // Blocks verification requests for roles the user already holds.
-    const roleId = await this.getRoleId(requestedRole);
-    if (roleId && user.roles.some((existingRole) => existingRole.toString() === roleId.toString())) {
-      throw ApiError.conflict(`User is already a ${requestedRole}`);
+    return user;
+  }
+
+  /**
+   * Builds the metadata stored alongside a verification submission.
+   */
+  private buildVerificationMetadata(
+    data: SubmitRenterIdVerificationInput | SubmitRenterLicenseVerificationInput | SubmitPeerhostVerificationInput,
+    submission: VerificationSubmission,
+  ): VerificationMetadata {
+    return {
+      targetVerificationLevel: submission.targetVerificationLevel,
+      documentNumber: "documentNumber" in data ? data.documentNumber : data.licenseNumber,
+      dateOfBirth: data.dateOfBirth,
+      documentExpiry: "licenseExpiry" in data ? data.licenseExpiry : "",
+      address: "address" in data ? data.address : undefined,
+    };
+  }
+
+  /**
+   * Creates a pending verification after duplicate checks.
+   */
+  private async submitVerification(
+    authUserId: string,
+    data: SubmitRenterIdVerificationInput | SubmitRenterLicenseVerificationInput | SubmitPeerhostVerificationInput,
+    submission: VerificationSubmission,
+  ): Promise<VerificationDocument> {
+    const user = await this.findUserByAuthIdOrThrow(authUserId);
+
+    if (
+      VERIFICATION_LEVEL_ORDER[user.verificationLevel] >=
+      VERIFICATION_LEVEL_ORDER[submission.targetVerificationLevel]
+    ) {
+      throw ApiError.conflict("User has already reached this verification level");
     }
 
-    // Prevents duplicate pending submissions for the same role and document type.
     const existingPending = await Verification.findOne({
       userId: user._id,
       status: "PENDING",
-      documentType: "DRIVER_LICENSE",
-      "extractedData.requestedRole": requestedRole,
+      documentType: submission.documentType,
     });
 
     if (existingPending) {
-      throw ApiError.conflict("A verification request for this role is already pending review");
+      throw ApiError.conflict(
+        "A verification request for this document type is already pending review",
+      );
     }
 
-    // Stores the verified identity fields as extracted metadata for later admin review.
-    const metadata: VerificationMetadata = {
-      requestedRole,
-      licenseNumber: data.licenseNumber,
-      dateOfBirth: data.dateOfBirth,
-      licenseExpiry: data.licenseExpiry,
-      address: "address" in data ? data.address : undefined,
-    };
-
-    // Creates a pending verification record that can be reviewed and approved by an admin later.
     return Verification.create({
       userId: user._id,
-      documentType: "DRIVER_LICENSE",
+      documentType: submission.documentType,
       documentFrontUrl: data.documentFrontUrl,
       documentBackUrl: data.documentBackUrl,
-      extractedData: metadata,
+      extractedData: this.buildVerificationMetadata(data, submission),
       status: "PENDING",
     });
   }
 
-  private async getRoleId(roleName: RequestedRole) {
-    // Resolves a system role name into the database id stored on the user document.
-    const role = await Role.findOne({ name: roleName });
-    return role?._id ?? null;
+  /**
+   * Derives the resulting user verification level from a stored verification.
+   */
+  private resolveApprovedVerificationLevel(
+    documentType: VerificationDocument["documentType"],
+    metadata?: VerificationMetadata,
+  ) {
+    if (metadata?.targetVerificationLevel) {
+      return metadata.targetVerificationLevel;
+    }
+
+    if (documentType === "NATIONAL_ID" || documentType === "PASSPORT") {
+      return VerificationLevel.ID_VERIFIED;
+    }
+
+    return VerificationLevel.LICENSE_VERIFIED;
   }
 }
 

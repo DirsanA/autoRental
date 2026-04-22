@@ -1,37 +1,26 @@
-export type UserStatus = "active" | "inactive" | "invited" | "suspended";
+import type {
+  AdminUserCompanySummary,
+  AdminUserDetail,
+  AdminUserMetrics,
+  AdminUserOwnedVehicle,
+  AdminUserRecentBooking,
+  AdminUserRecentDispute,
+  AdminUserRecentReview,
+  AdminUserRecentTransaction,
+  AdminUserUiStatus,
+  AdminUserVerificationRecord,
+} from "@/lib/admin-users-api";
 
-export interface UserFullDetail {
-  id: string;
-  name: string;
-  username: string;
-  email: string;
-  role: string;
-  status: UserStatus;
-  joined: string;
-  avatarUrl?: string;
-  lastLogin: string;
-  department: string;
-  manager: string;
-}
-
-export interface UserActivity {
-  id: string;
-  action: string;
-  module: string;
-  ipAddress: string;
-  timestamp: string;
-}
-
-export interface SecurityEvent {
-  id: string;
-  event: string;
-  status: "success" | "failed" | "warning";
-  device: string;
-  location: string;
-  timestamp: string;
-}
-
-// ─── Shared UI Types ─────────────────────────────────────────────────────────
+export type UserStatus = AdminUserUiStatus;
+export type UserFullDetail = AdminUserDetail;
+export type UserCompanySummary = AdminUserCompanySummary;
+export type UserMetrics = AdminUserMetrics;
+export type UserVerificationRecord = AdminUserVerificationRecord;
+export type UserOwnedVehicle = AdminUserOwnedVehicle;
+export type UserRecentBooking = AdminUserRecentBooking;
+export type UserRecentReview = AdminUserRecentReview;
+export type UserRecentDispute = AdminUserRecentDispute;
+export type UserRecentTransaction = AdminUserRecentTransaction;
 
 export interface ConfirmationConfig {
   title: string;

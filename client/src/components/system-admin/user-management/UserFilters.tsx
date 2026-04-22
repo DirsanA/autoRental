@@ -6,58 +6,56 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { mockUsers } from "./data";
 
 interface UserFiltersProps {
   search: string;
   onSearchChange: (value: string) => void;
-  roleFilter: string;
-  onRoleFilterChange: (value: string) => void;
+  accountTypeFilter: string;
+  onAccountTypeFilterChange: (value: string) => void;
   statusFilter: string;
   onStatusFilterChange: (value: string) => void;
-  roles: string[]; // list of distinct roles
 }
 
 export function UserFilters({
   search,
   onSearchChange,
-  roleFilter,
-  onRoleFilterChange,
+  accountTypeFilter,
+  onAccountTypeFilterChange,
   statusFilter,
   onStatusFilterChange,
-  roles,
 }: UserFiltersProps) {
   return (
     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
       <Input
         placeholder="Search by name, email, or username..."
         value={search}
-        onChange={(e) => onSearchChange(e.target.value)}
+        onChange={(event) => onSearchChange(event.target.value)}
         className="sm:max-w-xs"
       />
-      <Select value={roleFilter} onValueChange={onRoleFilterChange}>
+
+      <Select
+        value={accountTypeFilter}
+        onValueChange={onAccountTypeFilterChange}
+      >
         <SelectTrigger className="sm:w-[180px]">
-          <SelectValue placeholder="All roles" />
+        <SelectValue placeholder="All account types" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All roles</SelectItem>
-          {roles.map((role) => (
-            <SelectItem key={role} value={role}>
-              {role}
-            </SelectItem>
-          ))}
+          <SelectItem value="all">All people</SelectItem>
+          <SelectItem value="USER">Users</SelectItem>
+          <SelectItem value="ADMIN">Admins</SelectItem>
         </SelectContent>
       </Select>
+
       <Select value={statusFilter} onValueChange={onStatusFilterChange}>
         <SelectTrigger className="sm:w-[180px]">
           <SelectValue placeholder="All statuses" />
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="all">All statuses</SelectItem>
-          <SelectItem value="active">Active</SelectItem>
-          <SelectItem value="inactive">Inactive</SelectItem>
-          <SelectItem value="invited">Invited</SelectItem>
-          <SelectItem value="suspended">Suspended</SelectItem>
+          <SelectItem value="ACTIVE">Active</SelectItem>
+          <SelectItem value="PENDING">Pending</SelectItem>
+          <SelectItem value="SUSPENDED">Suspended</SelectItem>
         </SelectContent>
       </Select>
     </div>

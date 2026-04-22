@@ -2,8 +2,9 @@
 
 import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useSyncUserRoleState } from "@/hooks/use-sync-user-role-state";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 
 export default function PeerHostLayout({
@@ -12,11 +13,23 @@ export default function PeerHostLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const { activeRole } = useUserRoleState();
+  const pathname = usePathname();
+  const { isSyncing } = useSyncUserRoleState();
+  const { activeRole, roles } = useUserRoleState();
 
   useEffect(() => {
-    if (activeRole !== "peerhost") router.replace("/renter/dashboard");
-  }, [activeRole, router]);
+    if (isSyncing) return;
+
+    const isOnboardingPage = pathname === "/peerhost/become-host";
+    if (!roles.peerhost && !isOnboardingPage) {
+      router.replace("/renter/dashboard");
+      return;
+    }
+
+    if (roles.peerhost && activeRole !== "peerhost" && !isOnboardingPage) {
+      router.replace("/renter/dashboard");
+    }
+  }, [activeRole, isSyncing, pathname, roles.peerhost, router]);
 
   return (
     <SidebarProvider suppressHydrationWarning>

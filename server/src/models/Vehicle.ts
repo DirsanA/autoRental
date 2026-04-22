@@ -61,6 +61,8 @@ export interface IVehicle {
 
   // Lifecycle
   status: VehicleStatus;
+  adminComment?: string | undefined;
+  verifiedBy?: Types.ObjectId | undefined;
   verifiedAt?: Date | undefined;
 
   createdAt?: Date | undefined;
@@ -131,6 +133,8 @@ const vehicleSchema = new Schema<IVehicle>(
       default: "PENDING_APPROVAL",
     },
 
+    adminComment: { type: String, trim: true },
+    verifiedBy: { type: Schema.Types.ObjectId, ref: "User" },
     verifiedAt: { type: Date },
   },
   {

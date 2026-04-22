@@ -1,5 +1,10 @@
 import mongoose from "mongoose";
-import { Vehicle, type VehicleDocument } from "../models/Vehicle.js";
+import {
+  Vehicle,
+  type VehicleDocument,
+  type VehicleStatus,
+} from "../models/Vehicle.js";
+import { AccountType, VerificationLevel } from "../models/User.js";
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -7,7 +12,22 @@ import type {
 } from "../validators/vehicle.validator.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { ApiError } from "../utils/ApiError.js";
+import { companyService } from "./company.service.js";
+import { userPersistenceService } from "./user.persistence.service.js";
+import type { RequestUser } from "../utils/requestContext.js";
 
+const VEHICLE_FILTER_STATUS: Record<
+  "available" | "rented" | "maintenance",
+  VehicleStatus
+> = {
+  available: "AVAILABLE",
+  rented: "BOOKED",
+  maintenance: "MAINTENANCE",
+};
+
+/**
+ * Deduplicates and trims vehicle feature labels.
+ */
 function normalizeFeatures(features: string[]) {
   const seen = new Set<string>();
   const normalized: string[] = [];
@@ -15,8 +35,10 @@ function normalizeFeatures(features: string[]) {
   for (const feature of features) {
     const trimmed = feature.trim();
     if (!trimmed) continue;
+
     const key = trimmed.toLowerCase();
     if (seen.has(key)) continue;
+
     seen.add(key);
     normalized.push(trimmed);
   }
@@ -24,10 +46,16 @@ function normalizeFeatures(features: string[]) {
   return normalized;
 }
 
+/**
+ * Checks whether a string is already a hosted http(s) URL.
+ */
 function isHttpUrl(value: string) {
   return /^https?:\/\//.test(value);
 }
 
+/**
+ * Normalizes upload input into a persisted asset URL.
+ */
 async function resolveUploadValue(
   value: string,
   folder: string,
@@ -43,20 +71,40 @@ async function resolveUploadValue(
 }
 
 export class VehicleService {
+  /**
+   * Lists vehicles with an optional API shorthand filter.
+   */
   async list(filter?: "available" | "rented" | "maintenance") {
-    const query: { status?: "AVAILABLE" | "BOOKED" | "MAINTENANCE" } = {};
-
-    if (filter === "available") query.status = "AVAILABLE";
-    if (filter === "rented") query.status = "BOOKED";
-    if (filter === "maintenance") query.status = "MAINTENANCE";
-
+    const query = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
     return Vehicle.find(query).sort({ createdAt: -1 });
   }
 
+  /**
+   * Lists vehicles belonging to the authenticated requester.
+   */
+  async listMine(
+    caller: RequestUser,
+    filter?: "available" | "rented" | "maintenance",
+  ) {
+    const owner = await this.resolveVehicleOwner(caller);
+
+    return Vehicle.find({
+      ownerId: owner.ownerId,
+      ownerType: owner.ownerType,
+      ...(filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {}),
+    }).sort({ createdAt: -1 });
+  }
+
+  /**
+   * Returns a vehicle by id.
+   */
   async getById(id: string) {
     return Vehicle.findById(id);
   }
 
+  /**
+   * Updates the lifecycle status of a vehicle.
+   */
   async updateStatus(
     id: string,
     status: UpdateVehicleStatusInput["status"],
@@ -100,63 +148,42 @@ export class VehicleService {
     }
   }
 
-  async create(data: CreateVehicleInput): Promise<VehicleDocument> {
-    const ownerId = data.ownerId
-      ? new mongoose.Types.ObjectId(data.ownerId)
-      : new mongoose.Types.ObjectId();
+  /**
+   * Resolves the Cloudinary folder used by a vehicle submission.
+   */
+  private buildVehicleFolder(plate: string): string {
+    return `auto-rental/vehicles/${plate.replace(/\s+/g, "-").toLowerCase()}`;
+  }
 
-    const ownerType = data.ownerType ?? "User";
-    const folder = `auto-rental/vehicles/${data.plate.replace(/\s+/g, "-").toLowerCase()}`;
-
-    const [front, back, side, interior] = await Promise.all([
+  /**
+   * Uploads vehicle photos and documents when the client sends data URLs.
+   */
+  private async uploadVehicleAssets(
+    data: CreateVehicleInput,
+    folder: string,
+  ): Promise<{
+    photos: {
+      front: string;
+      back: string;
+      side: string;
+      interior: string;
+      gallery: string[];
+    };
+    documents: {
+      ownership: string;
+      insurance: string;
+    };
+  }> {
+    const [front, back, side, interior, ownership, insurance] = await Promise.all([
       resolveUploadValue(data.photos.front, folder, "front"),
       resolveUploadValue(data.photos.back, folder, "back"),
       resolveUploadValue(data.photos.side, folder, "side"),
       resolveUploadValue(data.photos.interior, folder, "interior"),
+      resolveUploadValue(data.documents.ownership, folder, "ownership"),
+      resolveUploadValue(data.documents.insurance, folder, "insurance"),
     ]);
 
-    const documents = data.documents
-      ? {
-          ownership: await resolveUploadValue(
-            data.documents.ownership,
-            folder,
-            "ownership",
-          ),
-          insurance: await resolveUploadValue(
-            data.documents.insurance,
-            folder,
-            "insurance",
-          ),
-        }
-      : undefined;
-
-    const initialStatus =
-      ownerType === "Company" && data.status ? data.status : "PENDING_APPROVAL";
-
-    const vehicle = await Vehicle.create({
-      ownerId,
-      ownerType,
-
-      make: data.make,
-      model: data.model,
-      year: data.year,
-      vin: data.vin,
-      plate: data.plate,
-
-      mileage: data.mileage,
-      fuel: data.fuel,
-      transmission: data.transmission,
-      seats: data.seats,
-      features: normalizeFeatures(data.features),
-      condition: data.condition,
-
-      price: data.price,
-      weeklyDiscount: data.weeklyDiscount,
-      monthlyDiscount: data.monthlyDiscount,
-
-      availability: data.availability,
-      delivery: data.delivery,
-
+    return {
       photos: {
         front,
         back,
@@ -164,11 +191,93 @@ export class VehicleService {
         interior,
         gallery: [front, back, side, interior],
       },
-      documents,
-      status: initialStatus,
-    });
+      documents: {
+        ownership,
+        insurance,
+      },
+    };
+  }
 
-    return vehicle;
+  /**
+   * Resolves the persisted owner record for a user or company uploader.
+   */
+  private async resolveVehicleOwner(caller: RequestUser): Promise<{
+    ownerId: mongoose.Types.ObjectId;
+    ownerType: "User" | "Company";
+  }> {
+    if (caller.accountType === AccountType.COMPANY) {
+      const company = await companyService.getByAuthUserId(caller.id);
+      if (!company) {
+        throw ApiError.notFound("Company account not found");
+      }
+
+      return {
+        ownerId: company._id,
+        ownerType: "Company",
+      };
+    }
+
+    if (caller.accountType !== AccountType.USER) {
+      throw ApiError.forbidden("This account cannot upload vehicles");
+    }
+
+    const user = await userPersistenceService.findByAuthId(caller.id);
+    if (!user) {
+      throw ApiError.notFound("User not found");
+    }
+
+    if (
+      ![
+        VerificationLevel.ID_VERIFIED,
+        VerificationLevel.LICENSE_VERIFIED,
+        VerificationLevel.PEER_HOST,
+      ].includes(user.verificationLevel)
+    ) {
+      throw ApiError.unprocessable(
+        "You must complete ID or license verification before uploading a vehicle",
+      );
+    }
+
+    return {
+      ownerId: user._id,
+      ownerType: "User",
+    };
+  }
+
+  /**
+   * Creates a vehicle record after resolving uploads and derived fields.
+   */
+  async create(
+    caller: RequestUser,
+    data: CreateVehicleInput,
+  ): Promise<VehicleDocument> {
+    const { ownerId, ownerType } = await this.resolveVehicleOwner(caller);
+    const folder = this.buildVehicleFolder(data.plate);
+    const assets = await this.uploadVehicleAssets(data, folder);
+
+    return Vehicle.create({
+      ownerId,
+      ownerType,
+      make: data.make,
+      model: data.model,
+      year: data.year,
+      vin: data.vin,
+      plate: data.plate,
+      mileage: data.mileage,
+      fuel: data.fuel,
+      transmission: data.transmission,
+      seats: data.seats,
+      features: normalizeFeatures(data.features),
+      condition: data.condition,
+      price: data.price,
+      weeklyDiscount: data.weeklyDiscount,
+      monthlyDiscount: data.monthlyDiscount,
+      availability: data.availability,
+      delivery: data.delivery,
+      photos: assets.photos,
+      documents: assets.documents,
+      status: "PENDING_APPROVAL",
+    });
   }
 }
 

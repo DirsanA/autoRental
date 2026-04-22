@@ -1,77 +1,90 @@
 import type { Request, Response, NextFunction } from "express";
 import { z, type ZodType } from "zod";
+import { ApiError } from "../utils/ApiError.js";
 
-/**
- * Request validation middleware factory.
- * Validates body, query, and/or params against Zod schemas.
- *
- * Usage:
- *   router.post("/", validate({ body: createCompanySchema }), controller.create);
- */
-export function validate(schemas: {
+type ValidationSchemas = {
   body?: ZodType;
   query?: ZodType;
   params?: ZodType;
-}) {
-  return (req: Request, res: Response, next: NextFunction) => {
-    // Aggregates validation issues across body, query, and params into one consistent error response.
-    const errors: { field: string; message: string }[] = [];
+};
+
+type ValidationErrorDetail = { field: string; message: string };
+
+/**
+ * Converts Zod issues into the API validation error shape.
+ */
+function appendIssues(
+  errors: ValidationErrorDetail[],
+  issues: z.ZodIssue[],
+  prefix = "",
+): void {
+  for (const issue of issues) {
+    errors.push({
+      field: prefix ? `${prefix}.${issue.path.join(".")}` : issue.path.join("."),
+      message: issue.message,
+    });
+  }
+}
+
+/**
+ * Replaces the contents of a mutable request segment without reassigning the object.
+ */
+function replaceObjectValues(
+  target: Record<string, unknown>,
+  next: Record<string, unknown>,
+): void {
+  for (const key of Object.keys(target)) {
+    delete target[key];
+  }
+
+  Object.assign(target, next);
+}
+
+/**
+ * Validates request body, query, and params against Zod schemas.
+ */
+export function validate(schemas: ValidationSchemas) {
+  return (req: Request, _res: Response, next: NextFunction) => {
+    const errors: ValidationErrorDetail[] = [];
 
     if (schemas.body) {
-      // Replaces the raw body with parsed data so downstream handlers receive sanitized values.
       const result = schemas.body.safeParse(req.body);
       if (!result.success) {
-        for (const issue of result.error.issues) {
-          errors.push({
-            field: issue.path.join("."),
-            message: issue.message,
-          });
-        }
+        appendIssues(errors, result.error.issues);
       } else {
         req.body = result.data;
       }
     }
 
     if (schemas.query) {
-      // Validates query parameters separately so client errors point to the exact request segment.
       const result = schemas.query.safeParse(req.query);
       if (!result.success) {
-        for (const issue of result.error.issues) {
-          errors.push({
-            field: `query.${issue.path.join(".")}`,
-            message: issue.message,
-          });
-        }
+        appendIssues(errors, result.error.issues, "query");
+      } else {
+        replaceObjectValues(
+          req.query as Record<string, unknown>,
+          result.data as Record<string, unknown>,
+        );
       }
     }
 
     if (schemas.params) {
-      // Validates route params independently to keep identifier-related errors explicit.
       const result = schemas.params.safeParse(req.params);
       if (!result.success) {
-        for (const issue of result.error.issues) {
-          errors.push({
-            field: `params.${issue.path.join(".")}`,
-            message: issue.message,
-          });
-        }
+        appendIssues(errors, result.error.issues, "params");
+      } else {
+        replaceObjectValues(
+          req.params as Record<string, unknown>,
+          result.data as Record<string, unknown>,
+        );
       }
     }
 
     if (errors.length > 0) {
-      // Stops the request early whenever any configured schema fails validation.
-      res.status(400).json({
-        success: false,
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Request validation failed",
-          details: errors,
-        },
-      });
+      next(ApiError.badRequest("Request validation failed", errors));
       return;
     }
 
-    // Continues only after every requested schema has passed validation.
     next();
   };
 }

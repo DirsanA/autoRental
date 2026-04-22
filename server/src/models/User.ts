@@ -7,9 +7,10 @@ export enum AccountType {
 }
 
 export enum VerificationLevel {
-  BASIC = "BASIC",
+  NONE = "NONE",
   ID_VERIFIED = "ID_VERIFIED",
   LICENSE_VERIFIED = "LICENSE_VERIFIED",
+  PEER_HOST = "PEER_HOST",
 }
 /**
  * 1. Interface Definitions
@@ -104,7 +105,7 @@ const userSchema = new Schema<IUser>(
     verificationLevel: {
       type: String,
       enum: VerificationLevel,
-      default: VerificationLevel.BASIC,
+      default: VerificationLevel.NONE,
     },
     status: {
       type: String,

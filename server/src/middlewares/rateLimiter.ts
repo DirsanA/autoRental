@@ -24,7 +24,7 @@ export const generalLimiter = rateLimit({
 // Uses a tighter limit on auth routes to slow brute-force and credential stuffing attempts.
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: 100, //10
   standardHeaders: true,
   legacyHeaders: false,
   message: {

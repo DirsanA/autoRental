@@ -18,7 +18,8 @@ import { verificationService } from "../services/verification.service.js";
 import { AccountType } from "../models/User.js";
 import {
   legacySubmitPeerhostVerificationSchema,
-  legacySubmitRenterVerificationSchema,
+  submitRenterIdVerificationSchema,
+  submitRenterLicenseVerificationSchema,
 } from "../validators/verification.validator.js";
 
 /**
@@ -31,7 +32,7 @@ import {
 export function createAuthRoutes(auth: Auth): Router {
   const router = Router();
   const authService = createAuthService(auth);
-  const authController = createAuthController(auth, authService);
+  const authController = createAuthController(authService);
   const verificationController =
     createVerificationController(verificationService);
   const authenticate = createAuthMiddleware(auth);
@@ -49,13 +50,22 @@ export function createAuthRoutes(auth: Auth): Router {
     authController.registerUser,
   );
 
-  // POST /api/auth/upgrade/renter
+  // POST /api/auth/upgrade/renter/id
   router.post(
-    "/upgrade/renter",
+    "/upgrade/renter/id",
     authenticate,
     requireAccountType(AccountType.USER),
-    validate({ body: legacySubmitRenterVerificationSchema }),
-    verificationController.submitRenter,
+    validate({ body: submitRenterIdVerificationSchema }),
+    verificationController.submitRenterId,
+  );
+
+  // POST /api/auth/upgrade/renter/license
+  router.post(
+    "/upgrade/renter/license",
+    authenticate,
+    requireAccountType(AccountType.USER),
+    validate({ body: submitRenterLicenseVerificationSchema }),
+    verificationController.submitRenterLicense,
   );
 
   // POST /api/auth/upgrade/peerhost
@@ -96,6 +106,13 @@ export function createAuthRoutes(auth: Auth): Router {
     "/login/company",
     validate({ body: loginSchema }),
     authController.loginCompany,
+  );
+
+  // POST /api/auth/login/admin
+  router.post(
+    "/login/admin",
+    validate({ body: loginSchema }),
+    authController.loginAdmin,
   );
 
   // POST /api/auth/logout
