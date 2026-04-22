@@ -2,6 +2,7 @@ import type { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import type { Auth } from "../config/auth.js";
 import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 import { getMongoClient } from "../config/database.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
 import {
@@ -41,7 +42,7 @@ async function findSessionByToken(token: string): Promise<TokenSession | null> {
   ];
 
   if (mongoose.Types.ObjectId.isValid(token)) {
-    filters.push({ _id: new mongoose.Types.ObjectId(token) });
+    filters.push({ _id: new ObjectId(token) });
   }
 
   return sessionCollection.findOne({ $or: filters }) as Promise<TokenSession | null>;

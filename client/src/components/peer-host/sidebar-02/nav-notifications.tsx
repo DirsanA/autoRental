@@ -14,7 +14,7 @@ import { BellIcon } from "lucide-react";
 
 type Notification = {
   id: string;
-  avatar: string;
+  avatar?: string;
   fallback: string;
   text: string;
   time: string;
@@ -46,7 +46,7 @@ export function NotificationsPopover({
             className="flex items-start gap-3 hover:bg-muted"
           >
             <Avatar className="size-8">
-              <AvatarImage src={avatar} alt="Avatar" />
+              {avatar ? <AvatarImage src={avatar} alt="Avatar" /> : null}
               <AvatarFallback>{fallback}</AvatarFallback>
             </Avatar>
             <div className="flex flex-col">

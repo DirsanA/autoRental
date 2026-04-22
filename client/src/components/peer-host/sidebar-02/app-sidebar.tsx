@@ -38,21 +38,18 @@ import { toggleActiveRole, writeUserRoleState } from "@/lib/role-store";
 const sampleNotifications = [
   {
     id: "1",
-    avatar: "/avatars/01.png",
     fallback: "NR",
     text: "New booking request for Tesla Model 3",
     time: "5m ago",
   },
   {
     id: "2",
-    avatar: "/avatars/02.png",
     fallback: "JD",
     text: "Booking accepted: BMW X5",
     time: "2h ago",
   },
   {
     id: "3",
-    avatar: "/avatars/03.png",
     fallback: "MK",
     text: "Document verification pending",
     time: "5h ago",
@@ -97,8 +94,16 @@ export function PeerToPeerSidebar() {
   const isCollapsed = state === "collapsed";
   const router = useRouter();
   const roleState = useUserRoleState();
+  const routes = roleState.roles.peerhost
+    ? dashboardRoutes
+    : dashboardRoutes.filter((route) => route.id === "become-a-host");
 
   function handleSwitchRole() {
+    if (!roleState.roles.peerhost) {
+      router.push("/renter/dashboard");
+      return;
+    }
+
     const next = toggleActiveRole(roleState);
     writeUserRoleState(next);
     router.push(next.activeRole === "peerhost" ? "/peerhost/dashboard" : "/renter/dashboard");
@@ -139,7 +144,7 @@ export function PeerToPeerSidebar() {
       </SidebarHeader>
       
       <SidebarContent className="gap-4 px-2 py-4">
-        <DashboardNavigation routes={dashboardRoutes} />
+        <DashboardNavigation routes={routes} />
       </SidebarContent>
       
       <SidebarFooter className="px-2">
@@ -156,7 +161,11 @@ export function PeerToPeerSidebar() {
               <div className="grid flex-1 text-left text-sm leading-tight">
                 <span className="truncate font-semibold">Switch Role</span>
                 <span className="truncate text-xs">
-                  {roleState.activeRole === "peerhost" ? "Go to renter" : "Go to peer host"}
+                  {roleState.roles.peerhost
+                    ? roleState.activeRole === "peerhost"
+                      ? "Go to renter"
+                      : "Go to peer host"
+                    : "Back to renter"}
                 </span>
               </div>
             </SidebarMenuButton>

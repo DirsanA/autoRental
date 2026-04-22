@@ -10,13 +10,34 @@ export type UserRoleState = {
   activeRole: ActiveRole;
 };
 
+export type RoleStateSourceUser = {
+  accountType?: string | null;
+  roles?: unknown;
+  verificationLevel?: string | null;
+};
+
 const STORAGE_KEY = "autorent.userRoleState";
 const ROLE_CHANGE_EVENT = "autorent:role-changed";
 
 const DEFAULT_STATE: UserRoleState = {
-  roles: { peerhost: true, renter: true },
-  activeRole: "peerhost",
+  roles: { peerhost: false, renter: true },
+  activeRole: "renter",
 };
+
+function hasPeerHostAccess(user: RoleStateSourceUser | null | undefined) {
+  if (!user || user.accountType !== "USER") {
+    return false;
+  }
+
+  const roleNames = Array.isArray(user.roles)
+    ? user.roles.filter((role): role is string => typeof role === "string")
+    : [];
+
+  return (
+    user.verificationLevel === "PEER_HOST" ||
+    roleNames.some((role) => role.toLowerCase() === "peerhost")
+  );
+}
 
 let cachedRaw: string | null | undefined = undefined;
 let cachedState: UserRoleState = DEFAULT_STATE;
@@ -61,6 +82,26 @@ export function writeUserRoleState(next: UserRoleState) {
   cachedState = next;
   window.localStorage.setItem(STORAGE_KEY, raw);
   window.dispatchEvent(new Event(ROLE_CHANGE_EVENT));
+}
+
+export function buildUserRoleState(
+  user: RoleStateSourceUser | null | undefined,
+  current: UserRoleState = DEFAULT_STATE,
+): UserRoleState {
+  const peerhost = hasPeerHostAccess(user);
+
+  return {
+    roles: {
+      renter: true,
+      peerhost,
+    },
+    activeRole:
+      peerhost && current.activeRole === "peerhost" ? "peerhost" : "renter",
+  };
+}
+
+export function resetUserRoleState() {
+  writeUserRoleState(DEFAULT_STATE);
 }
 
 export function toggleActiveRole(state: UserRoleState): UserRoleState {

@@ -8,8 +8,8 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   ArrowLeft,
+  BarChart3,
   Ban,
-  BriefcaseBusiness,
   CheckCircle2,
   FileText,
   RotateCcw,
@@ -214,26 +214,20 @@ export function UserDetailPage({ userId }: { userId: string }) {
 
                 <div className="min-w-0 w-full flex-1">
                   <Tabs defaultValue="overview" className="w-full">
-                    <TabsList className="mb-6 grid w-full grid-cols-3 bg-muted/60 p-1">
+                    <TabsList className="mb-6 grid w-full grid-cols-3 rounded-2xl bg-muted/50 p-1">
                       <TabsTrigger value="overview" className="gap-2">
                         <FileText className="hidden h-4 w-4 sm:block" />
-                        Overview
+                        Summary
                       </TabsTrigger>
                       <TabsTrigger value="verification" className="gap-2">
                         <ShieldCheck className="hidden h-4 w-4 sm:block" />
                         Verification
                       </TabsTrigger>
                       <TabsTrigger value="records" className="gap-2">
-                        <BriefcaseBusiness className="hidden h-4 w-4 sm:block" />
-                        Related Records
+                        <BarChart3 className="hidden h-4 w-4 sm:block" />
+                        Activity
                       </TabsTrigger>
                     </TabsList>
-
-                    <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-                      This view now uses live user, company, booking, review,
-                      dispute, transaction, and verification records available in
-                      the current API.
-                    </div>
 
                     <TabsContent
                       value="overview"

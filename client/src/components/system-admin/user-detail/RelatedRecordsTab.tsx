@@ -1,5 +1,11 @@
 "use client";
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { Badge } from "@/components/ui/badge";
 import {
   Card,
@@ -9,13 +15,11 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+  CarFront,
+  CreditCard,
+  MessageSquareText,
+  NotebookPen,
+} from "lucide-react";
 import type { UserFullDetail } from "./types";
 import { formatDateTime, formatLabel, formatMoney } from "./formatters";
 
@@ -25,182 +29,259 @@ interface RelatedRecordsTabProps {
 
 function EmptyState({ message }: { message: string }) {
   return (
-    <div className="rounded-lg border border-dashed bg-muted/20 p-6 text-sm text-muted-foreground">
+    <div className="rounded-2xl border border-dashed bg-muted/20 p-5 text-sm text-muted-foreground">
       {message}
     </div>
   );
 }
 
+function SummaryCard({
+  title,
+  value,
+  icon: Icon,
+}: {
+  title: string;
+  value: string | number;
+  icon: React.ElementType;
+}) {
+  return (
+    <Card className="border-none shadow-sm ring-1 ring-border">
+      <CardContent className="flex items-center gap-4 p-5">
+        <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+          <Icon className="h-5 w-5" />
+        </div>
+        <div>
+          <div className="text-sm text-muted-foreground">{title}</div>
+          <div className="text-2xl font-semibold tracking-tight">{value}</div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
 /**
- * Shows recent bookings, reviews, disputes, and transactions for the user.
+ * Shows a compact activity view with expandable detail.
  */
 export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
+  const vehicles = user.ownedVehicles.slice(0, 3);
+  const bookings = user.recentBookings.slice(0, 3);
+  const transactions = user.recentTransactions.slice(0, 3);
+  const reviews = user.recentReviews.slice(0, 2);
+  const disputes = user.recentDisputes.slice(0, 2);
+
   return (
     <div className="grid gap-6">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Reviews</CardDescription>
-            <CardTitle className="text-2xl">
-              {user.metrics.reviewsWritten} / {user.metrics.reviewsReceived}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-sm text-muted-foreground">
-            Written vs received reviews linked to this account.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Disputes</CardDescription>
-            <CardTitle className="text-2xl">
-              {user.metrics.disputesRaised} / {user.metrics.disputesAgainst}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-sm text-muted-foreground">
-            Raised vs received disputes found for the user.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total paid</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatMoney(user.metrics.totalPaid)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-sm text-muted-foreground">
-            Sum of completed outgoing transactions by this user.
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="pb-3">
-            <CardDescription>Total received</CardDescription>
-            <CardTitle className="text-2xl">
-              {formatMoney(user.metrics.totalReceived)}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="pt-0 text-sm text-muted-foreground">
-            Sum of completed incoming transactions tied to the user or linked company.
-          </CardContent>
-        </Card>
+        <SummaryCard
+          title="Owned Vehicles"
+          value={user.metrics.vehiclesOwned}
+          icon={CarFront}
+        />
+        <SummaryCard
+          title="Bookings"
+          value={user.metrics.bookingsAsRenter}
+          icon={NotebookPen}
+        />
+        <SummaryCard
+          title="Disputes"
+          value={user.metrics.disputesRaised + user.metrics.disputesAgainst}
+          icon={MessageSquareText}
+        />
+        <SummaryCard
+          title="Total Received"
+          value={formatMoney(user.metrics.totalReceived)}
+          icon={CreditCard}
+        />
       </div>
 
-      <div className="grid gap-6">
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Bookings</CardTitle>
-            <CardDescription>
-              Latest bookings where the user appears as renter or through owned inventory.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {user.recentBookings.length === 0 ? (
-              <EmptyState message="No linked bookings were found." />
-            ) : (
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Booking</TableHead>
-                      <TableHead>Relation</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Start</TableHead>
-                      <TableHead>End</TableHead>
-                      <TableHead>Created</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {user.recentBookings.map((booking) => (
-                      <TableRow key={booking.id}>
-                        <TableCell className="font-medium">
-                          {booking.bookingId || booking.id}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {formatLabel(booking.relation)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatLabel(booking.status)}</TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDateTime(booking.startTime)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDateTime(booking.endTime)}
-                        </TableCell>
-                        <TableCell className="whitespace-nowrap">
-                          {formatDateTime(booking.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+      <Accordion
+        type="multiple"
+        defaultValue={["vehicles", "bookings"]}
+        className="grid gap-4"
+      >
+        <AccordionItem
+          value="vehicles"
+          className="overflow-hidden rounded-2xl border bg-card px-5"
+        >
+          <AccordionTrigger className="py-5 hover:no-underline">
+            <div className="text-left">
+              <div className="text-lg font-semibold">Owned Vehicles</div>
+              <div className="text-sm text-muted-foreground">
+                The most recent vehicle inventory attached to this user.
               </div>
-            )}
-          </CardContent>
-        </Card>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-5">
+            {vehicles.length === 0 ? (
+              <EmptyState message="No owned vehicles were found for this user." />
+            ) : (
+              <div className="grid gap-4 lg:grid-cols-3">
+                {vehicles.map((vehicle) => {
+                  const coverPhoto =
+                    vehicle.photos.front ||
+                    vehicle.photos.side ||
+                    vehicle.photos.back ||
+                    vehicle.photos.gallery[0] ||
+                    null;
 
-        <div className="grid gap-6 xl:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Reviews</CardTitle>
-              <CardDescription>
-                Latest authored and received reviews tied to the account.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user.recentReviews.length === 0 ? (
-                <EmptyState message="No linked reviews were found." />
-              ) : (
-                <div className="space-y-3">
-                  {user.recentReviews.map((review) => (
+                  return (
                     <div
-                      key={review.id}
-                      className="rounded-lg border bg-muted/10 p-4"
+                      key={vehicle.id}
+                      className="overflow-hidden rounded-2xl border bg-muted/10"
                     >
-                      <div className="flex flex-wrap items-center justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="font-normal">
-                            {formatLabel(review.relation)}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {formatLabel(review.targetType)}
-                          </Badge>
-                        </div>
-                        <div className="text-sm font-medium">
-                          Rating: {review.rating ?? "N/A"}
-                        </div>
+                      <div className="h-40 bg-muted/30">
+                        {coverPhoto ? (
+                          <img
+                            src={coverPhoto}
+                            alt={`${vehicle.year || ""} ${vehicle.make || ""} ${vehicle.model || ""}`.trim()}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+                            No vehicle image
+                          </div>
+                        )}
                       </div>
-                      <p className="mt-3 text-sm text-muted-foreground">
-                        {review.comment || "No review comment provided."}
-                      </p>
-                      <div className="mt-3 text-xs text-muted-foreground">
-                        {formatDateTime(review.createdAt)}
+                      <div className="grid gap-3 p-4 text-sm">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <div className="font-semibold">
+                              {[vehicle.year, vehicle.make, vehicle.model]
+                                .filter(Boolean)
+                                .join(" ") || "Unnamed vehicle"}
+                            </div>
+                            <div className="text-muted-foreground">
+                              Plate: {vehicle.plate || "Not provided"}
+                            </div>
+                          </div>
+                          <Badge variant="outline" className="font-normal">
+                            {formatLabel(vehicle.status)}
+                          </Badge>
+                        </div>
+                        <div className="grid gap-2">
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">Price</span>
+                            <span className="font-medium">
+                              {formatMoney(vehicle.price)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-3">
+                            <span className="text-muted-foreground">VIN</span>
+                            <span className="font-medium">
+                              {vehicle.vin || "Not provided"}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  );
+                })}
+              </div>
+            )}
+          </AccordionContent>
+        </AccordionItem>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Recent Disputes</CardTitle>
-              <CardDescription>
-                Latest dispute records where the user is a party.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {user.recentDisputes.length === 0 ? (
-                <EmptyState message="No linked disputes were found." />
-              ) : (
-                <div className="space-y-3">
-                  {user.recentDisputes.map((dispute) => (
+        <AccordionItem
+          value="bookings"
+          className="overflow-hidden rounded-2xl border bg-card px-5"
+        >
+          <AccordionTrigger className="py-5 hover:no-underline">
+            <div className="text-left">
+              <div className="text-lg font-semibold">Recent Bookings</div>
+              <div className="text-sm text-muted-foreground">
+                The latest booking activity where this user is directly involved.
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-5">
+            {bookings.length === 0 ? (
+              <EmptyState message="No linked bookings were found." />
+            ) : (
+              <div className="grid gap-3">
+                {bookings.map((booking) => (
+                  <div
+                    key={booking.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/10 p-4"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {booking.bookingId || booking.id}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="font-normal">
+                          {formatLabel(booking.relation)}
+                        </Badge>
+                        <Badge variant="outline" className="font-normal">
+                          {formatLabel(booking.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatDateTime(booking.startTime)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </AccordionContent>
+        </AccordionItem>
+
+        <AccordionItem
+          value="signals"
+          className="overflow-hidden rounded-2xl border bg-card px-5"
+        >
+          <AccordionTrigger className="py-5 hover:no-underline">
+            <div className="text-left">
+              <div className="text-lg font-semibold">Trust Signals</div>
+              <div className="text-sm text-muted-foreground">
+                Recent reviews and dispute activity that could affect admin decisions.
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-5">
+            <div className="grid gap-6 lg:grid-cols-2">
+              <div className="grid gap-3">
+                <div className="text-sm font-semibold text-muted-foreground">
+                  Reviews
+                </div>
+                {reviews.length === 0 ? (
+                  <EmptyState message="No linked reviews were found." />
+                ) : (
+                  reviews.map((review) => (
+                    <div
+                      key={review.id}
+                      className="rounded-2xl border bg-muted/10 p-4"
+                    >
+                      <div className="flex flex-wrap items-center gap-2">
+                        <Badge variant="secondary" className="font-normal">
+                          {formatLabel(review.relation)}
+                        </Badge>
+                        <Badge variant="outline" className="font-normal">
+                          {formatLabel(review.targetType)}
+                        </Badge>
+                      </div>
+                      <div className="mt-3 text-sm font-medium">
+                        Rating: {review.rating ?? "N/A"}
+                      </div>
+                      <div className="mt-2 text-sm text-muted-foreground">
+                        {review.comment || "No review comment provided."}
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="grid gap-3">
+                <div className="text-sm font-semibold text-muted-foreground">
+                  Disputes
+                </div>
+                {disputes.length === 0 ? (
+                  <EmptyState message="No linked disputes were found." />
+                ) : (
+                  disputes.map((dispute) => (
                     <div
                       key={dispute.id}
-                      className="rounded-lg border bg-muted/10 p-4"
+                      className="rounded-2xl border bg-muted/10 p-4"
                     >
                       <div className="flex flex-wrap items-center gap-2">
                         <Badge variant="secondary" className="font-normal">
@@ -209,78 +290,69 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
                         <Badge variant="outline" className="font-normal">
                           {formatLabel(dispute.status)}
                         </Badge>
-                        <Badge variant="outline" className="font-normal">
-                          {formatLabel(dispute.subjectModel)}
-                        </Badge>
                       </div>
-                      <div className="mt-3 text-sm text-foreground">
+                      <div className="mt-3 font-medium">
                         {formatLabel(dispute.issueCategory)}
                       </div>
-                      <div className="mt-2 text-xs text-muted-foreground">
+                      <div className="mt-2 text-sm text-muted-foreground">
                         {formatDateTime(dispute.createdAt)}
                       </div>
                     </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </AccordionContent>
+        </AccordionItem>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Transactions</CardTitle>
-            <CardDescription>
-              Latest incoming and outgoing transactions connected to this profile.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {user.recentTransactions.length === 0 ? (
+        <AccordionItem
+          value="payments"
+          className="overflow-hidden rounded-2xl border bg-card px-5"
+        >
+          <AccordionTrigger className="py-5 hover:no-underline">
+            <div className="text-left">
+              <div className="text-lg font-semibold">Recent Transactions</div>
+              <div className="text-sm text-muted-foreground">
+                A short payment snapshot without the full ledger view.
+              </div>
+            </div>
+          </AccordionTrigger>
+          <AccordionContent className="pb-5">
+            {transactions.length === 0 ? (
               <EmptyState message="No linked transactions were found." />
             ) : (
-              <div className="rounded-xl border overflow-hidden">
-                <Table>
-                  <TableHeader className="bg-muted/40">
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead>Created</TableHead>
-                      <TableHead>Direction</TableHead>
-                      <TableHead>Type</TableHead>
-                      <TableHead>Status</TableHead>
-                      <TableHead>Receiver</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {user.recentTransactions.map((transaction) => (
-                      <TableRow key={transaction.id}>
-                        <TableCell className="whitespace-nowrap font-medium">
-                          {formatDateTime(transaction.createdAt)}
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant="secondary" className="font-normal">
-                            {formatLabel(transaction.direction)}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>{formatLabel(transaction.type)}</TableCell>
-                        <TableCell>{formatLabel(transaction.status)}</TableCell>
-                        <TableCell>
-                          {formatLabel(transaction.receiverModel)}
-                        </TableCell>
-                        <TableCell className="text-right font-medium">
-                          {formatMoney(
-                            transaction.amount,
-                            transaction.currency || "USD",
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
+              <div className="grid gap-3">
+                {transactions.map((transaction) => (
+                  <div
+                    key={transaction.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-muted/10 p-4"
+                  >
+                    <div>
+                      <div className="font-medium">
+                        {formatMoney(
+                          transaction.amount,
+                          transaction.currency || "USD",
+                        )}
+                      </div>
+                      <div className="mt-1 flex flex-wrap gap-2">
+                        <Badge variant="secondary" className="font-normal">
+                          {formatLabel(transaction.direction)}
+                        </Badge>
+                        <Badge variant="outline" className="font-normal">
+                          {formatLabel(transaction.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                    <div className="text-sm text-muted-foreground">
+                      {formatDateTime(transaction.createdAt)}
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
-          </CardContent>
-        </Card>
-      </div>
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     </div>
   );
 }

@@ -69,7 +69,7 @@ export function CompanyTable({
       : "Unknown";
 
   return (
-    <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+    <div className="rounded-xl border bg-card shadow-sm">
       <Table>
         <TableHeader className="bg-muted/50">
           <TableRow className="hover:bg-transparent">
@@ -126,7 +126,9 @@ export function CompanyTable({
                         {company.authAccount?.name || "No linked auth account"}
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {company.authAccount?.email || company.contactEmail || "No email"}
+                        {company.authAccount?.email ||
+                          company.contactEmail ||
+                          "No email"}
                       </div>
                     </div>
                   </TableCell>
@@ -177,7 +179,9 @@ export function CompanyTable({
                             View details
                           </DropdownMenuItem>
                           {company.statusValue !== "ACTIVE" ? (
-                            <DropdownMenuItem onClick={() => onApprove(company)}>
+                            <DropdownMenuItem
+                              onClick={() => onApprove(company)}
+                            >
                               <CheckCircle2 className="mr-2 h-4 w-4" />
                               {company.statusValue === "SUSPENDED"
                                 ? "Reactivate"
@@ -185,7 +189,9 @@ export function CompanyTable({
                             </DropdownMenuItem>
                           ) : null}
                           {company.statusValue !== "SUSPENDED" ? (
-                            <DropdownMenuItem onClick={() => onSuspend(company)}>
+                            <DropdownMenuItem
+                              onClick={() => onSuspend(company)}
+                            >
                               <ShieldBan className="mr-2 h-4 w-4" />
                               Suspend
                             </DropdownMenuItem>

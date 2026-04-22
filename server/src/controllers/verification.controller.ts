@@ -13,10 +13,10 @@ function requireAuthenticatedUserId(req: Request, message: string): string {
 export function createVerificationController(service: VerificationService) {
   return {
     /**
-     * Submits a renter verification for the current user.
+     * Submits a renter ID verification for with-driver mode.
      */
-    submitRenter: asyncHandler(async (req: Request, res: Response) => {
-      const verification = await service.submitRenterVerification(
+    submitRenterId: asyncHandler(async (req: Request, res: Response) => {
+      const verification = await service.submitRenterIdVerification(
         requireAuthenticatedUserId(
           req,
           "Authentication required to submit verification",
@@ -28,7 +28,28 @@ export function createVerificationController(service: VerificationService) {
         success: true,
         data: {
           verification,
-          message: "Renter verification submitted for review.",
+          message: "National ID verification submitted for review.",
+        },
+      });
+    }),
+
+    /**
+     * Submits a renter license verification for self-drive mode.
+     */
+    submitRenterLicense: asyncHandler(async (req: Request, res: Response) => {
+      const verification = await service.submitRenterLicenseVerification(
+        requireAuthenticatedUserId(
+          req,
+          "Authentication required to submit verification",
+        ),
+        req.body,
+      );
+
+      res.status(201).json({
+        success: true,
+        data: {
+          verification,
+          message: "Driver's License verification submitted for review.",
         },
       });
     }),

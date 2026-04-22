@@ -2,6 +2,7 @@ import type {
   AdminUserCompanySummary,
   AdminUserDetail,
   AdminUserMetrics,
+  AdminUserOwnedVehicle,
   AdminUserRecentBooking,
   AdminUserRecentDispute,
   AdminUserRecentReview,
@@ -15,6 +16,7 @@ export type UserFullDetail = AdminUserDetail;
 export type UserCompanySummary = AdminUserCompanySummary;
 export type UserMetrics = AdminUserMetrics;
 export type UserVerificationRecord = AdminUserVerificationRecord;
+export type UserOwnedVehicle = AdminUserOwnedVehicle;
 export type UserRecentBooking = AdminUserRecentBooking;
 export type UserRecentReview = AdminUserRecentReview;
 export type UserRecentDispute = AdminUserRecentDispute;

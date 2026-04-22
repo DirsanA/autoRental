@@ -4,7 +4,6 @@ import { Company } from "../models/Company.js";
 
 /**
  * Subject types for CASL abilities.
- * In production, you might want to automate this or use class names.
  */
 export type AppSubjects =
   | "User"
@@ -26,17 +25,28 @@ export type AppActions = "manage" | "create" | "read" | "update" | "delete";
 
 export type AppAbility = PureAbility<[AppActions, AppSubjects]>;
 
+type AbilityPlaceholderContext = {
+  authUserId: string;
+  mongoUserId: string;
+  companyId: string;
+};
+
+type StoredPermission = {
+  action: AppActions;
+  subject: AppSubjects;
+  conditions?: unknown;
+};
+
 /**
  * Service to manage role permissions and generate CASL abilities.
  */
 export class AuthPermissionService {
+  /**
+   * Replaces stored permission placeholders with the current user's values.
+   */
   private interpolatePlaceholders(
     value: unknown,
-    context: {
-      authUserId: string;
-      mongoUserId: string;
-      companyId: string;
-    },
+    context: AbilityPlaceholderContext,
   ): unknown {
     if (typeof value === "string") {
       return value
@@ -62,42 +72,46 @@ export class AuthPermissionService {
   }
 
   /**
-   * Fetches the permissions for a given user and builds their CASL ability.
-   * Currently users have a single role in the `roles` array; this can be extended for multiple roles.
+   * Resolves the placeholder values used by dynamic CASL conditions.
+   */
+  private async buildPlaceholderContext(
+    authUserId: string,
+    mongoUserId: string,
+  ): Promise<AbilityPlaceholderContext> {
+    const company = await Company.findOne({ authUserId }).select("_id").lean();
+
+    return {
+      authUserId,
+      mongoUserId,
+      companyId: company?._id?.toString?.() ?? "",
+    };
+  }
+
+  /**
+   * Fetches permissions for a user and builds the resulting CASL ability.
    */
   async getAbilityForUser(userId: string): Promise<AppAbility> {
-    // Builds a CASL ability from the user's populated roles and stored permission documents.
     const { can, build } = new AbilityBuilder<AppAbility>(createMongoAbility);
-
     const user = await userPersistenceService.findByAuthIdWithRoles(userId);
-    // Returns an empty ability when the user cannot be resolved to any permission-bearing roles.
+
     if (!user || !user.roles || (Array.isArray(user.roles) && user.roles.length === 0)) {
-      // Unauthenticated or roleless users get no permissions by default
       return build();
     }
 
     const mongoUserId = user._id?.toString?.() ?? userId;
-    const company = await Company.findOne({ authUserId: userId }).select("_id").lean();
-    const companyId = company?._id?.toString?.() ?? "";
-
+    const context = await this.buildPlaceholderContext(userId, mongoUserId);
     const roles = Array.isArray(user.roles) ? user.roles : [user.roles];
 
     for (const role of roles) {
-      // Reads each role's permission list and replays it into the CASL builder.
-      // Cast role.permissions to the expected structure
-      const permissions = (role as any).permissions || [];
-      
-      for (const p of permissions) {
-        // Replaces template placeholders so permission conditions are scoped to the current user.
-        const conditions = p.conditions
-          ? this.interpolatePlaceholders(p.conditions, {
-              authUserId: userId,
-              mongoUserId,
-              companyId,
-            })
+      const permissions = ((role as { permissions?: StoredPermission[] }).permissions ??
+        []) as StoredPermission[];
+
+      for (const permission of permissions) {
+        const conditions = permission.conditions
+          ? this.interpolatePlaceholders(permission.conditions, context)
           : undefined;
 
-        can(p.action as AppActions, p.subject as AppSubjects, conditions);
+        can(permission.action, permission.subject, conditions);
       }
     }
 

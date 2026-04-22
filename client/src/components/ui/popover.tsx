@@ -23,7 +23,7 @@ function usePopoverContext() {
 }
 
 function mergeRefs<T>(...refs: Array<React.Ref<T> | undefined>) {
-  return (node: T) => {
+  return (node: T | null) => {
     refs.forEach((ref) => {
       if (!ref) return;
 
@@ -135,13 +135,15 @@ export const PopoverTrigger = React.forwardRef<
   };
 
   if (asChild && React.isValidElement(children)) {
-    const child = children as React.ReactElement<{
-      onClick?: React.MouseEventHandler<HTMLElement>;
-    }>;
+    const child = children as React.ReactElement<any>;
 
     return React.cloneElement(child, {
       ...props,
-      ref: mergeRefs((child as { ref?: React.Ref<HTMLElement> }).ref, triggerRef, ref),
+      ref: mergeRefs(
+        (child as { ref?: React.Ref<HTMLElement> }).ref,
+        triggerRef,
+        ref,
+      ),
       onClick: composeClickHandlers(child.props.onClick, handleClick),
       "aria-expanded": open,
       "data-state": open ? "open" : "closed",

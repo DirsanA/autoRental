@@ -10,11 +10,7 @@ import { Loader2, RefreshCcw, ShieldCheck, UserCog, Users } from "lucide-react";
 import { UserFilters } from "./UserFilters";
 import { UserTable } from "./UserTable";
 import type { User } from "./data";
-import {
-  deleteAdminUser,
-  fetchAdminUsers,
-  updateAdminUserStatus,
-} from "./api";
+import { deleteAdminUser, fetchAdminUsers, updateAdminUserStatus } from "./api";
 import { useToast } from "@/hooks/use-toast";
 import type {
   AdminUserAccountType,
@@ -160,12 +156,7 @@ export default function UserManagementPage() {
   };
 
   const handleActivate = (user: User) =>
-    applyStatusUpdate(
-      user,
-      "ACTIVE",
-      "User updated",
-      "{name} is now active.",
-    );
+    applyStatusUpdate(user, "ACTIVE", "User updated", "{name} is now active.");
 
   const handleMarkPending = (user: User) =>
     applyStatusUpdate(
@@ -218,14 +209,16 @@ export default function UserManagementPage() {
   const pendingUsers = users.filter(
     (user) => user.status === "inactive" || user.status === "invited",
   ).length;
-  const adminUsers = users.filter((user) => user.accountType === "ADMIN").length;
+  const adminUsers = users.filter(
+    (user) => user.accountType === "ADMIN",
+  ).length;
 
   return (
     <div className="relative flex h-dvh w-full">
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header />
 
-        <Main className="gap-6 p-6 md:p-8">
+        <Main className="gap-6 p-6 md:p-8 ">
           <div className="flex flex-col gap-2">
             <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               User Management
@@ -306,11 +299,7 @@ export default function UserManagementPage() {
           ) : error ? (
             <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-center text-sm text-red-700">
               <div>{error}</div>
-              <Button
-                variant="outline"
-                onClick={refreshUsers}
-                className="mt-4"
-              >
+              <Button variant="outline" onClick={refreshUsers} className="mt-4">
                 Try again
               </Button>
             </div>

@@ -1,35 +1,35 @@
-'use client';
-import { useState } from 'react';
-import { 
-  Search, 
-  Filter, 
-  Check, 
-  X, 
-  Clock, 
-  Calendar, 
-  User, 
+"use client";
+import { useState } from "react";
+import {
+  Search,
+  Filter,
+  Check,
+  X,
+  Clock,
+  Calendar,
+  User,
   Car,
   MapPin,
   MessageSquareText,
   MoreHorizontal,
   Star,
-  Wallet
-} from 'lucide-react';
-import { MOCK_BOOKINGS, Booking } from '../types';
+  Wallet,
+} from "lucide-react";
+import { MOCK_BOOKINGS, Booking } from "../types";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/components/ui/dialog';
+} from "@/components/ui/dialog";
 
 const formatSubmittedDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleDateString('en-US', {
-    year: 'numeric',
-    month: 'short',
-    day: 'numeric',
-    timeZone: 'UTC',
+  new Date(isoDate).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    timeZone: "UTC",
   });
 
 export default function BookingManagement() {
@@ -37,13 +37,18 @@ export default function BookingManagement() {
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
 
-  const getStatusStyle = (status: Booking['status']) => {
+  const getStatusStyle = (status: Booking["status"]) => {
     switch (status) {
-      case 'approved': return 'bg-emerald-100 text-emerald-700';
-      case 'pending': return 'bg-amber-100 text-amber-700';
-      case 'rejected': return 'bg-rose-100 text-rose-700';
-      case 'completed': return 'bg-blue-100 text-blue-700';
-      default: return 'bg-slate-100 text-slate-700';
+      case "approved":
+        return "bg-emerald-100 text-emerald-700";
+      case "pending":
+        return "bg-amber-100 text-amber-700";
+      case "rejected":
+        return "bg-rose-100 text-rose-700";
+      case "completed":
+        return "bg-blue-100 text-blue-700";
+      default:
+        return "bg-slate-100 text-slate-700";
     }
   };
 
@@ -56,18 +61,25 @@ export default function BookingManagement() {
     <div className="space-y-6">
       <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="font-bold text-slate-900 text-2xl">Booking Management</h2>
-          <p className="text-slate-500">Review and manage vehicle reservation requests.</p>
+          <h2 className="font-bold text-slate-900 text-2xl">
+            Booking Management
+          </h2>
+          <p className="text-slate-500">
+            Review and manage vehicle reservation requests.
+          </p>
         </div>
       </div>
 
       <div className="bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
         <div className="flex sm:flex-row flex-col justify-between items-center gap-4 p-4 border-slate-100 border-b">
           <div className="relative w-full sm:w-64">
-            <Search className="top-1/2 left-3 absolute text-slate-400 -translate-y-1/2" size={18} />
-            <input 
-              type="text" 
-              placeholder="Search bookings..." 
+            <Search
+              className="top-1/2 left-3 absolute text-slate-400 -translate-y-1/2"
+              size={18}
+            />
+            <input
+              type="text"
+              placeholder="Search bookings..."
               className="py-2 pr-4 pl-10 border border-slate-200 focus:border-emerald-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full text-sm transition-all"
             />
           </div>
@@ -86,39 +98,62 @@ export default function BookingManagement() {
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-slate-50 border-slate-100 border-b">
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Customer</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Vehicle</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Dates</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Amount</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">Status</th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs text-right uppercase tracking-wider">Actions</th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
+                  Customer
+                </th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
+                  Vehicle
+                </th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
+                  Dates
+                </th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
+                  Amount
+                </th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
+                  Status
+                </th>
+                <th className="px-6 py-4 font-bold text-slate-500 text-xs text-right uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {bookings.map((booking) => (
-                <tr key={booking.id} className="group hover:bg-slate-50/50 transition-colors">
+                <tr
+                  key={booking.id}
+                  className="group hover:bg-slate-50/50 transition-colors"
+                >
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       <div className="flex justify-center items-center bg-slate-100 rounded-full w-10 h-10 font-bold text-slate-600">
                         {booking.customerName.charAt(0)}
                       </div>
                       <div>
-                        <p className="font-bold text-slate-900 text-sm">{booking.customerName}</p>
-                        <p className="text-slate-500 text-xs">ID: {booking.id}</p>
+                        <p className="font-bold text-slate-900 text-sm">
+                          {booking.customerName}
+                        </p>
+                        <p className="text-slate-500 text-xs">
+                          ID: {booking.id}
+                        </p>
                       </div>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-2">
                       <Car size={16} className="text-slate-400" />
-                      <span className="font-medium text-slate-700 text-sm">{booking.vehicleName}</span>
+                      <span className="font-medium text-slate-700 text-sm">
+                        {booking.vehicleName}
+                      </span>
                     </div>
                   </td>
                   <td className="px-6 py-4">
                     <div className="space-y-1">
                       <div className="flex items-center gap-2 text-slate-600 text-xs">
                         <Calendar size={14} />
-                        <span>{booking.startDate} to {booking.endDate}</span>
+                        <span>
+                          {booking.startDate} to {booking.endDate}
+                        </span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <Clock size={12} />
@@ -127,21 +162,31 @@ export default function BookingManagement() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <span className="font-bold text-slate-900 text-sm">${booking.totalAmount}</span>
+                    <span className="font-bold text-slate-900 text-sm">
+                      ${booking.totalAmount}
+                    </span>
                   </td>
                   <td className="px-6 py-4">
-                    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(booking.status)}`}>
+                    <span
+                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(booking.status)}`}
+                    >
                       {booking.status}
                     </span>
                   </td>
                   <td className="px-6 py-4 text-right">
                     <div className="flex justify-end gap-2">
-                      {booking.status === 'pending' && (
+                      {booking.status === "pending" && (
                         <>
-                          <button className="bg-emerald-50 hover:bg-emerald-100 p-2 rounded-lg text-emerald-600 transition-colors" title="Approve">
+                          <button
+                            className="bg-emerald-50 hover:bg-emerald-100 p-2 rounded-lg text-emerald-600 transition-colors"
+                            title="Approve"
+                          >
                             <Check size={18} />
                           </button>
-                          <button className="bg-rose-50 hover:bg-rose-100 p-2 rounded-lg text-rose-600 transition-colors" title="Reject">
+                          <button
+                            className="bg-rose-50 hover:bg-rose-100 p-2 rounded-lg text-rose-600 transition-colors"
+                            title="Reject"
+                          >
                             <X size={18} />
                           </button>
                         </>
@@ -164,10 +209,16 @@ export default function BookingManagement() {
         </div>
 
         <div className="flex justify-between items-center bg-slate-50 p-4 border-slate-100 border-t">
-          <p className="font-medium text-slate-500 text-xs">Showing 2 of 2 bookings</p>
+          <p className="font-medium text-slate-500 text-xs">
+            Showing 2 of 2 bookings
+          </p>
           <div className="flex gap-2">
-            <button className="px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-400 text-xs cursor-not-allowed">Previous</button>
-            <button className="hover:bg-white px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-600 text-xs transition-all">Next</button>
+            <button className="px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-400 text-xs cursor-not-allowed">
+              Previous
+            </button>
+            <button className="hover:bg-white px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-600 text-xs transition-all">
+              Next
+            </button>
           </div>
         </div>
       </div>
@@ -226,21 +277,25 @@ export default function BookingManagement() {
 
               <div className="border border-slate-100 rounded-xl overflow-hidden">
                 <div className="bg-slate-50 px-4 py-3 border-slate-100 border-b">
-                  <p className="font-semibold text-slate-900 text-sm">Booking Summary</p>
+                  <p className="font-semibold text-slate-900 text-sm">
+                    Booking Summary
+                  </p>
                 </div>
                 <div className="divide-y divide-slate-100">
                   {[
-                    ['Booking ID', selectedBooking.id],
-                    ['Status', selectedBooking.status],
-                    ['Pickup location', selectedBooking.pickupLocation],
-                    ['Booked on', selectedBooking.createdAt],
+                    ["Booking ID", selectedBooking.id],
+                    ["Status", selectedBooking.status],
+                    ["Pickup location", selectedBooking.pickupLocation],
+                    ["Booked on", selectedBooking.createdAt],
                   ].map(([label, value]) => (
                     <div
                       key={label}
                       className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 px-4 py-3"
                     >
                       <p className="text-slate-500 text-xs">{label}</p>
-                      <p className="font-semibold text-slate-900 text-sm">{value}</p>
+                      <p className="font-semibold text-slate-900 text-sm">
+                        {value}
+                      </p>
                     </div>
                   ))}
                 </div>
@@ -262,7 +317,8 @@ export default function BookingManagement() {
 
                   {selectedBooking.review?.submittedAt && (
                     <span className="bg-emerald-500 px-3 py-1 rounded-full font-semibold text-white text-xs">
-                      Reviewed on {formatSubmittedDate(selectedBooking.review.submittedAt)}
+                      Reviewed on{" "}
+                      {formatSubmittedDate(selectedBooking.review.submittedAt)}
                     </span>
                   )}
                 </div>
@@ -271,38 +327,49 @@ export default function BookingManagement() {
                   {selectedBooking.review ? (
                     <>
                       <div className="flex flex-wrap items-center gap-2">
-                        {Array.from({ length: 5 }, (_, index) => index + 1).map((star) => (
-                          <div
-                            key={star}
-                            className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                              star <= selectedBooking.review!.rating
-                                ? 'bg-amber-100 text-amber-500'
-                                : 'bg-slate-100 text-slate-300'
-                            }`}
-                          >
-                            <Star
-                              size={18}
-                              className={star <= selectedBooking.review.rating ? 'fill-current' : ''}
-                            />
-                          </div>
-                        ))}
+                        {Array.from({ length: 5 }, (_, index) => index + 1).map(
+                          (star) => (
+                            <div
+                              key={star}
+                              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
+                                star <= selectedBooking.review!.rating
+                                  ? "bg-amber-100 text-amber-500"
+                                  : "bg-slate-100 text-slate-300"
+                              }`}
+                            >
+                              <Star
+                                size={18}
+                                className={
+                                  star <= (selectedBooking.review?.rating || 0)
+                                    ? "fill-current"
+                                    : ""
+                                }
+                              />
+                            </div>
+                          ),
+                        )}
                         <span className="px-3 py-1 border border-slate-200 rounded-full font-semibold text-slate-700 text-xs">
-                          {selectedBooking.review.rating}/5 rating
+                          {selectedBooking.review?.rating || 0}/5 rating
                         </span>
                       </div>
 
                       <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                        <p className="font-medium text-slate-500 text-xs">Customer comment</p>
+                        <p className="font-medium text-slate-500 text-xs">
+                          Customer comment
+                        </p>
                         <p className="mt-2 text-slate-800 text-sm leading-6">
-                          {selectedBooking.review.comment}
+                          {selectedBooking.review?.comment || "No comment"}
                         </p>
                       </div>
                     </>
                   ) : (
                     <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                      <p className="font-semibold text-slate-900 text-sm">No review yet</p>
+                      <p className="font-semibold text-slate-900 text-sm">
+                        No review yet
+                      </p>
                       <p className="mt-1 text-slate-500 text-xs leading-5">
-                        This booking does not have a rating or review from the customer yet.
+                        This booking does not have a rating or review from the
+                        customer yet.
                       </p>
                     </div>
                   )}
