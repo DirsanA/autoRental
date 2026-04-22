@@ -97,4 +97,30 @@ export const vehicleController = {
       },
     });
   }),
+  // update
+  update: asyncHandler(async (req: Request, res: Response) => {
+    const vehicle = await vehicleService.update(
+      req.params.id as string,
+      req.body,
+    );
+
+    res.json({
+      success: true,
+      data: {
+        vehicle,
+        message: "Vehicle updated successfully.",
+      },
+    });
+  }),
+  //remove
+  remove: asyncHandler(async (req: Request, res: Response) => {
+    await vehicleService.remove(req.params.id as string);
+
+    res.json({
+      success: true,
+      data: {
+        message: "Vehicle removed successfully.",
+      },
+    });
+  }),
 };
