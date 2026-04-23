@@ -5,6 +5,7 @@ import { createCompanyRoutes } from "./company.routes.js";
 import { createVerificationRoutes } from "./verification.routes.js";
 import { createVehicleRoutes } from "./vehicle.routes.js";
 import { createP2PAdminRoutes } from "./p2p.admin.routes.js";
+import { createBookingRoutes } from "./booking.routes.js";
 import type { Auth } from "../config/auth.js";
 
 /**
@@ -21,6 +22,7 @@ export function createApiRoutes(auth: Auth): Router {
   router.use("/verifications", createVerificationRoutes(auth));
   router.use("/vehicles", createVehicleRoutes(auth));
   router.use("/admin/p2p", createP2PAdminRoutes(auth));
+  router.use("/bookings", createBookingRoutes(auth));
 
   return router;
 }
