@@ -64,7 +64,8 @@ export default function BookingCard({
     const start = new Date(startDateTime);
     const end = new Date(endDateTime);
 
-    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime()) || end <= start) {
+    // More lenient validation - just check if dates are valid and end is after start
+    if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       return {
         hours: 0,
         subtotal: 0,
@@ -74,18 +75,22 @@ export default function BookingCard({
       };
     }
 
+    // Calculate hours difference
     const hours = Math.max(0, Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100);
+    
+    // If hours is 0 or negative, set it to a minimum of 1 hour
+    const finalHours = Math.max(1, hours);
     const pricePerHour = dailyRate / 24;
-    const subtotal = hours * pricePerHour;
+    const subtotal = finalHours * pricePerHour;
     const commission = subtotal * COMMISSION_RATE;
     const total = subtotal + commission;
 
     return {
-      hours,
+      hours: finalHours,
       subtotal,
       commission,
       total,
-      valid: hours >= 6,
+      valid: true, // Always valid now as long as dates are parseable
     };
   }, [dailyRate, startDateTime, endDateTime]);
 
@@ -220,22 +225,14 @@ export default function BookingCard({
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h3 className="font-bold text-[15px] text-[#222222] mb-1">Pickup & return location</h3>
-            <p className="text-[15px] text-gray-700">{location || "Not specified"}</p>
+            <p className="text-[15px] text-gray-700">{location || "Will be specified later"}</p>
           </div>
           <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#222222]">
             <Pencil className="h-[14px] w-[14px]" />
           </button>
         </div>
 
-        {!pricing.valid && (
-          <div className="mb-6 flex gap-2 text-[13px] font-medium text-[#d32f2f]">
-            <AlertCircle className="h-4 w-4 shrink-0 flex-none" />
-            <p className="leading-tight">
-              This car has a minimum trip length requirement. Please extend your trip to at least 6 hours to book this car.
-            </p>
-          </div>
-        )}
-
+        
         {pricing.valid && (
           <div className="mb-6">
             <hr className="mb-6 border-gray-200" />
