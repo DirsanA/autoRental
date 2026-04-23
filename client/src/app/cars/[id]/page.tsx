@@ -161,6 +161,8 @@ const Index = () => {
                 src={car.images[0]}
                 alt={car.name}
                 fill
+                sizes="(max-width: 768px) 100vw, 66vw"
+                loading="eager"
                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
                 unoptimized
               />
@@ -173,6 +175,7 @@ const Index = () => {
                     src={img}
                     alt={`${car.name} view ${i + 2}`}
                     fill
+                    sizes="(max-width: 768px) 100vw, 22vw"
                     className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 rounded-2xl"
                     unoptimized
                   />
@@ -274,10 +277,11 @@ const Index = () => {
           {/* Right Sidebar */}
           <div className="lg:col-span-1">
             <BookingCard
-              pricePerMonth={car.pricePerMonth}
-              originalPrice={car.originalPrice}
-              monthlyDiscount={car.monthlyDiscount}
+              vehicleId={vehicle?.id || ""}
+              vehicleName={car.name}
+              dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
+              disabled={!vehicle || vehicle.status !== "available"}
             />
           </div>
         </div>
@@ -390,4 +394,3 @@ const Index = () => {
 };
 
 export default Index;
-
