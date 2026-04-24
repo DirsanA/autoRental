@@ -313,7 +313,7 @@ export class BookingService {
 
     if (!phoneForChapa) {
       throw ApiError.unprocessable(
-        "Use an Ethiopian phone number in 09xxxxxxxx, 07xxxxxxxx, or +2519xxxxxxxx format",
+        "Add a valid Ethiopian phone number to your profile (09xxxxxxxx, 07xxxxxxxx, or +2519xxxxxxxx) before checkout",
       );
     }
 
@@ -367,7 +367,8 @@ export class BookingService {
         input.pickupAddress?.trim() ||
         context.vehicle.delivery ||
         context.vehicle.availability,
-      contactPhone: input.contactPhone.trim(),
+      // Store a normalized phone used for Chapa + owner contact.
+      contactPhone: context.phoneForChapa,
       isBlocked: true,
       payment: {
         method: "CHAPA",

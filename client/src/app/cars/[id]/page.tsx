@@ -281,7 +281,12 @@ const Index = () => {
               vehicleName={car.name}
               dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
-              disabled={!vehicle || vehicle.status !== "available"}
+              disabled={
+                !vehicle ||
+                (vehicle.acceptingBookings != null
+                  ? !vehicle.acceptingBookings
+                  : !(vehicle.status === "available" || vehicle.status === "rented"))
+              }
             />
           </div>
         </div>
