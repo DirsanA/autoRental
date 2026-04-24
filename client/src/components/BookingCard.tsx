@@ -57,14 +57,16 @@ export default function BookingCard({
   const [endTimeStr, setEndTimeStr] = useState(toDateTimeInputValue(initialEnd).slice(11, 16));
   const [submitting, setSubmitting] = useState(false);
 
-  const startDateTime = `${startDate}T${startTimeStr}`;
-  const endDateTime = `${endDate}T${endTimeStr}`;
+  const safeStartTimeStr = startTimeStr?.trim() ? startTimeStr : "00:00";
+  const safeEndTimeStr = endTimeStr?.trim() ? endTimeStr : "00:00";
+  const startDateTime = `${startDate}T${safeStartTimeStr}`;
+  const endDateTime = `${endDate}T${safeEndTimeStr}`;
 
   const pricing = useMemo(() => {
     const start = new Date(startDateTime);
     const end = new Date(endDateTime);
+    const now = new Date();
 
-    // More lenient validation - just check if dates are valid and end is after start
     if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) {
       return {
         hours: 0,
@@ -75,11 +77,23 @@ export default function BookingCard({
       };
     }
 
-    // Calculate hours difference
-    const hours = Math.max(0, Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100);
-    
-    // If hours is 0 or negative, set it to a minimum of 1 hour
-    const finalHours = Math.max(1, hours);
+    const rawHours = Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100;
+    const isValid =
+      start.getTime() > now.getTime() &&
+      end.getTime() > start.getTime() &&
+      rawHours >= 6;
+
+    if (!isValid) {
+      return {
+        hours: 0,
+        subtotal: 0,
+        commission: 0,
+        total: 0,
+        valid: false,
+      };
+    }
+
+    const finalHours = rawHours;
     const pricePerHour = dailyRate / 24;
     const subtotal = finalHours * pricePerHour;
     const commission = subtotal * COMMISSION_RATE;
@@ -90,7 +104,7 @@ export default function BookingCard({
       subtotal,
       commission,
       total,
-      valid: true, // Always valid now as long as dates are parseable
+      valid: true,
     };
   }, [dailyRate, startDateTime, endDateTime]);
 
@@ -188,6 +202,7 @@ export default function BookingCard({
                     type="time"
                     value={startTimeStr}
                     onChange={(e) => setStartTimeStr(e.target.value)}
+                    required
                     className="w-full rounded-xl border-gray-300 py-6 px-3 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
                   />
                 </div>
@@ -211,6 +226,7 @@ export default function BookingCard({
                     type="time"
                     value={endTimeStr}
                     onChange={(e) => setEndTimeStr(e.target.value)}
+                    required
                     className="w-full rounded-xl border-gray-300 py-6 px-3 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
                   />
                 </div>
