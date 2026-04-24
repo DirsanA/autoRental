@@ -125,7 +125,6 @@ export default function BookingCard({
         startTime: new Date(startDateTime).toISOString(),
         endTime: new Date(endDateTime).toISOString(),
         withDriver: false,
-        contactPhone: "", // Phone validation removed from frontend
         pickupAddress: location,
         returnAddress: location,
       });

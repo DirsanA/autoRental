@@ -48,7 +48,7 @@ export type ChapaCheckoutInput = {
   withDriver: boolean;
   pickupAddress?: string;
   returnAddress?: string;
-  contactPhone: string;
+  contactPhone?: string;
 };
 
 export type BookingPaymentStatus = {

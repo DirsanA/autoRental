@@ -12,7 +12,12 @@ export const chapaCheckoutSchema = z.object({
   withDriver: z.boolean().default(false),
   pickupAddress: z.string().trim().max(300).optional(),
   returnAddress: z.string().trim().max(300).optional(),
-  contactPhone: z.string().trim().min(7).max(32),
+  contactPhone: z
+    .string()
+    .trim()
+    .max(32)
+    .optional()
+    .transform((value) => (value ? value : undefined)),
 });
 
 export const chapaVerifyQuerySchema = z
