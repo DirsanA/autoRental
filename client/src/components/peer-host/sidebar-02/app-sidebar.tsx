@@ -106,7 +106,17 @@ export function PeerToPeerSidebar() {
 
     const next = toggleActiveRole(roleState);
     writeUserRoleState(next);
-    router.push(next.activeRole === "peerhost" ? "/peerhost/dashboard" : "/renter/dashboard");
+    if (next.activeRole === "peerhost") {
+      router.push("/peerhost/dashboard");
+      return;
+    }
+
+    if (next.activeRole === "company") {
+      router.push("/company/dashboard");
+      return;
+    }
+
+    router.push("/renter/dashboard");
   }
 
   return (
@@ -163,7 +173,9 @@ export function PeerToPeerSidebar() {
                 <span className="truncate text-xs">
                   {roleState.roles.peerhost
                     ? roleState.activeRole === "peerhost"
-                      ? "Go to renter"
+                      ? roleState.roles.company
+                        ? "Go to company"
+                        : "Go to renter"
                       : "Go to peer host"
                     : "Back to renter"}
                 </span>

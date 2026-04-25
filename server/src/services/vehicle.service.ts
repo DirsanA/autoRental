@@ -170,17 +170,30 @@ export class VehicleService {
       gallery: string[];
     };
     documents: {
-      ownership: string;
-      insurance: string;
+      ownership?: string;
+      insurance?: string;
     };
   }> {
+    const documentUploads = data.documents
+      ? Promise.all([
+          resolveUploadValue(data.documents.ownership, folder, "ownership"),
+          resolveUploadValue(data.documents.insurance, folder, "insurance"),
+        ])
+      : Promise.resolve([undefined, undefined] as const);
+
     const [front, back, side, interior, ownership, insurance] = await Promise.all([
       resolveUploadValue(data.photos.front, folder, "front"),
       resolveUploadValue(data.photos.back, folder, "back"),
       resolveUploadValue(data.photos.side, folder, "side"),
       resolveUploadValue(data.photos.interior, folder, "interior"),
-      resolveUploadValue(data.documents.ownership, folder, "ownership"),
-      resolveUploadValue(data.documents.insurance, folder, "insurance"),
+      documentUploads,
+    ]).then(([resolvedFront, resolvedBack, resolvedSide, resolvedInterior, docs]) => [
+      resolvedFront,
+      resolvedBack,
+      resolvedSide,
+      resolvedInterior,
+      docs[0],
+      docs[1],
     ]);
 
     return {
@@ -201,14 +214,23 @@ export class VehicleService {
   /**
    * Resolves the persisted owner record for a user or company uploader.
    */
-  private async resolveVehicleOwner(caller: RequestUser): Promise<{
+  private async resolveVehicleOwner(
+    caller: RequestUser,
+    requestedOwnerType?: "User" | "Company",
+  ): Promise<{
     ownerId: mongoose.Types.ObjectId;
     ownerType: "User" | "Company";
   }> {
-    if (caller.accountType === AccountType.COMPANY) {
+    if (requestedOwnerType === "Company" || caller.accountType === AccountType.COMPANY) {
       const company = await companyService.getByAuthUserId(caller.id);
       if (!company) {
-        throw ApiError.notFound("Company account not found");
+        throw ApiError.notFound("You don't have a registered company");
+      }
+
+      if (company.status !== "ACTIVE") {
+        throw ApiError.unprocessable(
+          "Your company must be approved before managing fleet vehicles",
+        );
       }
 
       return {
@@ -251,7 +273,10 @@ export class VehicleService {
     caller: RequestUser,
     data: CreateVehicleInput,
   ): Promise<VehicleDocument> {
-    const { ownerId, ownerType } = await this.resolveVehicleOwner(caller);
+    const { ownerId, ownerType } = await this.resolveVehicleOwner(
+      caller,
+      data.ownerType,
+    );
     const folder = this.buildVehicleFolder(data.plate);
     const assets = await this.uploadVehicleAssets(data, folder);
 

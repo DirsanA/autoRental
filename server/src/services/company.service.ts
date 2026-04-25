@@ -89,28 +89,36 @@ export class CompanyService {
    * Registers a new company under the authenticated company account.
    */
   async create(
-    authUserId: string,
-    data: CreateCompanyInput,
-  ): Promise<CompanyDocument> {
-    await this.assertRegistrationAvailability({
-      authUserId,
-      contactEmail: data.contactInfo.email,
-      tinNumber: data.tinNumber,
-      phoneNumber: data.contactInfo.phoneNumber,
-    });
+  authUserId: string,
+  data: CreateCompanyInput & { fullAddress?: string; licenseFile?: string },
+): Promise<CompanyDocument> {
+  await this.assertRegistrationAvailability({
+    authUserId,
+    contactEmail: data.contactInfo.email,
+    tinNumber: data.tinNumber,
+    phoneNumber: data.contactInfo.phoneNumber,
+  });
 
-    return Company.create({
-      authUserId,
-      name: data.name,
-      tinNumber: data.tinNumber,
-      website: data.website,
-      bio: data.bio,
-      licenseDocumentUrl: data.licenseDocumentUrl,
-      contactInfo: data.contactInfo,
-      location: data.location,
-      socialLinks: data.socialLinks,
-    });
-  }
+  const tempAddress = data.fullAddress;
+
+  return Company.create({
+    authUserId,
+    name: data.name,
+    tinNumber: data.tinNumber,
+
+    website: data.website,
+
+    bio: tempAddress || data.bio, 
+
+    licenseDocumentUrl: data.licenseFile || data.licenseDocumentUrl,
+
+    contactInfo: data.contactInfo,
+
+
+    socialLinks: data.socialLinks,
+  });
+}
+
 
   /**
    * Returns a company by its id.

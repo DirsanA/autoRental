@@ -69,6 +69,18 @@ function toNodeHeaders(req: Request): Headers {
  * Creates authentication-related route handlers.
  */
 export function createAuthController(authService: AuthService) {
+  const login = asyncHandler(async (req: Request, res: Response) => {
+    const { email, password } = req.body;
+    const result = await authService.login(email, password, toNodeHeaders(req));
+
+    forwardAuthCookies(res, result.cookieSource);
+
+    res.json({
+      success: true,
+      data: result.body,
+    });
+  });
+
   /**
    * Creates a portal-specific login handler.
    */
@@ -126,7 +138,13 @@ export function createAuthController(authService: AuthService) {
 
     /**
      * POST /api/auth/login
-     * Logs a renter into the user portal.
+     * Logs any account into the unified application session.
+     */
+    login,
+
+    /**
+     * POST /api/auth/login/user
+     * Backward-compatible user portal login.
      */
     loginUser: loginFor(AccountType.USER),
 

@@ -19,7 +19,14 @@ export default function RenterLayout({
 
   useEffect(() => {
     if (isSyncing) return;
-    if (activeRole !== "renter") router.replace("/peerhost/dashboard");
+    if (activeRole === "peerhost") {
+      router.replace("/peerhost/dashboard");
+      return;
+    }
+
+    if (activeRole === "company") {
+      router.replace("/company/dashboard");
+    }
   }, [activeRole, isSyncing, router]);
 
   return (

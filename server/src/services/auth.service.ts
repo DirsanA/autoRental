@@ -1,8 +1,10 @@
 import mongoose from "mongoose";
+import { ObjectId } from "mongodb";
 import type { Auth } from "../config/auth.js";
 import { AccountType, User } from "../models/User.js";
 import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
+import { getMongoClient } from "../config/database.js";
 import { ENV } from "../config/env.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
@@ -11,11 +13,16 @@ import type {
 } from "../validators/auth.validator.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { companyService } from "./company.service.js";
+import { getBearerToken } from "../utils/requestContext.js";
 
 type AuthResponse<T> = {
   body: T;
   cookieSource?: unknown;
 };
+
+type TokenSession = {
+  userId?: string;
+} & Record<string, unknown>;
 
 /**
  * Auth service business logic for registration, session flows, and portal login.
@@ -28,6 +35,26 @@ export class AuthService {
    */
   private normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
+  }
+
+  /**
+   * Resolves a persisted session directly from a bearer token.
+   */
+  private async findSessionByToken(token: string): Promise<TokenSession | null> {
+    const db = getMongoClient().db();
+    const sessionCollection = db.collection("session");
+    const filters: Array<Record<string, unknown>> = [
+      { token },
+      { sessionToken: token },
+      { id: token },
+      { _id: token },
+    ];
+
+    if (mongoose.Types.ObjectId.isValid(token)) {
+      filters.push({ _id: new ObjectId(token) });
+    }
+
+    return sessionCollection.findOne({ $or: filters }) as Promise<TokenSession | null>;
   }
 
   /**
@@ -106,20 +133,6 @@ export class AuthService {
       tinNumber: data.tinNumber,
       phoneNumber: data.companyPhone,
     });
-  }
-
-  /**
-   * Ensures the caller is logging into the correct account portal.
-   */
-  private async assertLoginPortal(
-    email: string,
-    expectedAccountType: AccountType,
-  ): Promise<void> {
-    const account = await User.findOne({ email }).select("accountType").lean();
-
-    if (!account || account.accountType !== expectedAccountType) {
-      throw ApiError.unauthorized("Invalid credentials for this portal");
-    }
   }
 
   /**
@@ -242,7 +255,7 @@ export class AuthService {
     email: string,
     password: string,
     headers: Headers,
-    expectedAccountType: AccountType,
+    expectedAccountType?: AccountType,
   ): Promise<
     AuthResponse<{
       user: unknown;
@@ -251,7 +264,15 @@ export class AuthService {
     }>
   > {
     const normalizedEmail = this.normalizeEmail(email);
-    await this.assertLoginPortal(normalizedEmail, expectedAccountType);
+    if (expectedAccountType) {
+      const account = await User.findOne({ email: normalizedEmail })
+        .select("accountType")
+        .lean();
+
+      if (!account || account.accountType !== expectedAccountType) {
+        throw ApiError.unauthorized("Invalid credentials for this portal");
+      }
+    }
 
     const result = await this.auth.api.signInEmail({
       headers,
@@ -299,18 +320,37 @@ export class AuthService {
     company: unknown;
   }> {
     const session = await this.auth.api.getSession({ headers });
-    if (!session) {
+    const token = getBearerToken({
+      headers: Object.fromEntries(headers.entries()),
+    } as Parameters<typeof getBearerToken>[0]);
+
+    let resolvedUser = session?.user ?? null;
+    let resolvedSession = session?.session ?? null;
+
+    if (!resolvedUser && token) {
+      const tokenSession = await this.findSessionByToken(token);
+      const userId = tokenSession?.userId;
+      const persistedUser = userId
+        ? await userPersistenceService.findByAuthId(userId)
+        : null;
+
+      if (persistedUser) {
+        resolvedUser = persistedUser.toJSON();
+        resolvedSession = tokenSession;
+      }
+    }
+
+    if (!resolvedUser) {
       throw ApiError.unauthorized("No active session");
     }
 
-    const company =
-      session.user.accountType === AccountType.COMPANY
-        ? await companyService.getByAuthUserId(session.user.id)
-        : null;
+    const company = await companyService.getByAuthUserId(
+      String((resolvedUser as { id?: string }).id || ""),
+    );
 
     return {
-      user: session.user,
-      session: session.session,
+      user: resolvedUser,
+      session: resolvedSession,
       company,
     };
   }

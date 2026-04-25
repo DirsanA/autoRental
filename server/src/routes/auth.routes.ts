@@ -91,7 +91,7 @@ export function createAuthRoutes(auth: Auth): Router {
   router.post(
     "/login",
     validate({ body: loginSchema }),
-    authController.loginUser,
+    authController.login,
   );
 
   // POST /api/auth/login/user

@@ -11,13 +11,12 @@ import {
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import {
+  ArrowLeftRight,
   Building2,
   Handshake,
   Landmark,
   LayoutDashboard,
   MessageCircleCheckIcon,
-  ShoppingCart,
-  Store,
   UserCheck,
 } from "lucide-react";
 import { Logo } from "@/components/dashboard/sidebar-02/logo";
@@ -25,6 +24,9 @@ import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
 import { TeamSwitcher } from "@/components/dashboard/sidebar-02/team-switcher";
+import { useRouter } from "next/navigation";
+import { useUserRoleState } from "@/hooks/use-user-role-state";
+import { writeUserRoleState } from "@/lib/role-store";
 
 const sampleNotifications = [
   {
@@ -143,6 +145,13 @@ const teams = [
 export function DashboardSidebar() {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const router = useRouter();
+  const roleState = useUserRoleState();
+
+  function switchToRenter() {
+    writeUserRoleState({ ...roleState, activeRole: "renter" });
+    router.push("/renter/dashboard");
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -181,7 +190,17 @@ export function DashboardSidebar() {
         <DashboardNavigation routes={dashboardRoutes} />
       </SidebarContent>
       <SidebarFooter className="px-2">
-        <TeamSwitcher teams={teams} />
+        <div className="space-y-2">
+          <TeamSwitcher teams={teams} />
+          <button
+            type="button"
+            onClick={switchToRenter}
+            className="flex w-full items-center justify-between rounded-lg border px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-accent hover:text-foreground"
+          >
+            <span>Switch to renter</span>
+            <ArrowLeftRight className="size-4" />
+          </button>
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

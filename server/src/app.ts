@@ -46,7 +46,7 @@ export function createApp(auth: Auth) {
   // MUST be mounted BEFORE the better-auth catch-all so our custom
   // registration/login endpoints take priority.
   app.use("/api", createApiRoutes(auth));
-
+ 
   // --- better-auth handler ---
   // Catches remaining /api/auth/* requests (email verification callbacks,
   // native sign-up/sign-in if the client calls them directly, etc.)
