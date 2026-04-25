@@ -22,12 +22,12 @@ export default function PeerHostLayout({
 
     const isOnboardingPage = pathname === "/peerhost/become-host";
     if (!roles.peerhost && !isOnboardingPage) {
-      router.replace("/renter/dashboard");
+      router.replace("/dashboard");
       return;
     }
 
     if (roles.peerhost && activeRole !== "peerhost" && !isOnboardingPage) {
-      router.replace("/renter/dashboard");
+      router.replace("/dashboard");
     }
   }, [activeRole, isSyncing, pathname, roles.peerhost, router]);
 

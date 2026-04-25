@@ -1,9 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
-import { usePathname } from "next/navigation";
-import { Car, Contact2, Key, Menu, User } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import {
+  Building2,
+  Car,
+  LayoutDashboard,
+  LogOut,
+  User,
+  UserCircle2,
+} from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
@@ -12,131 +18,119 @@ import { ModeToggle } from "./mode-toggle";
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuPortal,
-  DropdownMenuSub,
-  DropdownMenuSubContent,
-  DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+import { useAuth } from "@/hooks/use_auth";
+import { logout } from "@/lib/auth-api";
+
 const Navbar = () => {
-  const pathname = usePathname();
-  const isDetailPage =
-    pathname.includes("/detail") || pathname.split("/").length > 2;
-  const isWhyChoosePage = pathname === "/why-choose-us";
+  const router = useRouter();
+  const { user, company, loading } = useAuth();
+
+  const handleRegisterCompany = () => {
+    router.push("/auth/becomehost");
+  };
+
+  const handleBecomePeerHost = () => {
+    router.push("/peerhost/become-host");
+  };
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } finally {
+      router.push("/");
+      router.refresh();
+    }
+  };
+
+  const companyStatus = company?.status;
+  const companyMenuLabel =
+    companyStatus === "ACTIVE"
+      ? "Company Dashboard"
+      : companyStatus === "PENDING_APPROVAL"
+        ? "Company Application Pending"
+        : "Register Company";
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50 mx-auto h-16 w-full dark:bg-gray-900/80 dark:border-gray-700/50 border-b border-border/40 bg-background/80 backdrop-blur-xl transition-all">
+    <nav className="h-16 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
-        {/* Logo */}
-        <div className="flex items-center gap-6">
-          <div className="font-semibold text-black dark:text-white text-lg">
-            <Logo />
-          </div>
+        <Logo />
 
-          {isDetailPage && (
-            <div className="hidden lg:flex items-center gap-3 bg-white dark:bg-zinc-900 shadow-sm hover:shadow-md px-4 py-2 border rounded-full transition cursor-pointer">
-              <span className="pr-3 border-r font-bold text-sm">
-                Addis Ababa
-              </span>
-              <span className="px-1 text-muted-foreground text-sm">
-                03/27 - 03/30
-              </span>
-            </div>
-          )}
-        </div>
-
-        {/* Right-side menu */}
         <div className="flex items-center gap-3">
-          {!isDetailPage && (
-            <Button
-              variant="ghost"
-              onClick={() =>
-                (window.location.href = isWhyChoosePage
-                  ? "/become-a-host"
-                  : "/why-choose-us")
-              }
-              className="hidden rounded-xl sm:inline-flex font-semibold"
-            >
-              {isWhyChoosePage ? "Become a host" : "Why choose Auto-rent?"}
-            </Button>
+          {!loading && !user && (
+            <>
+              <Button asChild variant="ghost">
+                <Link href="/auth/signin">Login</Link>
+              </Button>
+              <Button asChild>
+                <Link href="/auth/signup">Sign up</Link>
+              </Button>
+            </>
           )}
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                className="flex items-center gap-3 rounded-full dark:bg-zinc-900 border-gray-300 py-6 px-3 hover:shadow-md transition-all"
-              >
-                <Menu size={20} />
-                <div className="bg-zinc-800 dark:bg-zinc-900 text-white p-1 rounded-full">
-                  <User size={18} />
-                </div>
-              </Button>
-            </DropdownMenuTrigger>
+          {!loading && user && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="rounded-full"
+                  aria-label="Open user menu"
+                >
+                  <User className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
 
-            <DropdownMenuContent
-              align="end"
-              sideOffset={12}
-              className="bg-white dark:bg-black shadow-xl p-2 border border-border/50 rounded-2xl w-[280px]"
-            >
-              <DropdownMenuGroup>
-                {/* Updated links */}
-                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
-                  <Link href="/auth/signin" className="w-full">
-                    Login
-                  </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 hover:bg-muted cursor-pointer">
-                  <Link href="/auth/signup" className="w-full">
-                    Sign Up
-                  </Link>
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-
-              <DropdownMenuSeparator />
-
-              <DropdownMenuGroup>
-                <DropdownMenuSub>
-                  <DropdownMenuSubTrigger className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
-                    <Car size={18} />
-                    Become a host
-                  </DropdownMenuSubTrigger>
-                  <DropdownMenuPortal>
-                    <DropdownMenuSubContent className="p-2 rounded-xl w-48">
-                      <DropdownMenuItem className="px-3 py-2 rounded-lg text-md">
-                        Peer To Peer
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="px-3 py-2 rounded-lg text-md">
-                        Register Company
-                      </DropdownMenuItem>
-                    </DropdownMenuSubContent>
-                  </DropdownMenuPortal>
-                </DropdownMenuSub>
-
-                <DropdownMenuItem className="flex items-center gap-2 rounded-lg px-3 py-3 text-md hover:bg-muted">
-                  <Link href="/why-choose-us" className="flex items-center gap-2">
-                    <Key size={18} />
-                    How Auto-rent works
+              <DropdownMenuContent align="end" className="w-[260px]">
+                <DropdownMenuItem asChild>
+                  <Link href="/renter/profile-verification">
+                    <UserCircle2 className="mr-2 h-4 w-4" />
+                    My Profile
                   </Link>
                 </DropdownMenuItem>
 
-                <DropdownMenuItem className="flex items-center gap-2 hover:bg-muted px-3 py-3 rounded-lg text-md">
-                  <Contact2 size={18} />
-                  Contact Support
+                <DropdownMenuItem asChild>
+                  <Link href="/renter/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    My Renter Dashboard
+                  </Link>
                 </DropdownMenuItem>
-              </DropdownMenuGroup>
 
-              <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={handleBecomePeerHost}>
+                  <Car className="mr-2 h-4 w-4" />
+                  Become a Peer Host
+                </DropdownMenuItem>
 
-              <DropdownMenuItem className="hover:bg-red-50 px-3 py-3 rounded-lg text-md text-red-500">
-                Log out
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+                {companyStatus === "ACTIVE" ? (
+                  <DropdownMenuItem asChild>
+                    <Link href="/company/dashboard">
+                      <Building2 className="mr-2 h-4 w-4" />
+                      {companyMenuLabel}
+                    </Link>
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    onClick={handleRegisterCompany}
+                    disabled={companyStatus === "PENDING_APPROVAL"}
+                  >
+                    <Building2 className="mr-2 h-4 w-4" />
+                    {companyMenuLabel}
+                  </DropdownMenuItem>
+                )}
+
+                <DropdownMenuSeparator />
+
+                <DropdownMenuItem onClick={handleLogout}>
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
 
           <ModeToggle />
         </div>

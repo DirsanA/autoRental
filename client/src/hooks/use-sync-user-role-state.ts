@@ -22,7 +22,7 @@ export function useSyncUserRoleState() {
       .then((session) => {
         if (cancelled) return;
         writeUserRoleState(
-          buildUserRoleState(session?.user, readUserRoleState()),
+          buildUserRoleState(session, readUserRoleState()),
         );
       })
       .catch(() => {

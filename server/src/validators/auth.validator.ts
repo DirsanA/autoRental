@@ -1,4 +1,13 @@
 import { z } from "zod";
+import { isValidE164Phone, normalizePhoneNumber } from "../utils/phone.js";
+
+const phoneNumberSchema = z
+  .string()
+  .trim()
+  .transform((value) => normalizePhoneNumber(value))
+  .refine((value): value is string => typeof value === "string" && isValidE164Phone(value), {
+    message: "Phone number must be in valid E.164 format",
+  });
 
 /**
  * Shared credential fields for all registration types.
@@ -27,10 +36,7 @@ const personalRegistrationFields = {
     .max(50, "Last name must be at most 50 characters")
     .trim(),
   email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
-  phoneNumber: z
-    .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, "Phone number must be in valid E.164 format")
-    .trim(),
+  phoneNumber: phoneNumberSchema,
 };
 
 /**
@@ -64,10 +70,7 @@ export const registerCompanySchema = z.object({
     .max(30, "TIN number must be at most 30 characters")
     .trim(),
   companyEmail: z.string().email("Invalid company contact email").trim().toLowerCase(),
-  companyPhone: z
-    .string()
-    .regex(/^\+?[1-9]\d{1,14}$/, "Company phone must be in E.164 format")
-    .trim(),
+  companyPhone: phoneNumberSchema,
   companyAddress: z.string().max(200).optional(),
   website: z.string().url("Invalid website URL").optional(),
   bio: z.string().max(500, "Bio must be at most 500 characters").optional(),

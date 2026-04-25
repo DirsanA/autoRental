@@ -1,5 +1,6 @@
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
-import { buildAuthHeader } from "@/lib/auth-token";
+import { buildAuthHeader, writeAuthToken } from "@/lib/auth-token";
+import { resetUserRoleState } from "@/lib/role-store";
 
 const API_BASE_URL = resolveApiBaseUrl();
 
@@ -10,7 +11,6 @@ async function parseError(response: Response) {
   return payload?.error?.message || `Request failed (HTTP ${response.status})`;
 }
 
-export type LoginPortal = "user" | "company" | "admin";
 export type AuthSessionUser = {
   id?: string;
   accountType?: string;
@@ -18,18 +18,8 @@ export type AuthSessionUser = {
   verificationLevel?: string;
 } & Record<string, unknown>;
 
-export async function loginWithEmail(
-  portal: LoginPortal,
-  input: { email: string; password: string },
-) {
-  const path =
-    portal === "company"
-      ? "/auth/login/company"
-      : portal === "admin"
-        ? "/auth/login/admin"
-        : "/auth/login/user";
-
-  const response = await fetch(`${API_BASE_URL}${path}`, {
+export async function loginWithEmail(input: { email: string; password: string }) {
+  const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     credentials: "include",
     headers: {
@@ -104,4 +94,25 @@ export async function fetchCurrentSession() {
   };
 
   return payload.data || null;
+}
+
+export async function logout() {
+  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      ...buildAuthHeader(),
+    },
+  });
+
+  writeAuthToken(null);
+  resetUserRoleState();
+
+  if (!response.ok) throw new Error(await parseError(response));
+
+  const payload = (await response.json().catch(() => null)) as
+    | { data?: { message?: string } }
+    | null;
+
+  return payload?.data || null;
 }

@@ -10,8 +10,9 @@ import {
 // Cache the server snapshot so that getServerSnapshot
 // returns a stable value and avoids React warnings.
 const SERVER_SNAPSHOT: UserRoleState = {
-  roles: { peerhost: false, renter: true },
+  roles: { peerhost: false, renter: true, company: false },
   activeRole: "renter",
+  companyStatus: null,
 };
 
 const getServerSnapshot = (): UserRoleState => SERVER_SNAPSHOT;

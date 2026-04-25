@@ -1,4 +1,13 @@
 import { z } from "zod";
+import { isValidE164Phone, normalizePhoneNumber } from "../utils/phone.js";
+
+const phoneNumberSchema = z
+  .string()
+  .trim()
+  .transform((value) => normalizePhoneNumber(value))
+  .refine((value): value is string => typeof value === "string" && isValidE164Phone(value), {
+    message: "Phone must be in E.164 format",
+  });
 
 // Validates the full company creation payload required during initial company registration.
 export const createCompanySchema = z.object({
@@ -9,9 +18,7 @@ export const createCompanySchema = z.object({
   licenseDocumentUrl: z.string().url("Invalid license document URL").optional(),
   contactInfo: z.object({
     email: z.string().email("Invalid contact email"),
-    phoneNumber: z
-      .string()
-      .regex(/^\+?[1-9]\d{1,14}$/, "Phone must be in E.164 format"),
+    phoneNumber: phoneNumberSchema,
     address: z.string().max(200).optional(),
   }),
   location: z
@@ -43,7 +50,7 @@ export const updateCompanySchema = z
     contactInfo: z
       .object({
         email: z.string().email().optional(),
-        phoneNumber: z.string().regex(/^\+?[1-9]\d{1,14}$/).optional(),
+        phoneNumber: phoneNumberSchema.optional(),
         address: z.string().max(200).optional().nullable(),
       })
       .optional(),

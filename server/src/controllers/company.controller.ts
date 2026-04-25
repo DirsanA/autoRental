@@ -2,6 +2,8 @@ import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { companyService } from "../services/company.service.js";
 import { ApiError } from "../utils/ApiError.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { normalizePhoneNumber } from "../utils/phone.js";
 import { requireRequestUser } from "../utils/requestContext.js";
 
 /**
@@ -24,6 +26,25 @@ function buildListOptions(query: Request["query"]) {
   return options;
 }
 
+function readString(
+  source: Record<string, unknown>,
+  ...keys: string[]
+): string | undefined {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "string" && value.trim()) {
+      return value.trim();
+    }
+  }
+
+  return undefined;
+}
+
+function fileBufferToDataUrl(file: Express.Multer.File): string {
+  const base64 = file.buffer.toString("base64");
+  return `data:${file.mimetype};base64,${base64}`;
+}
+
 export const companyController = {
   /**
    * POST /api/companies
@@ -31,7 +52,50 @@ export const companyController = {
    */
   create: asyncHandler(async (req: Request, res: Response) => {
     const user = requireRequestUser(req);
-    const company = await companyService.create(user.id, req.body);
+    const body = req.body as Record<string, unknown>;
+    const contactInfo = {
+      email: readString(body, "contactInfo[email]", "email", "contactEmail"),
+      phoneNumber: normalizePhoneNumber(
+        readString(body, "contactInfo[phoneNumber]", "phoneNumber", "phone") || "",
+      ),
+      address: readString(body, "contactInfo[address]", "address", "companyAddress"),
+    };
+
+    if (!contactInfo.email || !contactInfo.phoneNumber) {
+      throw ApiError.badRequest(
+        "Company contact email and phone number are required",
+      );
+    }
+
+    const fullAddress =
+      readString(body, "fullAddress") ||
+      [
+        contactInfo.address,
+        readString(body, "city"),
+        readString(body, "region"),
+        "Ethiopia",
+      ]
+        .filter(Boolean)
+        .join(", ");
+
+    const licenseFile = req.file
+      ? await uploadToCloudinary(
+          fileBufferToDataUrl(req.file),
+          "auto-rental/company-documents",
+        )
+      : undefined;
+
+    const company = await companyService.create(user.id, {
+      ...body,
+      name: readString(body, "name") || "",
+      tinNumber: readString(body, "tinNumber") || "",
+      website: readString(body, "website"),
+      bio: readString(body, "bio"),
+      licenseDocumentUrl: readString(body, "licenseDocumentUrl"),
+      contactInfo,
+      fullAddress,
+      licenseFile,
+    });
 
     res.status(201).json({
       success: true,

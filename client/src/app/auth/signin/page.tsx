@@ -2,12 +2,12 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Suspense, useMemo, useState, type FormEvent } from "react";
+import { Suspense, useState, type FormEvent } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
-import { loginWithEmail, type LoginPortal } from "@/lib/auth-api";
+import { fetchCurrentSession, loginWithEmail } from "@/lib/auth-api";
 import { writeAuthToken } from "@/lib/auth-token";
 import { buildUserRoleState, writeUserRoleState } from "@/lib/role-store";
 import { useToast } from "@/hooks/use-toast";
@@ -17,45 +17,36 @@ function SignInContent() {
   const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const nextUrl = searchParams.get("next") || "";
-
-  const initialPortal = useMemo<LoginPortal>(() => {
-    const p = (searchParams.get("portal") || "user").toLowerCase();
-    if (p === "admin" || p === "company" || p === "user") return p;
-    return "user";
-  }, [searchParams]);
-
-  const [portal, setPortal] = useState<LoginPortal>(initialPortal);
+  const nextUrl = searchParams.get("next") || searchParams.get("redirect") || "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
-  const portalRedirect = (p: LoginPortal) => {
-    if (nextUrl) return nextUrl;
-    if (p === "admin") return "/sysadmin/dashboard";
-    if (p === "company") return "/company/dashboard";
-    return "/renter/dashboard";
-  };
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
     try {
-      const data = await loginWithEmail(portal, {
+      const data = await loginWithEmail({
         email: email.trim().toLowerCase(),
         password,
       });
       writeAuthToken(data.token || null);
-      if (portal === "user") {
-        writeUserRoleState(buildUserRoleState(data.user as Record<string, unknown>));
-      }
+      const session = await fetchCurrentSession().catch(() => null);
+      writeUserRoleState(
+        buildUserRoleState(session || (data.user as Record<string, unknown>)),
+      );
       toast({
         title: "Signed in",
         description: data.message || "Login successful",
       });
-      router.push(portalRedirect(portal));
+      if (session?.user?.accountType === "ADMIN") {
+        router.push(nextUrl || "/sysadmin/dashboard");
+        return;
+      }
+
+      router.push(nextUrl || "/");
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Login failed";
       setError(msg);
@@ -112,42 +103,6 @@ function SignInContent() {
             <p className="text-muted-foreground">
               Sign in to manage your rentals
             </p>
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            <button
-              type="button"
-              onClick={() => setPortal("user")}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                portal === "user"
-                  ? "bg-foreground text-background"
-                  : "bg-background text-foreground hover:bg-accent"
-              }`}
-            >
-              User
-            </button>
-            <button
-              type="button"
-              onClick={() => setPortal("company")}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                portal === "company"
-                  ? "bg-foreground text-background"
-                  : "bg-background text-foreground hover:bg-accent"
-              }`}
-            >
-              Company
-            </button>
-            <button
-              type="button"
-              onClick={() => setPortal("admin")}
-              className={`rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
-                portal === "admin"
-                  ? "bg-foreground text-background"
-                  : "bg-background text-foreground hover:bg-accent"
-              }`}
-            >
-              Admin
-            </button>
           </div>
 
           <form className="space-y-5" onSubmit={onSubmit}>

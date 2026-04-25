@@ -103,7 +103,7 @@ const SignUp = () => {
                 <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <input
                   type="tel"
-                  placeholder="+2519..."
+                  placeholder="0911234567 or +251911234567"
                   value={phoneNumber}
                   onChange={(e) => setPhoneNumber(e.target.value)}
                   className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
