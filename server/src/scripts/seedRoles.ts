@@ -64,6 +64,8 @@ const renterBookingPermissions = [
   { action: "create", subject: "Transaction", conditions: { payerId: "${userMongoId}" } },
   { action: "read", subject: "Transaction", conditions: selfUserLedgerCondition },
   { action: "create", subject: "Review", conditions: { reviewerId: "${userMongoId}" } },
+  { action: "update", subject: "Review", conditions: { reviewerId: "${userMongoId}" } },
+  { action: "delete", subject: "Review", conditions: { reviewerId: "${userMongoId}" } },
 ];
 const selfDisputePermissions = [
   { action: "create", subject: "Dispute", conditions: { raisedBy: "${userMongoId}" } },

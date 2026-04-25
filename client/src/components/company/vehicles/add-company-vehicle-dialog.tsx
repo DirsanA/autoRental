@@ -437,7 +437,10 @@ export function AddCompanyVehicleDialog({
                     <Select
                       value={draft.fuel}
                       onValueChange={(value) =>
-                        setDraft((current) => ({ ...current, fuel: value }))
+                        setDraft((current) => ({
+                          ...current,
+                          fuel: value as DraftVehicle["fuel"],
+                        }))
                       }
                     >
                       <SelectTrigger>
@@ -456,7 +459,10 @@ export function AddCompanyVehicleDialog({
                     <Select
                       value={draft.transmission}
                       onValueChange={(value) =>
-                        setDraft((current) => ({ ...current, transmission: value }))
+                        setDraft((current) => ({
+                          ...current,
+                          transmission: value as DraftVehicle["transmission"],
+                        }))
                       }
                     >
                       <SelectTrigger>

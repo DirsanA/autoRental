@@ -174,26 +174,18 @@ export class VehicleService {
       insurance?: string;
     };
   }> {
-    const documentUploads = data.documents
-      ? Promise.all([
-          resolveUploadValue(data.documents.ownership, folder, "ownership"),
-          resolveUploadValue(data.documents.insurance, folder, "insurance"),
-        ])
-      : Promise.resolve([undefined, undefined] as const);
+    const documents = data.documents;
+    if (!documents) {
+      throw ApiError.badRequest("Ownership and insurance documents are required");
+    }
 
     const [front, back, side, interior, ownership, insurance] = await Promise.all([
       resolveUploadValue(data.photos.front, folder, "front"),
       resolveUploadValue(data.photos.back, folder, "back"),
       resolveUploadValue(data.photos.side, folder, "side"),
       resolveUploadValue(data.photos.interior, folder, "interior"),
-      documentUploads,
-    ]).then(([resolvedFront, resolvedBack, resolvedSide, resolvedInterior, docs]) => [
-      resolvedFront,
-      resolvedBack,
-      resolvedSide,
-      resolvedInterior,
-      docs[0],
-      docs[1],
+      resolveUploadValue(documents.ownership, folder, "ownership"),
+      resolveUploadValue(documents.insurance, folder, "insurance"),
     ]);
 
     return {
