@@ -1,12 +1,18 @@
 import { Booking, type BookingDocument } from "../models/Booking.js";
 import { Transaction } from "../models/Transaction.js";
 import { Vehicle } from "../models/Vehicle.js";
+import { Review } from "../models/Review.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { chapaService } from "./chapa.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ENV } from "../config/env.js";
 import type { RequestUser } from "../utils/requestContext.js";
-import type { ChapaCheckoutInput } from "../validators/booking.validator.js";
+import type {
+  BookingReviewCreateInput,
+  BookingReviewUpdateInput,
+  ChapaCheckoutInput,
+  RenterBookingListQueryInput,
+} from "../validators/booking.validator.js";
 
 const COMMISSION_RATE = 0.08;
 const PAYMENT_WINDOW_MINUTES = 30;
@@ -34,6 +40,10 @@ function fitForChapa(value: string, maxLength: number) {
 
 function fitForBookingCancelReason(value: string, maxLength = 240) {
   return value.trim().slice(0, maxLength);
+}
+
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function toChapaPhoneNumber(phone?: string | null) {
@@ -117,6 +127,134 @@ function mapBookingResponse(booking: BookingDocument) {
     },
     createdAt: booking.createdAt || null,
     updatedAt: booking.updatedAt || null,
+  };
+}
+
+function mapPaymentStateToStatus(value?: "pending" | "paid" | "failed") {
+  switch (value) {
+    case "paid":
+      return "PAID";
+    case "failed":
+      return "FAILED";
+    case "pending":
+      return "PENDING";
+    default:
+      return undefined;
+  }
+}
+
+function mapRenterBookingListItem(booking: Record<string, any>) {
+  const payment = booking.payment || {};
+  const vehicle =
+    booking.vehicleId && typeof booking.vehicleId === "object"
+      ? booking.vehicleId
+      : null;
+  const gallery = Array.isArray(vehicle?.photos?.gallery)
+    ? vehicle.photos.gallery.filter(Boolean)
+    : [];
+  const imageUrl =
+    vehicle?.photos?.front ||
+    vehicle?.photos?.side ||
+    vehicle?.photos?.back ||
+    gallery[0] ||
+    null;
+
+  return {
+    id: booking._id?.toString?.() ?? String(booking._id),
+    bookingId: booking.bookingId,
+    status: booking.status,
+    paymentState:
+      payment.status === "PAID"
+        ? ("paid" as const)
+        : payment.status === "FAILED" || booking.status === "CANCELLED"
+          ? ("failed" as const)
+          : ("pending" as const),
+    startTime: booking.startTime ?? null,
+    endTime: booking.endTime ?? null,
+    actualReturnTime: booking.actualReturnTime ?? null,
+    withDriver: Boolean(booking.withDriver),
+    contactPhone: booking.contactPhone ?? null,
+    pickupAddress: booking.pickupAddress ?? null,
+    returnAddress: booking.returnAddress ?? null,
+    cancelReason: booking.cancelReason ?? null,
+    createdAt: booking.createdAt ?? null,
+    updatedAt: booking.updatedAt ?? null,
+    pricing: {
+      pricePerHour: booking.priceSnapshot?.pricePerHour ?? 0,
+      totalHours: booking.priceSnapshot?.totalHours ?? 0,
+      systemCommission: booking.priceSnapshot?.systemCommission ?? 0,
+      totalAmount: booking.priceSnapshot?.totalAmount ?? 0,
+      currency: booking.priceSnapshot?.currency ?? "ETB",
+    },
+    payment: {
+      method: payment.method ?? null,
+      status: payment.status ?? null,
+      txRef: payment.tx_ref ?? null,
+      checkoutUrl: payment.checkoutUrl ?? null,
+      checkoutExpiresAt: payment.checkoutExpiresAt ?? null,
+      referenceId: payment.referenceId ?? null,
+      paidAt: payment.paidAt ?? null,
+      lastVerifiedAt: payment.lastVerifiedAt ?? null,
+    },
+    vehicle: vehicle
+      ? {
+          id: vehicle._id?.toString?.() ?? String(vehicle._id),
+          make: vehicle.make ?? null,
+          model: vehicle.model ?? null,
+          year: vehicle.year ?? null,
+          plate: vehicle.plate ?? null,
+          imageUrl,
+          availability: vehicle.availability ?? null,
+          delivery: vehicle.delivery ?? null,
+        }
+      : null,
+  };
+}
+
+function mapBookingReviewItem(review: Record<string, any>, currentUserId?: string) {
+  const reviewerSource = review.reviewerId;
+  const reviewerId =
+    reviewerSource?._id?.toString?.() ??
+    reviewerSource?.toString?.() ??
+    null;
+  const reviewerName =
+    reviewerSource?.name ||
+    [reviewerSource?.firstName, reviewerSource?.lastName]
+      .filter(Boolean)
+      .join(" ") ||
+    null;
+  const targetSource =
+    review.targetId && typeof review.targetId === "object" ? review.targetId : null;
+
+  return {
+    id: review._id?.toString?.() ?? review.id ?? String(review._id),
+    bookingId:
+      review.bookingId?._id?.toString?.() ??
+      review.bookingId?.toString?.() ??
+      null,
+    reviewerId,
+    rating: review.rating ?? 0,
+    comment: review.comment ?? "",
+    images: Array.isArray(review.images) ? review.images.filter(Boolean) : [],
+    createdAt: review.createdAt ?? null,
+    updatedAt: review.updatedAt ?? null,
+    isOwner: reviewerId ? reviewerId === String(currentUserId) : false,
+    reviewer: reviewerId
+      ? {
+          id: reviewerId,
+          name: reviewerName || "Anonymous renter",
+          profilePicture: reviewerSource?.profilePicture ?? null,
+        }
+      : null,
+    target: targetSource
+      ? {
+          id: targetSource._id?.toString?.() ?? String(targetSource._id),
+          make: targetSource.make ?? null,
+          model: targetSource.model ?? null,
+          year: targetSource.year ?? null,
+          plate: targetSource.plate ?? null,
+        }
+      : null,
   };
 }
 
@@ -263,7 +401,9 @@ export class BookingService {
     }
 
     if (vehicle.status !== "AVAILABLE") {
-      throw ApiError.conflict("This vehicle is not available for booking right now");
+      throw ApiError.conflict(
+        "This vehicle is not available for booking right now",
+      );
     }
 
     const startTime = new Date(input.startTime);
@@ -282,7 +422,9 @@ export class BookingService {
       throw ApiError.unprocessable("Return time must be after pickup time");
     }
 
-    const totalHours = roundMoney((endTime.getTime() - startTime.getTime()) / 36e5);
+    const totalHours = roundMoney(
+      (endTime.getTime() - startTime.getTime()) / 36e5,
+    );
     if (totalHours < 6) {
       throw ApiError.unprocessable("Bookings must be at least 6 hours long");
     }
@@ -309,7 +451,8 @@ export class BookingService {
     const firstName = fitForChapa(splitNames.firstName, 35) || "Auto";
     const lastName = fitForChapa(splitNames.lastName, 35) || "Renter";
     const phoneForChapa =
-      toChapaPhoneNumber(input.contactPhone) || toChapaPhoneNumber(renter.phoneNumber);
+      toChapaPhoneNumber(input.contactPhone) ||
+      toChapaPhoneNumber(renter.phoneNumber);
 
     if (!phoneForChapa) {
       throw ApiError.unprocessable(
@@ -361,7 +504,9 @@ export class BookingService {
       withDriver: input.withDriver,
       status: "PENDING",
       pickupAddress:
-        input.pickupAddress?.trim() || context.vehicle.delivery || context.vehicle.availability,
+        input.pickupAddress?.trim() ||
+        context.vehicle.delivery ||
+        context.vehicle.availability,
       returnAddress:
         input.returnAddress?.trim() ||
         input.pickupAddress?.trim() ||
@@ -396,7 +541,10 @@ export class BookingService {
         phone_number: context.phoneForChapa,
         tx_ref: context.txRef,
         customization: {
-          title: fitForChapa(`${context.vehicle.make} ${context.vehicle.model}`, 16),
+          title: fitForChapa(
+            `${context.vehicle.make} ${context.vehicle.model}`,
+            16,
+          ),
           description: `Booking ${booking.bookingId} for ${context.totalHours} rental hours`,
         },
         meta: {
@@ -446,9 +594,81 @@ export class BookingService {
     };
   }
 
+  async listRenterBookings(
+    caller: RequestUser,
+    query: RenterBookingListQueryInput,
+  ) {
+    const renter = await this.resolveRenter(caller);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+    const filter: Record<string, unknown> = {
+      renterId: renter._id,
+    };
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const paymentStatus = mapPaymentStateToStatus(query.paymentState);
+    if (paymentStatus) {
+      filter["payment.status"] = paymentStatus;
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), "i");
+      const vehicles = await Vehicle.find({
+        $or: [{ make: regex }, { model: regex }, { plate: regex }],
+      })
+        .select("_id")
+        .lean();
+
+      const vehicleIds = vehicles.map((vehicle) => vehicle._id);
+      const orFilters: Array<Record<string, unknown>> = [
+        { bookingId: regex },
+        { pickupAddress: regex },
+        { returnAddress: regex },
+      ];
+
+      if (vehicleIds.length > 0) {
+        orFilters.push({ vehicleId: { $in: vehicleIds } });
+      }
+
+      filter.$or = orFilters;
+    }
+
+    const skip = (page - 1) * limit;
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter as any)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "vehicleId",
+          select: "make model year plate photos availability delivery",
+        })
+        .lean(),
+      Booking.countDocuments(filter as any),
+    ]);
+
+    return {
+      bookings: bookings.map((booking) =>
+        mapRenterBookingListItem(booking as Record<string, any>),
+      ),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
   private async verifyAndSyncBooking(booking: BookingDocument) {
     if (!booking.payment.tx_ref) {
-      throw ApiError.unprocessable("This booking does not have a Chapa transaction reference");
+      throw ApiError.unprocessable(
+        "This booking does not have a Chapa transaction reference",
+      );
     }
 
     if (booking.payment.status === "PAID") {
@@ -458,15 +678,23 @@ export class BookingService {
       };
     }
 
-    const verification = await chapaService.verifyTransaction(booking.payment.tx_ref);
+    const verification = await chapaService.verifyTransaction(
+      booking.payment.tx_ref,
+    );
     const verificationStatus = verification.verificationStatus;
     const amount = Number(verification.amount);
 
-    if (verification.currency && verification.currency !== booking.priceSnapshot.currency) {
+    if (
+      verification.currency &&
+      verification.currency !== booking.priceSnapshot.currency
+    ) {
       throw ApiError.unprocessable("Payment currency verification failed");
     }
 
-    if (!Number.isNaN(amount) && roundMoney(amount) !== booking.priceSnapshot.totalAmount) {
+    if (
+      !Number.isNaN(amount) &&
+      roundMoney(amount) !== booking.priceSnapshot.totalAmount
+    ) {
       throw ApiError.unprocessable("Payment amount verification failed");
     }
 
@@ -482,7 +710,10 @@ export class BookingService {
       booking.isBlocked = false;
       booking.set("cancelReason", undefined);
       booking.set("cancelledAt", undefined);
-    } else if (verificationStatus === "failed" || verificationStatus === "cancelled") {
+    } else if (
+      verificationStatus === "failed" ||
+      verificationStatus === "cancelled"
+    ) {
       booking.payment.status = "FAILED";
       booking.status = "CANCELLED";
       booking.isBlocked = false;
@@ -516,10 +747,7 @@ export class BookingService {
     };
   }
 
-  async verifyChapaPayment(input: {
-    bookingId?: string;
-    txRef?: string;
-  }) {
+  async verifyChapaPayment(input: { bookingId?: string; txRef?: string }) {
     const booking = await Booking.findOne({
       $or: [
         ...(input.bookingId ? [{ _id: input.bookingId }] : []),
@@ -534,11 +762,214 @@ export class BookingService {
     return this.verifyAndSyncBooking(booking);
   }
 
-  async getChapaCallbackResult(input: {
-    txRef?: string;
-    bookingId?: string;
-  }) {
+  async getChapaCallbackResult(input: { txRef?: string; bookingId?: string }) {
     return this.verifyChapaPayment(input);
+  }
+
+  async getBookingDetail(caller: RequestUser, bookingId: string) {
+    const renter = await this.resolveRenter(caller);
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      renterId: renter._id,
+    })
+      .populate({
+        path: "vehicleId",
+        select:
+          "make model year plate photos availability delivery ownerType ownerId",
+      })
+      .populate({
+        path: "driverAssigned",
+        select: "firstName lastName email phoneNumber profilePicture",
+      })
+      .lean();
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    return mapRenterBookingListItem(booking as Record<string, any>);
+  }
+
+  async createReview(
+    caller: RequestUser,
+    bookingId: string,
+    reviewData: BookingReviewCreateInput,
+  ) {
+    const renter = await this.resolveRenter(caller);
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      renterId: renter._id,
+      status: "COMPLETED",
+    }).lean();
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found or not completed");
+    }
+
+    // Check if review already exists
+    const existingReview = await Review.findOne({
+      bookingId: booking._id,
+      reviewerId: renter._id,
+    });
+
+    if (existingReview) {
+      throw ApiError.conflict("Review already submitted for this booking");
+    }
+
+    const vehicle = await Vehicle.findById(booking.vehicleId);
+    if (!vehicle) {
+      throw ApiError.notFound("Vehicle not found");
+    }
+
+    // Create review targeting the vehicle
+    const review = await Review.create({
+      bookingId: booking._id,
+      reviewerId: renter._id,
+      targetId: vehicle._id,
+      targetType: "Vehicle",
+      rating: reviewData.rating,
+      comment: reviewData.comment,
+      images: reviewData.images || [],
+    });
+
+    const populatedReview = await Review.findById(review._id)
+      .populate({
+        path: "reviewerId",
+        select: "name firstName lastName profilePicture",
+      })
+      .populate({
+        path: "targetId",
+        select: "make model year plate",
+      })
+      .lean();
+
+    return mapBookingReviewItem(
+      (populatedReview || review.toObject()) as Record<string, any>,
+      renter._id.toString(),
+    );
+  }
+
+  async updateReview(
+    caller: RequestUser,
+    bookingId: string,
+    reviewId: string,
+    reviewData: BookingReviewUpdateInput,
+  ) {
+    const renter = await this.resolveRenter(caller);
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      renterId: renter._id,
+    })
+      .select("_id")
+      .lean();
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    const updates: Record<string, unknown> = {};
+    if (reviewData.rating !== undefined) {
+      updates.rating = reviewData.rating;
+    }
+    if (reviewData.comment !== undefined) {
+      updates.comment = reviewData.comment;
+    }
+    if (reviewData.images !== undefined) {
+      updates.images = reviewData.images;
+    }
+
+    const review = await Review.findOneAndUpdate(
+      {
+        _id: reviewId,
+        bookingId: booking._id,
+        reviewerId: renter._id,
+      },
+      {
+        $set: updates,
+      },
+      {
+        new: true,
+        runValidators: true,
+      },
+    )
+      .populate({
+        path: "reviewerId",
+        select: "name firstName lastName profilePicture",
+      })
+      .populate({
+        path: "targetId",
+        select: "make model year plate",
+      })
+      .lean();
+
+    if (!review) {
+      throw ApiError.notFound("Review not found");
+    }
+
+    return mapBookingReviewItem(review as Record<string, any>, renter._id.toString());
+  }
+
+  async deleteReview(caller: RequestUser, bookingId: string, reviewId: string) {
+    const renter = await this.resolveRenter(caller);
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      renterId: renter._id,
+    })
+      .select("_id")
+      .lean();
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    const review = await Review.findOneAndDelete({
+      _id: reviewId,
+      bookingId: booking._id,
+      reviewerId: renter._id,
+    }).lean();
+
+    if (!review) {
+      throw ApiError.notFound("Review not found");
+    }
+
+    return {
+      id: review._id?.toString?.() ?? reviewId,
+      deleted: true,
+    };
+  }
+
+  async getBookingReviews(caller: RequestUser, bookingId: string) {
+    const renter = await this.resolveRenter(caller);
+
+    const booking = await Booking.findOne({
+      _id: bookingId,
+      renterId: renter._id,
+    }).lean();
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    const reviews = await Review.find({
+      bookingId: booking._id,
+    })
+      .populate({
+        path: "reviewerId",
+        select: "name firstName lastName profilePicture",
+      })
+      .populate({
+        path: "targetId",
+        select: "make model year plate",
+      })
+      .lean();
+
+    return reviews.map((review) =>
+      mapBookingReviewItem(review as Record<string, any>, renter._id.toString()),
+    );
   }
 }
 
