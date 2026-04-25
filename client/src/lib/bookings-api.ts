@@ -38,19 +38,17 @@ async function parseApiError(response: Response) {
   const message = payload?.error?.message || `Request failed (HTTP ${response.status})`;
   const composed = details ? `${message} - ${details}` : message;
 
-  if (response.status >= 500) {
-    console.error(
-      "Booking checkout error",
-      JSON.stringify(
-        {
-          status: response.status,
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  }
+  console.error(
+    "Booking API error",
+    JSON.stringify(
+      {
+        status: response.status,
+        payload,
+      },
+      null,
+      2,
+    ),
+  );
 
   return composed;
 }
