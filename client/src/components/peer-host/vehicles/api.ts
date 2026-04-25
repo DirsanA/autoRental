@@ -48,6 +48,7 @@ function mapStatus(status?: string): VehicleStatus {
 
 function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
   const mappedStatus = mapStatus(vehicle.status);
+  const acceptingBookings = mappedStatus === "available" || mappedStatus === "rented";
   const imageFromGallery = Array.isArray(vehicle.photos?.gallery)
     ? vehicle.photos?.gallery[0]
     : undefined;
@@ -69,7 +70,7 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     description: vehicle.condition,
     dailyRate: typeof vehicle.price === "number" ? vehicle.price : 0,
     status: mappedStatus,
-    acceptingBookings: mappedStatus === "available",
+    acceptingBookings,
     location: vehicle.delivery || vehicle.availability || "Ethiopia",
     imageUrl: vehicle.photos?.front || imageFromGallery,
     galleryImages,
