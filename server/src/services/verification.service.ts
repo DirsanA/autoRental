@@ -30,6 +30,31 @@ type VerificationSubmission = {
     | VerificationLevel.LICENSE_VERIFIED;
 };
 
+type VerificationDocumentType = VerificationDocument["documentType"];
+
+type VerificationSnapshotStatus =
+  | "NOT_SUBMITTED"
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED";
+
+type VerificationSnapshot = {
+  latest: VerificationDocument | null;
+  status: VerificationSnapshotStatus;
+  canSubmit: boolean;
+  submissionsCount: number;
+};
+
+type VerificationOverview = {
+  idVerification: VerificationSnapshot;
+  licenseVerification: VerificationSnapshot;
+};
+
+type MyVerificationOverview = {
+  verifications: VerificationDocument[];
+  overview: VerificationOverview;
+};
+
 const VERIFICATION_LEVEL_ORDER: Record<VerificationLevel, number> = {
   [VerificationLevel.NONE]: 0,
   [VerificationLevel.ID_VERIFIED]: 1,
@@ -95,9 +120,24 @@ export class VerificationService {
   /**
    * Returns every verification owned by the current user.
    */
-  async getMyVerifications(authUserId: string): Promise<VerificationDocument[]> {
+  async getMyVerifications(authUserId: string): Promise<MyVerificationOverview> {
     const user = await this.findUserByAuthIdOrThrow(authUserId);
-    return Verification.find({ userId: user._id }).sort({ createdAt: -1 });
+    const verifications = await Verification.find({ userId: user._id }).sort({
+      createdAt: -1,
+    });
+
+    return {
+      verifications,
+      overview: {
+        idVerification: this.buildVerificationSnapshot(verifications, [
+          "NATIONAL_ID",
+          "PASSPORT",
+        ]),
+        licenseVerification: this.buildVerificationSnapshot(verifications, [
+          "DRIVER_LICENSE",
+        ]),
+      },
+    };
   }
 
   /**
@@ -207,13 +247,6 @@ export class VerificationService {
   ): Promise<VerificationDocument> {
     const user = await this.findUserByAuthIdOrThrow(authUserId);
 
-    if (
-      VERIFICATION_LEVEL_ORDER[user.verificationLevel] >=
-      VERIFICATION_LEVEL_ORDER[submission.targetVerificationLevel]
-    ) {
-      throw ApiError.conflict("User has already reached this verification level");
-    }
-
     const existingPending = await Verification.findOne({
       userId: user._id,
       status: "PENDING",
@@ -252,6 +285,29 @@ export class VerificationService {
     }
 
     return VerificationLevel.LICENSE_VERIFIED;
+  }
+
+  /**
+   * Picks the latest submission for a document group and exposes submit readiness.
+   */
+  private buildVerificationSnapshot(
+    verifications: VerificationDocument[],
+    documentTypes: VerificationDocumentType[],
+  ): VerificationSnapshot {
+    const matchingVerifications = verifications.filter((verification) =>
+      documentTypes.includes(verification.documentType),
+    );
+
+    const latest = matchingVerifications[0] ?? null;
+
+    return {
+      latest,
+      status: latest?.status ?? "NOT_SUBMITTED",
+      canSubmit: !matchingVerifications.some(
+        (verification) => verification.status === "PENDING",
+      ),
+      submissionsCount: matchingVerifications.length,
+    };
   }
 }
 

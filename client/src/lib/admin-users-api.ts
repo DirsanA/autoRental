@@ -1,11 +1,7 @@
 import { resolveApiBaseUrl } from "./api-base-url";
 import { buildAuthHeader } from "./auth-token";
 
-export type AdminUserUiStatus =
-  | "active"
-  | "inactive"
-  | "invited"
-  | "suspended";
+export type AdminUserUiStatus = "active" | "inactive" | "invited" | "suspended";
 export type AdminUserApiStatus = "ACTIVE" | "PENDING" | "SUSPENDED";
 export type AdminUserAccountType = "USER" | "COMPANY" | "ADMIN";
 export type AdminUserDirectoryScope = "ALL" | "PEOPLE";
@@ -324,9 +320,9 @@ const API_BASE_URL = resolveApiBaseUrl();
  * Parses an API error into a user-facing message.
  */
 async function parseError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: { message?: string } }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    error?: { message?: string };
+  } | null;
 
   return payload?.error?.message || `Request failed (HTTP ${response.status})`;
 }
@@ -345,7 +341,9 @@ export function mapApiStatus(status?: string): AdminUserUiStatus {
 /**
  * Maps a UI status into the closest supported API status.
  */
-export function mapUiStatusToApi(status: AdminUserUiStatus): AdminUserApiStatus {
+export function mapUiStatusToApi(
+  status: AdminUserUiStatus,
+): AdminUserApiStatus {
   if (status === "active") return "ACTIVE";
   if (status === "suspended") return "SUSPENDED";
   return "PENDING";
@@ -736,4 +734,107 @@ export async function deleteAdminUser(userId: string): Promise<void> {
   if (!response.ok) {
     throw new Error(await parseError(response));
   }
+}
+
+/**
+ * Updates a verification record through the admin API.
+ */
+export async function updateAdminUserVerification(
+  userId: string,
+  verificationId: string,
+  status: "APPROVED" | "REJECTED",
+  adminComment?: string,
+): Promise<AdminUserVerificationRecord> {
+  const response = await fetch(
+    `${API_BASE_URL}/verifications/${encodeURIComponent(verificationId)}`,
+    buildRequestInit({
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        status,
+        adminComment: adminComment || undefined,
+      }),
+    }),
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: { verification?: ApiVerificationRecord };
+  };
+
+  if (!payload.data?.verification) {
+    throw new Error("Verification updated but response was empty.");
+  }
+
+  const verification = payload.data.verification;
+  return {
+    id: verification.id,
+    documentType: verification.documentType || null,
+    status: verification.status || null,
+    reviewTargetLevel: verification.reviewTargetLevel || null,
+    documentNumber: verification.documentNumber || null,
+    dateOfBirth: verification.dateOfBirth || null,
+    documentExpiry: verification.documentExpiry || null,
+    submittedAddress: verification.submittedAddress || null,
+    adminComment: verification.adminComment || null,
+    verifiedAt: verification.verifiedAt || null,
+    documentFrontUrl: verification.documentFrontUrl || null,
+    documentBackUrl: verification.documentBackUrl || null,
+    createdAt: verification.createdAt || null,
+  };
+}
+
+/**
+ * Updates a user's verification level through the admin API.
+ */
+export async function updateAdminUserVerificationLevel(
+  userId: string,
+  verificationLevel: "ID_VERIFIED" | "LICENSE_VERIFIED" | "PEER_HOST",
+): Promise<AdminUserDetail> {
+  // For now, only PEER_HOST is supported by the server schema
+  // TODO: Update server schema to support ID_VERIFIED and LICENSE_VERIFIED
+  const supportedLevel =
+    verificationLevel === "PEER_HOST" ? verificationLevel : "PEER_HOST";
+
+  const response = await fetch(
+    `${API_BASE_URL}/users/${encodeURIComponent(userId)}/verification-level`,
+    buildRequestInit({
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        verificationLevel: supportedLevel,
+      }),
+    }),
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      user?: ApiUser;
+      company?: ApiCompany | null;
+      metrics?: ApiMetrics | null;
+      verifications?: ApiVerificationRecord[];
+      ownedVehicles?: ApiOwnedVehicle[];
+      recentBookings?: ApiRecentBooking[];
+      recentReviews?: ApiRecentReview[];
+      recentDisputes?: ApiRecentDispute[];
+      recentTransactions?: ApiRecentTransaction[];
+    };
+  };
+
+  if (!payload.data) {
+    throw new Error("Verification level updated but response was empty.");
+  }
+
+  return mapApiUserDetailResponse(payload.data);
 }
