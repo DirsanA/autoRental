@@ -5,7 +5,7 @@ import { z } from "zod";
  */
 // Reuses the login credential rules across user and company registration flows.
 const authRegistrationFields = {
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -26,7 +26,7 @@ const personalRegistrationFields = {
     .min(2, "Last name must be at least 2 characters")
     .max(50, "Last name must be at most 50 characters")
     .trim(),
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
   phoneNumber: z
     .string()
     .regex(/^\+?[1-9]\d{1,14}$/, "Phone number must be in valid E.164 format")
@@ -63,7 +63,7 @@ export const registerCompanySchema = z.object({
     .min(4, "TIN number must be at least 4 characters")
     .max(30, "TIN number must be at most 30 characters")
     .trim(),
-  companyEmail: z.string().email("Invalid company contact email").trim().toLowerCase(),
+  companyEmail: z.email("Invalid company contact email").trim().toLowerCase(),
   companyPhone: z
     .string()
     .regex(/^\+?[1-9]\d{1,14}$/, "Company phone must be in E.164 format")
@@ -96,7 +96,7 @@ export const registerCompanySchema = z.object({
  */
 // Restricts login requests to the minimum credentials needed for email/password auth.
 export const loginSchema = z.object({
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -105,7 +105,7 @@ export const loginSchema = z.object({
  */
 // Validates the email used to request a password reset without revealing account existence.
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
 });
 
 /**
