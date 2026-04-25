@@ -14,17 +14,13 @@ import {
 import { cn } from "@/lib/utils";
 import {
   Ban,
-  Calendar,
   CheckCircle2,
   Clock,
-  Mail,
   MoreVertical,
-  Phone,
   ShieldAlert,
-  UserCircle2,
 } from "lucide-react";
 import type { UserFullDetail, UserStatus } from "./types";
-import { formatLabel, formatMoney } from "./formatters";
+import { formatLabel } from "./formatters";
 
 interface UserSidebarProps {
   user: UserFullDetail;
@@ -59,32 +55,6 @@ const statusConfig: Record<
   },
 };
 
-function InfoRow({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ElementType;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="flex items-start gap-3 rounded-xl border bg-muted/15 px-3 py-2.5">
-      <div className="rounded-lg bg-background p-2 text-muted-foreground shadow-sm">
-        <Icon className="h-4 w-4" />
-      </div>
-      <div className="min-w-0">
-        <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          {label}
-        </div>
-        <div className="truncate text-sm font-medium text-foreground">
-          {value}
-        </div>
-      </div>
-    </div>
-  );
-}
-
 /**
  * Renders the compact admin user summary sidebar.
  */
@@ -110,7 +80,11 @@ export function UserSidebar({
       <div className="absolute right-4 top-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full"
+            >
               <MoreVertical className="h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -151,7 +125,10 @@ export function UserSidebar({
           <p className="mt-1 text-sm text-muted-foreground">@{user.username}</p>
 
           <div className="mt-4 flex flex-wrap justify-center gap-2">
-            <Badge variant="outline" className={cn("gap-1 border-0", status.color)}>
+            <Badge
+              variant="outline"
+              className={cn("gap-1 border-0", status.color)}
+            >
               <StatusIcon className="h-3.5 w-3.5" />
               {status.label}
             </Badge>
@@ -164,62 +141,29 @@ export function UserSidebar({
           </div>
         </div>
 
-        <div className="grid gap-3">
-          <InfoRow icon={Mail} label="Email" value={user.email} />
-          <InfoRow
-            icon={Phone}
-            label="Phone"
-            value={user.phoneNumber || "Phone not provided"}
-          />
-          <InfoRow
-            icon={Calendar}
-            label="Joined"
-            value={
-              user.joined
-                ? new Date(user.joined).toLocaleDateString()
-                : "Unknown"
-            }
-          />
-          <InfoRow
-            icon={UserCircle2}
-            label="Last Login"
-            value={
-              user.lastLogin
-                ? new Date(user.lastLogin).toLocaleString()
-                : "Never logged in"
-            }
-          />
-        </div>
-
-        <div className="grid grid-cols-2 gap-3">
-          <div className="rounded-2xl border bg-background/80 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Wallet
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {formatMoney(user.walletBalance)}
-            </div>
-          </div>
-          <div className="rounded-2xl border bg-background/80 p-4 shadow-sm">
-            <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-              Email Verified
-            </div>
-            <div className="mt-2 text-lg font-semibold">
-              {user.emailVerified ? "Yes" : "No"}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-2xl border bg-background/80 p-4 shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Roles
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {roles.map((role) => (
-              <Badge key={role} variant="outline" className="font-normal">
-                {formatLabel(role)}
-              </Badge>
-            ))}
+        <div className="text-center">
+          <p className="text-xs text-muted-foreground uppercase tracking-wide">
+            Quick Actions
+          </p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onStatusChange("active")}
+              disabled={user.status === "active"}
+              className="text-xs"
+            >
+              Activate
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onStatusChange("suspended")}
+              disabled={user.status === "suspended"}
+              className="text-xs"
+            >
+              Suspend
+            </Button>
           </div>
         </div>
       </CardContent>

@@ -1,5 +1,5 @@
-import { BookingHistoryPage } from "@/components/shared/bookings/booking-history-page";
+import { RenterBookingHistoryPage } from "@/components/renter/bookings/RenterBookingHistoryPage";
 
 export default function RenterBookingHistoryRoute() {
-  return <BookingHistoryPage audience="renter" />;
+  return <RenterBookingHistoryPage />;
 }

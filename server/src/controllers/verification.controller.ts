@@ -79,7 +79,7 @@ export function createVerificationController(service: VerificationService) {
      * Returns every verification record owned by the current user.
      */
     getMyVerifications: asyncHandler(async (req: Request, res: Response) => {
-      const verifications = await service.getMyVerifications(
+      const result = await service.getMyVerifications(
         requireAuthenticatedUserId(
           req,
           "Authentication required to view verifications",
@@ -88,7 +88,7 @@ export function createVerificationController(service: VerificationService) {
 
       res.json({
         success: true,
-        data: { verifications },
+        data: result,
       });
     }),
 

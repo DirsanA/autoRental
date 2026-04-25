@@ -14,7 +14,7 @@ const phoneNumberSchema = z
  */
 // Reuses the login credential rules across user and company registration flows.
 const authRegistrationFields = {
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
   password: z
     .string()
     .min(8, "Password must be at least 8 characters")
@@ -99,7 +99,7 @@ export const registerCompanySchema = z.object({
  */
 // Restricts login requests to the minimum credentials needed for email/password auth.
 export const loginSchema = z.object({
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
   password: z.string().min(1, "Password is required"),
 });
 
@@ -108,7 +108,7 @@ export const loginSchema = z.object({
  */
 // Validates the email used to request a password reset without revealing account existence.
 export const forgotPasswordSchema = z.object({
-  email: z.string().email("Please provide a valid email address").trim().toLowerCase(),
+  email: z.email("Please provide a valid email address").trim().toLowerCase(),
 });
 
 /**

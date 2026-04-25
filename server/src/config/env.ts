@@ -28,4 +28,9 @@ export const ENV = {
   EMAIL_PORT: process.env.EMAIL_PORT,
   EMAIL_USER: process.env.EMAIL_USER,
   EMAIL_PASSWORD: process.env.EMAIL_PASSWORD,
+
+  // Chapa
+  CHAPA_SECRET_KEY: process.env.CHAPA_SECRET_KEY || "",
+  CHAPA_PUBLIC_KEY: process.env.CHAPA_PUBLIC_KEY || "",
+  CHAPA_BASE_URL: process.env.CHAPA_BASE_URL || "https://api.chapa.co",
 };

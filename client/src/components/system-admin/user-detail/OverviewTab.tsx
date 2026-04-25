@@ -87,6 +87,7 @@ export function OverviewTab({ user }: OverviewTabProps) {
 
   return (
     <div className="grid gap-6">
+      {/* Key Metrics */}
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <MetricCard
           label="Active Bookings"
@@ -99,109 +100,120 @@ export function OverviewTab({ user }: OverviewTabProps) {
           icon={BriefcaseBusiness}
         />
         <MetricCard
-          label="Verification Level"
-          value={formatLabel(user.verificationLevel)}
-          icon={ShieldCheck}
-        />
-        <MetricCard
           label="Wallet Balance"
           value={formatMoney(user.walletBalance)}
           icon={Wallet}
         />
+        <MetricCard
+          label="Total Reviews"
+          value={user.metrics.reviewsReceived}
+          icon={ShieldCheck}
+        />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-        <Card className="border-none shadow-sm ring-1 ring-border">
-          <CardHeader>
-            <CardTitle>Account Snapshot</CardTitle>
-            <CardDescription>
-              The most useful profile and verification details for admin review.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-5 md:grid-cols-2">
-            <DetailRow icon={FileBadge2} label="Full Name" value={fullName} />
-            <DetailRow icon={Mail} label="Email" value={user.email} />
-            <DetailRow
-              icon={Phone}
-              label="Phone"
-              value={user.phoneNumber || "Not provided"}
-            />
-            <DetailRow
-              icon={MapPin}
-              label="Address"
-              value={user.address || "Not provided"}
-            />
-            <DetailRow
-              icon={ShieldCheck}
-              label="Verification"
-              value={formatLabel(user.verificationLevel)}
-            />
-            <DetailRow
-              icon={FileBadge2}
-              label="Identity Number"
-              value={maskIdentity(user.idNumber)}
-            />
-          </CardContent>
-        </Card>
+      {/* Personal Information */}
+      <Card className="border-none shadow-sm ring-1 ring-border">
+        <CardHeader>
+          <CardTitle>Personal Information</CardTitle>
+          <CardDescription>
+            User profile details and contact information.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-5 md:grid-cols-2">
+          <DetailRow icon={FileBadge2} label="Full Name" value={fullName} />
+          <DetailRow icon={Mail} label="Email" value={user.email} />
+          <DetailRow
+            icon={Phone}
+            label="Phone"
+            value={user.phoneNumber || "Not provided"}
+          />
+          <DetailRow
+            icon={MapPin}
+            label="Address"
+            value={user.address || "Not provided"}
+          />
+          <DetailRow
+            icon={FileBadge2}
+            label="Identity Number"
+            value={maskIdentity(user.idNumber)}
+          />
+          <DetailRow
+            icon={ShieldCheck}
+            label="Verification Level"
+            value={formatLabel(user.verificationLevel)}
+          />
+        </CardContent>
+      </Card>
 
-        <Card className="border-none shadow-sm ring-1 ring-border">
-          <CardHeader>
-            <CardTitle>Access And Roles</CardTitle>
-            <CardDescription>
-              Status, sign-in signals, and role assignment for this account.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-2xl bg-muted/25 p-4">
-                <div className="text-sm text-muted-foreground">Status</div>
-                <div className="mt-1 font-semibold">
-                  {formatLabel(user.status)}
-                </div>
+      {/* Account Status & Access */}
+      <Card className="border-none shadow-sm ring-1 ring-border">
+        <CardHeader>
+          <CardTitle>Account Status & Access</CardTitle>
+          <CardDescription>
+            Account status, authentication details, and role assignments.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="grid gap-6">
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="rounded-2xl bg-muted/25 p-4">
+              <div className="text-sm text-muted-foreground">
+                Account Status
               </div>
-              <div className="rounded-2xl bg-muted/25 p-4">
-                <div className="text-sm text-muted-foreground">
-                  Email Verified
-                </div>
-                <div className="mt-1 font-semibold">
-                  {user.emailVerified ? "Yes" : "No"}
-                </div>
+              <div className="mt-1 font-semibold">
+                {formatLabel(user.status)}
               </div>
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <div className="text-sm text-muted-foreground">Joined</div>
-                <div className="mt-1 font-medium">
-                  {formatDateTime(user.createdAt || user.joined)}
-                </div>
+            <div className="rounded-2xl bg-muted/25 p-4">
+              <div className="text-sm text-muted-foreground">
+                Email Verified
               </div>
-              <div>
-                <div className="text-sm text-muted-foreground">Last Login</div>
-                <div className="mt-1 font-medium">
-                  {formatDateTime(user.lastLogin)}
-                </div>
+              <div className="mt-1 font-semibold">
+                {user.emailVerified ? "Yes" : "No"}
+              </div>
+            </div>
+            <div className="rounded-2xl bg-muted/25 p-4">
+              <div className="text-sm text-muted-foreground">Account Type</div>
+              <div className="mt-1 font-semibold">
+                {formatLabel(user.accountType)}
+              </div>
+            </div>
+          </div>
+
+          <div className="grid gap-4 md:grid-cols-2">
+            <div>
+              <div className="text-sm text-muted-foreground">Member Since</div>
+              <div className="mt-1 font-medium">
+                {formatDateTime(user.createdAt || user.joined)}
               </div>
             </div>
             <div>
-              <div className="text-sm text-muted-foreground">Assigned Roles</div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                {roles.map((role) => (
-                  <Badge key={role} variant="outline" className="font-normal">
-                    {formatLabel(role)}
-                  </Badge>
-                ))}
+              <div className="text-sm text-muted-foreground">Last Login</div>
+              <div className="mt-1 font-medium">
+                {formatDateTime(user.lastLogin)}
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+
+          <div>
+            <div className="text-sm text-muted-foreground">Assigned Roles</div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {roles.map((role) => (
+                <Badge key={role} variant="outline" className="font-normal">
+                  {formatLabel(role)}
+                </Badge>
+              ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+        {/* Company Information */}
         <Card className="border-none shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Linked Company</CardTitle>
+            <CardTitle>Company Information</CardTitle>
             <CardDescription>
-              Business relationship information associated with this account.
+              Business details for company accounts.
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -262,24 +274,29 @@ export function OverviewTab({ user }: OverviewTabProps) {
           </CardContent>
         </Card>
 
+        {/* Platform Activity */}
         <Card className="border-none shadow-sm ring-1 ring-border">
           <CardHeader>
-            <CardTitle>Platform Snapshot</CardTitle>
+            <CardTitle>Platform Activity</CardTitle>
             <CardDescription>
-              A compact view of this user&apos;s footprint across the platform.
+              User activity summary across the platform.
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="rounded-2xl bg-muted/20 p-4">
-              <div className="text-sm text-muted-foreground">Bookings</div>
+              <div className="text-sm text-muted-foreground">
+                Total Bookings
+              </div>
               <div className="mt-1 text-xl font-semibold">
                 {user.metrics.bookingsAsRenter}
               </div>
             </div>
             <div className="rounded-2xl bg-muted/20 p-4">
-              <div className="text-sm text-muted-foreground">Reviews</div>
+              <div className="text-sm text-muted-foreground">
+                Reviews Written
+              </div>
               <div className="mt-1 text-xl font-semibold">
-                {user.metrics.reviewsReceived}
+                {user.metrics.reviewsWritten}
               </div>
             </div>
             <div className="rounded-2xl bg-muted/20 p-4">
@@ -289,9 +306,9 @@ export function OverviewTab({ user }: OverviewTabProps) {
               </div>
             </div>
             <div className="rounded-2xl bg-muted/20 p-4">
-              <div className="text-sm text-muted-foreground">Total Received</div>
+              <div className="text-sm text-muted-foreground">Total Paid</div>
               <div className="mt-1 text-xl font-semibold">
-                {formatMoney(user.metrics.totalReceived)}
+                {formatMoney(user.metrics.totalPaid)}
               </div>
             </div>
           </CardContent>
