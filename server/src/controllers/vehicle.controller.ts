@@ -3,7 +3,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { vehicleService } from "../services/vehicle.service.js";
 import type { UpdateVehicleStatusInput } from "../validators/vehicle.validator.js";
 import { ApiError } from "../utils/ApiError.js";
-import { requireRequestUser } from "../utils/requestContext.js";
+import { getRequestUser } from "../utils/requestContext.js";
 
 /**
  * Parses the supported vehicle list filter from the request query.
@@ -34,8 +34,12 @@ export const vehicleController = {
    * Lists vehicles owned by the current authenticated user or company.
    */
   listMine: asyncHandler(async (req: Request, res: Response) => {
+    const user = getRequestUser(req);
+    if (!user) {
+      throw ApiError.unauthorized();
+    }
     const vehicles = await vehicleService.listMine(
-      requireRequestUser(req, "Authentication required to view your vehicles"),
+      user,
       getVehicleFilter(req.query),
     );
 
@@ -84,10 +88,11 @@ export const vehicleController = {
    * Creates a vehicle and uploads its media assets when needed.
    */
   create: asyncHandler(async (req: Request, res: Response) => {
-    const vehicle = await vehicleService.create(
-      requireRequestUser(req, "Authentication required to submit a vehicle"),
-      req.body,
-    );
+    const user = getRequestUser(req);
+    if (!user) {
+      throw ApiError.unauthorized();
+    }
+    const vehicle = await vehicleService.create(user, req.body);
 
     res.status(201).json({
       success: true,

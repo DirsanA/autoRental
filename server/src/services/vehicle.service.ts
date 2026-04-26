@@ -67,7 +67,9 @@ async function resolveUploadValue(
     return uploadToCloudinary(value, `${folder}/${fieldName}`);
   }
 
-  throw ApiError.badRequest(`${fieldName} must be a valid data URL or http(s) URL`);
+  throw ApiError.badRequest(
+    `${fieldName} must be a valid data URL or http(s) URL`,
+  );
 }
 
 export class VehicleService {
@@ -128,11 +130,10 @@ export class VehicleService {
       updateData.features = normalizeFeatures(updateData.features);
     }
 
-    const vehicle = await Vehicle.findByIdAndUpdate(
-      id,
-      updateData,
-      { new: true, runValidators: true },
-    );
+    const vehicle = await Vehicle.findByIdAndUpdate(id, updateData, {
+      new: true,
+      runValidators: true,
+    });
 
     if (!vehicle) {
       throw ApiError.notFound("Vehicle not found");
@@ -176,17 +177,20 @@ export class VehicleService {
   }> {
     const documents = data.documents;
     if (!documents) {
-      throw ApiError.badRequest("Ownership and insurance documents are required");
+      throw ApiError.badRequest(
+        "Ownership and insurance documents are required",
+      );
     }
 
-    const [front, back, side, interior, ownership, insurance] = await Promise.all([
-      resolveUploadValue(data.photos.front, folder, "front"),
-      resolveUploadValue(data.photos.back, folder, "back"),
-      resolveUploadValue(data.photos.side, folder, "side"),
-      resolveUploadValue(data.photos.interior, folder, "interior"),
-      resolveUploadValue(documents.ownership, folder, "ownership"),
-      resolveUploadValue(documents.insurance, folder, "insurance"),
-    ]);
+    const [front, back, side, interior, ownership, insurance] =
+      await Promise.all([
+        resolveUploadValue(data.photos.front, folder, "front"),
+        resolveUploadValue(data.photos.back, folder, "back"),
+        resolveUploadValue(data.photos.side, folder, "side"),
+        resolveUploadValue(data.photos.interior, folder, "interior"),
+        resolveUploadValue(documents.ownership, folder, "ownership"),
+        resolveUploadValue(documents.insurance, folder, "insurance"),
+      ]);
 
     return {
       photos: {
@@ -213,7 +217,10 @@ export class VehicleService {
     ownerId: mongoose.Types.ObjectId;
     ownerType: "User" | "Company";
   }> {
-    if (requestedOwnerType === "Company" || caller.accountType === AccountType.COMPANY) {
+    if (
+      requestedOwnerType === "Company" ||
+      caller.accountType === AccountType.COMPANY
+    ) {
       const company = await companyService.getByAuthUserId(caller.id);
       if (!company) {
         throw ApiError.notFound("You don't have a registered company");

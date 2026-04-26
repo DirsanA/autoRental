@@ -118,9 +118,9 @@ export async function fetchPeerHostVehicleById(id: string) {
   }
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: { message?: string } }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
     throw new Error(
       payload?.error?.message ||
         `Failed to load vehicle details (HTTP ${response.status})`,
@@ -158,9 +158,9 @@ export async function updatePeerHostVehicleAvailability(
   }
 
   if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: { message?: string } }
-      | null;
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
 
     throw new Error(
       payload?.error?.message ||

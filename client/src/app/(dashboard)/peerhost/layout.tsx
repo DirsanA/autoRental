@@ -1,11 +1,12 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useSyncUserRoleState } from "@/hooks/use-sync-user-role-state";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { writeUserRoleState } from "@/lib/role-store";
 
 export default function PeerHostLayout({
   children,
@@ -13,19 +14,25 @@ export default function PeerHostLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const pathname = usePathname();
   const { isSyncing } = useSyncUserRoleState();
-  const { activeRole, roles } = useUserRoleState();
+  const { activeRole, companyStatus, roles } = useUserRoleState();
 
   useEffect(() => {
     if (isSyncing) return;
 
-    const isOnboardingPage = pathname === "/peerhost/become-host";
-    if (!roles.peerhost && !isOnboardingPage) {
-      router.replace("/dashboard");
+    if (roles.peerhost && activeRole !== "peerhost") {
+      writeUserRoleState({
+        roles,
+        activeRole: "peerhost",
+        companyStatus,
+      });
       return;
     }
-  }, [activeRole, isSyncing, pathname, roles.peerhost, router]);
+
+    if (!roles.peerhost) {
+      router.replace("/renter/dashboard");
+    }
+  }, [activeRole, companyStatus, isSyncing, roles, router]);
 
   return (
     <SidebarProvider suppressHydrationWarning>
