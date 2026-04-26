@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -9,7 +12,7 @@ import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
 import { fetchPeerHostVehicles } from "./api";
 
 function statusBadgeVariant(
-  status: VehicleStatus
+  status: VehicleStatus,
 ): "default" | "secondary" | "destructive" | "outline" {
   switch (status) {
     case "available":
@@ -49,7 +52,7 @@ type PeerHostVehiclesPageProps = {
   showHeader?: boolean;
 };
 
-export async function PeerHostVehiclesPage({
+export function PeerHostVehiclesPage({
   filter,
   vehicles: providedVehicles,
   loadError: providedLoadError,
@@ -58,40 +61,72 @@ export async function PeerHostVehiclesPage({
   detailHrefBase = "/peerhost/vehicles",
   showHeader = true,
 }: PeerHostVehiclesPageProps) {
-  let vehicles = providedVehicles ?? [];
-  let loadError = providedLoadError ?? null;
+  const [vehicles, setVehicles] = useState<Vehicle[]>(providedVehicles ?? []);
+  const [loadError, setLoadError] = useState<string | null>(
+    providedLoadError ?? null,
+  );
+  const [isLoading, setIsLoading] = useState(
+    !providedVehicles && !providedLoadError,
+  );
 
-  if (!providedVehicles) {
-    try {
-      vehicles = await fetchPeerHostVehicles(filter);
-    } catch (error) {
-      loadError =
-        error instanceof Error
-          ? error.message
-          : "Failed to load vehicles from server.";
+  useEffect(() => {
+    if (providedVehicles || providedLoadError) {
+      setVehicles(providedVehicles ?? []);
+      setLoadError(providedLoadError ?? null);
+      setIsLoading(false);
+      return;
     }
-  }
 
-  const title = providedTitle ?? (filter ? `My Vehicles · ${formatStatus(filter)}` : "My Vehicles");
+    let cancelled = false;
+
+    setIsLoading(true);
+    setLoadError(null);
+
+    fetchPeerHostVehicles(filter)
+      .then((nextVehicles) => {
+        if (cancelled) return;
+        setVehicles(nextVehicles);
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load vehicles from server.",
+        );
+      })
+      .finally(() => {
+        if (cancelled) return;
+        setIsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [filter, providedLoadError, providedVehicles]);
+
+  const title =
+    providedTitle ??
+    (filter ? `My Vehicles · ${formatStatus(filter)}` : "My Vehicles");
 
   // Smart Stats (later replace with backend aggregation)
   const availableCount = vehicles.filter(
-    (v) => v.status === "available"
+    (v) => v.status === "available",
   ).length;
 
-  const rentedCount = vehicles.filter(
-    (v) => v.status === "rented"
-  ).length;
+  const rentedCount = vehicles.filter((v) => v.status === "rented").length;
 
   const maintenanceCount = vehicles.filter(
-    (v) => v.status === "maintenance"
+    (v) => v.status === "maintenance",
   ).length;
 
   const content = (
     <>
       <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h2 className="font-bold dark:text-white text-3xl tracking-tight">{title}</h2>
+          <h2 className="font-bold dark:text-white text-3xl tracking-tight">
+            {title}
+          </h2>
           <p className="mt-1 text-muted-foreground dark:text-slate-400 text-sm">
             {description}
           </p>
@@ -154,16 +189,28 @@ export async function PeerHostVehiclesPage({
       <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-2 mt-10">
         {loadError && (
           <div className="col-span-full py-6 text-center">
-            <p className="text-red-600 dark:text-red-400 text-sm">{loadError}</p>
+            <p className="text-red-600 dark:text-red-400 text-sm">
+              {loadError}
+            </p>
           </div>
         )}
 
-        {vehicles.length === 0 && (
+        {isLoading && (
+          <div className="col-span-full py-20 text-center">
+            <p className="text-muted-foreground dark:text-slate-400 text-lg">
+              Loading vehicles...
+            </p>
+          </div>
+        )}
+
+        {!isLoading && vehicles.length === 0 && (
           <div className="col-span-full py-20 text-center">
             <p className="text-muted-foreground dark:text-slate-400 text-lg">
               No vehicles found for this filter.
             </p>
-            <Button className="dark:bg-blue-600 dark:hover:bg-blue-700 mt-6">Add your first vehicle</Button>
+            <Button className="dark:bg-blue-600 dark:hover:bg-blue-700 mt-6">
+              Add your first vehicle
+            </Button>
           </div>
         )}
 
@@ -192,7 +239,7 @@ export async function PeerHostVehiclesPage({
                     v.status === "rented" && "border-blue-500",
                     v.status === "maintenance" && "border-amber-500",
                     v.status === "pending_approval" && "border-red-500",
-                    v.status === "retired" && "border-slate-500"
+                    v.status === "retired" && "border-slate-500",
                   )}
                 >
                   {formatStatus(v.status)}
@@ -227,7 +274,7 @@ export async function PeerHostVehiclesPage({
                   asChild
                   variant="secondary"
                   className={cn(
-                    "bg-muted/50 hover:bg-muted dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors"
+                    "bg-muted/50 hover:bg-muted dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors",
                   )}
                 >
                   <Link href={`${detailHrefBase}/${v.id}`}>View details</Link>
