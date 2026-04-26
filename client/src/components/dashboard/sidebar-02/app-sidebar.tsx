@@ -16,6 +16,7 @@ import {
   Landmark,
   LayoutDashboard,
   MessageCircleCheckIcon,
+  Receipt,
   ShoppingCart,
   Store,
   UserCheck,
@@ -113,6 +114,12 @@ const dashboardRoutes: Route[] = [
     title: "Revenue",
     icon: <Landmark className="size-4" />,
     link: "/sysadmin/revenue",
+  },
+  {
+    id: "Ledger",
+    title: "Ledger & Payouts",
+    icon: <Receipt className="size-4" />,
+    link: "/sysadmin/ledger",
   },
   {
     id: "Disputes",
