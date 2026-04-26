@@ -66,6 +66,20 @@ export const vehicleController = {
   }),
 
   /**
+   * Returns blocked availability ranges for a single vehicle.
+   */
+  getAvailability: asyncHandler(async (req: Request, res: Response) => {
+    const availability = await vehicleService.getAvailability(
+      req.params.id as string,
+    );
+
+    res.json({
+      success: true,
+      data: { availability },
+    });
+  }),
+
+  /**
    * Updates the lifecycle status of a vehicle.
    */
   updateStatus: asyncHandler(async (req: Request, res: Response) => {

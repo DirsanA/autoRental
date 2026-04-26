@@ -4,6 +4,7 @@ import {
   type VehicleDocument,
   type VehicleStatus,
 } from "../models/Vehicle.js";
+import { Booking } from "../models/Booking.js";
 import { AccountType, VerificationLevel } from "../models/User.js";
 import type {
   CreateVehicleInput,
@@ -73,6 +74,52 @@ async function resolveUploadValue(
 }
 
 export class VehicleService {
+  /**
+   * Returns blocked date ranges for a vehicle using the vehicle record and
+   * overlapping active bookings.
+   */
+  async getAvailability(vehicleId: string, range?: { start?: Date; end?: Date }) {
+    const vehicle = await Vehicle.findById(vehicleId).select("_id").lean();
+    if (!vehicle) {
+      throw ApiError.notFound("Vehicle not found");
+    }
+
+    const start = range?.start ?? new Date();
+    const end =
+      range?.end ??
+      new Date(start.getTime() + 365 * 24 * 60 * 60 * 1000);
+
+    const bookingBlocks = await Booking.find({
+      vehicleId,
+      status: { $in: ["PENDING", "CONFIRMED", "ACTIVE"] },
+      "payment.status": { $in: ["PENDING", "PAID"] },
+      startTime: { $lt: end },
+      endTime: { $gt: start },
+    })
+      .select("startTime endTime status bookingId")
+      .sort({ startTime: 1 })
+      .lean();
+
+    return bookingBlocks
+      .map((booking) => ({
+        id: booking._id?.toString?.() ?? String(booking._id),
+        startDate: booking.startTime,
+        endDate: booking.endTime,
+        reason: "BOOKING" as const,
+        source: "SYSTEM" as const,
+        bookingId: booking.bookingId ?? null,
+        notes:
+          booking.status === "PENDING"
+            ? "Booking payment hold"
+            : "Confirmed booking",
+      }))
+      .sort(
+        (left, right) =>
+          new Date(left.startDate).getTime() -
+          new Date(right.startDate).getTime(),
+      );
+  }
+
   /**
    * Lists vehicles with an optional API shorthand filter.
    */
