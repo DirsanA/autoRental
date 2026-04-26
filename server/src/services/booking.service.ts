@@ -400,16 +400,10 @@ export class BookingService {
       throw ApiError.notFound("Vehicle not found");
     }
 
-    // Allow multiple future bookings on the same vehicle.
-    // We only block checkout if the vehicle is explicitly not bookable.
-    if (vehicle.status === "MAINTENANCE") {
-      throw ApiError.conflict("This vehicle is under maintenance and cannot be booked right now");
-    }
-    if (vehicle.status === "RETIRED") {
-      throw ApiError.conflict("This vehicle is retired and cannot be booked");
-    }
-    if (vehicle.status === "PENDING_APPROVAL") {
-      throw ApiError.conflict("This vehicle is pending approval and cannot be booked yet");
+    if (vehicle.status !== "AVAILABLE") {
+      throw ApiError.conflict(
+        "This vehicle is not available for booking right now",
+      );
     }
 
     const startTime = new Date(input.startTime);

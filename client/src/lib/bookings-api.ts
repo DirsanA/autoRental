@@ -38,6 +38,7 @@ async function parseApiError(response: Response) {
   const message = payload?.error?.message || `Request failed (HTTP ${response.status})`;
   const composed = details ? `${message} - ${details}` : message;
 
+<<<<<<<<< Temporary merge branch 1
   if (response.status >= 500) {
     console.error(
       "Booking checkout error",
@@ -51,6 +52,19 @@ async function parseApiError(response: Response) {
       ),
     );
   }
+=========
+  console.error(
+    "Booking API error",
+    JSON.stringify(
+      {
+        status: response.status,
+        payload,
+      },
+      null,
+      2,
+    ),
+  );
+>>>>>>>>> Temporary merge branch 2
 
   return composed;
 }
