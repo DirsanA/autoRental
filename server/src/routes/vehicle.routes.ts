@@ -28,6 +28,11 @@ export function createVehicleRoutes(auth: Auth): Router {
     validate({ params: vehicleIdParamsSchema }),
     vehicleController.getById,
   );
+  router.get(
+    "/:id/availability",
+    validate({ params: vehicleIdParamsSchema }),
+    vehicleController.getAvailability,
+  );
   router.patch(
     "/:id/status",
     validate({

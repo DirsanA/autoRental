@@ -1,4 +1,9 @@
-import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
+import type {
+  Vehicle,
+  VehicleAvailabilityBlock,
+  VehicleFilterStatus,
+  VehicleStatus,
+} from "./types";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 
@@ -69,7 +74,6 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     description: vehicle.condition,
     dailyRate: typeof vehicle.price === "number" ? vehicle.price : 0,
     status: mappedStatus,
-    acceptingBookings: mappedStatus === "available",
     location: vehicle.delivery || vehicle.availability || "Ethiopia",
     imageUrl: vehicle.photos?.front || imageFromGallery,
     galleryImages,
@@ -136,6 +140,38 @@ export async function fetchPeerHostVehicleById(id: string) {
   if (!vehicle) return null;
 
   return mapApiVehicleToCard(vehicle);
+}
+
+export async function fetchVehicleAvailability(
+  id: string,
+): Promise<VehicleAvailabilityBlock[]> {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}/availability`, {
+      cache: "no-store",
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: { message?: string };
+    } | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to load vehicle availability (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { availability?: VehicleAvailabilityBlock[] };
+  };
+
+  return Array.isArray(payload.data?.availability)
+    ? payload.data.availability
+    : [];
 }
 
 export async function updatePeerHostVehicleAvailability(

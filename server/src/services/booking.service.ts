@@ -400,9 +400,21 @@ export class BookingService {
       throw ApiError.notFound("Vehicle not found");
     }
 
-    if (vehicle.status !== "AVAILABLE") {
+    if (vehicle.status === "PENDING_APPROVAL") {
       throw ApiError.conflict(
-        "This vehicle is not available for booking right now",
+        "This vehicle is still pending approval and cannot be booked yet",
+      );
+    }
+
+    if (vehicle.status === "MAINTENANCE") {
+      throw ApiError.conflict(
+        "This vehicle is currently in maintenance and unavailable for booking",
+      );
+    }
+
+    if (vehicle.status === "RETIRED") {
+      throw ApiError.conflict(
+        "This vehicle is no longer available for booking",
       );
     }
 

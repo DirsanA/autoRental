@@ -23,7 +23,9 @@ type ApiErrorPayload = {
 };
 
 async function parseApiError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as ApiErrorPayload | null;
+  const payload = (await response
+    .json()
+    .catch(() => null)) as ApiErrorPayload | null;
   const details = Array.isArray(payload?.error?.details)
     ? payload?.error?.details
         ?.map((detail) =>
@@ -35,24 +37,10 @@ async function parseApiError(response: Response) {
         .join(" | ")
     : "";
 
-  const message = payload?.error?.message || `Request failed (HTTP ${response.status})`;
+  const message =
+    payload?.error?.message || `Request failed (HTTP ${response.status})`;
   const composed = details ? `${message} - ${details}` : message;
 
-<<<<<<<<< Temporary merge branch 1
-  if (response.status >= 500) {
-    console.error(
-      "Booking checkout error",
-      JSON.stringify(
-        {
-          status: response.status,
-          payload,
-        },
-        null,
-        2,
-      ),
-    );
-  }
-=========
   console.error(
     "Booking API error",
     JSON.stringify(
@@ -64,7 +52,6 @@ async function parseApiError(response: Response) {
       2,
     ),
   );
->>>>>>>>> Temporary merge branch 2
 
   return composed;
 }

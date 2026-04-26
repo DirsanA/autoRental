@@ -28,8 +28,14 @@ import Navbar from "@/components/navbar";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { fetchPeerHostVehicleById } from "@/components/peer-host/vehicles/api";
-import type { Vehicle } from "@/components/peer-host/vehicles/types";
+import {
+  fetchPeerHostVehicleById,
+  fetchVehicleAvailability,
+} from "@/components/peer-host/vehicles/api";
+import type {
+  Vehicle,
+  VehicleAvailabilityBlock,
+} from "@/components/peer-host/vehicles/types";
 
 const FALLBACK_IMAGES = [carMain.src, car2.src, car3.src, car4.src, car5.src];
 
@@ -37,6 +43,9 @@ const Index = () => {
   const [showPhotos, setShowPhotos] = useState(false);
   const [isFavorite, setIsFavorite] = useState(false);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
+  const [availabilityBlocks, setAvailabilityBlocks] = useState<
+    VehicleAvailabilityBlock[]
+  >([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useParams<{ id: string }>();
@@ -67,10 +76,20 @@ const Index = () => {
         }
 
         setVehicle(data);
+
+        try {
+          const availability = await fetchVehicleAvailability(vehicleId);
+          if (cancelled) return;
+          setAvailabilityBlocks(availability);
+        } catch {
+          if (cancelled) return;
+          setAvailabilityBlocks([]);
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load vehicle");
         setVehicle(null);
+        setAvailabilityBlocks([]);
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -281,12 +300,8 @@ const Index = () => {
               vehicleName={car.name}
               dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
-              disabled={
-                !vehicle ||
-                (vehicle.acceptingBookings != null
-                  ? !vehicle.acceptingBookings
-                  : !(vehicle.status === "available" || vehicle.status === "rented"))
-              }
+              vehicleStatus={vehicle?.status}
+              availabilityBlocks={availabilityBlocks}
             />
           </div>
         </div>
