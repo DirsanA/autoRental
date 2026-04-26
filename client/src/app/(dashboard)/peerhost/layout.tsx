@@ -25,10 +25,6 @@ export default function PeerHostLayout({
       router.replace("/dashboard");
       return;
     }
-
-    if (roles.peerhost && activeRole !== "peerhost" && !isOnboardingPage) {
-      router.replace("/dashboard");
-    }
   }, [activeRole, isSyncing, pathname, roles.peerhost, router]);
 
   return (
@@ -40,5 +36,3 @@ export default function PeerHostLayout({
     </SidebarProvider>
   );
 }
-
-
