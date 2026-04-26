@@ -121,12 +121,6 @@ const Index = () => {
     };
   }, [vehicle]);
 
-  const isVehicleBookable =
-    !!vehicle &&
-    (vehicle.acceptingBookings != null
-      ? vehicle.acceptingBookings || vehicle.status === "rented"
-      : vehicle.status === "available" || vehicle.status === "rented");
-
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
@@ -287,7 +281,12 @@ const Index = () => {
               vehicleName={car.name}
               dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
-              disabled={!isVehicleBookable}
+              disabled={
+                !vehicle ||
+                (vehicle.acceptingBookings != null
+                  ? !vehicle.acceptingBookings
+                  : !(vehicle.status === "available" || vehicle.status === "rented"))
+              }
             />
           </div>
         </div>
