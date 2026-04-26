@@ -11,12 +11,30 @@ async function parseError(response: Response) {
   return payload?.error?.message || `Request failed (HTTP ${response.status})`;
 }
 
+export type AuthSessionRole = string | { name?: string } | null;
+
 export type AuthSessionUser = {
   id?: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
+  email?: string;
+  image?: string;
   accountType?: string;
-  roles?: string[];
+  roles?: AuthSessionRole[];
   verificationLevel?: string;
+  status?: string;
 } & Record<string, unknown>;
+
+export type AuthSessionCompany = {
+  status?: string | null;
+} & Record<string, unknown>;
+
+export type AuthSessionData = {
+  user?: AuthSessionUser;
+  session?: Record<string, unknown>;
+  company?: AuthSessionCompany | null;
+};
 
 export async function loginWithEmail(input: { email: string; password: string }) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -86,11 +104,7 @@ export async function fetchCurrentSession() {
 
   const payload = (await response.json()) as {
     success?: boolean;
-    data?: {
-      user?: AuthSessionUser;
-      session?: Record<string, unknown>;
-      company?: Record<string, unknown> | null;
-    };
+    data?: AuthSessionData;
   };
 
   return payload.data || null;

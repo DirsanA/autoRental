@@ -133,7 +133,7 @@ export function PeerToPeerSidebar() {
           <Logo className="w-8 h-8" />
           {!isCollapsed && (
             <span className="font-semibold text-black dark:text-white">
-              AutoRent 
+              AutoRent
             </span>
           )}
         </a>
@@ -152,11 +152,11 @@ export function PeerToPeerSidebar() {
           <SidebarTrigger />
         </motion.div>
       </SidebarHeader>
-      
+
       <SidebarContent className="gap-4 px-2 py-4">
         <DashboardNavigation routes={routes} />
       </SidebarContent>
-      
+
       <SidebarFooter className="px-2">
         <SidebarMenu>
           <SidebarMenuItem>
