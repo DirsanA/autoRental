@@ -3,13 +3,21 @@ import { buildAuthHeader, writeAuthToken } from "@/lib/auth-token";
 import { resetUserRoleState } from "@/lib/role-store";
 
 const API_BASE_URL = resolveApiBaseUrl();
+const AUTH_SESSION_STORAGE_KEY = "autorent.authSession";
 
 async function parseError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: { message?: string } }
-    | null;
-  return payload?.error?.message || `Request failed (HTTP ${response.status})`;
+  const payload = await response.json().catch(() => null);
+  if (payload) {
+    return JSON.stringify(payload);
+  }
+
+  return JSON.stringify({
+    error: {
+      message: `Request failed (HTTP ${response.status})`,
+    },
+  });
 }
+
 
 export type AuthSessionUser = {
   id?: string;
@@ -17,6 +25,37 @@ export type AuthSessionUser = {
   roles?: string[];
   verificationLevel?: string;
 } & Record<string, unknown>;
+
+export type AuthSessionSnapshot = {
+  user?: AuthSessionUser | null;
+  session?: Record<string, unknown>;
+  company?: Record<string, unknown> | null;
+};
+
+export function readCachedAuthSession(): AuthSessionSnapshot | null {
+  if (typeof window === "undefined") return null;
+
+  const raw = window.localStorage.getItem(AUTH_SESSION_STORAGE_KEY);
+  if (!raw) return null;
+
+  try {
+    return JSON.parse(raw) as AuthSessionSnapshot;
+  } catch {
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    return null;
+  }
+}
+
+export function writeCachedAuthSession(session: AuthSessionSnapshot | null) {
+  if (typeof window === "undefined") return;
+
+  if (!session) {
+    window.localStorage.removeItem(AUTH_SESSION_STORAGE_KEY);
+    return;
+  }
+
+  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+}
 
 export async function loginWithEmail(input: { email: string; password: string }) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
@@ -86,14 +125,12 @@ export async function fetchCurrentSession() {
 
   const payload = (await response.json()) as {
     success?: boolean;
-    data?: {
-      user?: AuthSessionUser;
-      session?: Record<string, unknown>;
-      company?: Record<string, unknown> | null;
-    };
+    data?: AuthSessionSnapshot;
   };
 
-  return payload.data || null;
+  const data = payload.data || null;
+  writeCachedAuthSession(data);
+  return data;
 }
 
 export async function logout() {
@@ -106,6 +143,7 @@ export async function logout() {
   });
 
   writeAuthToken(null);
+  writeCachedAuthSession(null);
   resetUserRoleState();
 
   if (!response.ok) throw new Error(await parseError(response));
