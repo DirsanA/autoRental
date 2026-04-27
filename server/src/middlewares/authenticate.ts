@@ -56,29 +56,13 @@ async function findSessionByToken(token: string): Promise<TokenSession | null> {
 export function createAuthMiddleware(auth: Auth) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      console.log("[Auth Middleware] Request path:", req.path);
-      console.log("[Auth Middleware] Cookie header:", req.headers.cookie);
-      console.log(
-        "[Auth Middleware] Authorization header:",
-        req.headers.authorization,
-      );
 
       const session = await auth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
 
-      console.log(
-        "[Auth Middleware] Session from better-auth:",
-        session ? "found" : "not found",
-      );
-
       if (session) {
-        console.log("[Auth Middleware] Session user ID:", session.user.id);
         const user = await userPersistenceService.findByAuthId(session.user.id);
-        console.log(
-          "[Auth Middleware] User from DB:",
-          user ? "found" : "not found",
-        );
         if (user) {
           setRequestAuth(
             req,

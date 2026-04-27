@@ -38,16 +38,25 @@ export function authorize(action: AppActions, subject: AppSubjects) {
     }
 
     try {
+      // Step 1: System Admin Override
+      // If the user's base account type is 'ADMIN', they automatically have access to everything.
+      // We skip all other checks to speed up their requests.
       if (String(user.accountType || "").toUpperCase() === "ADMIN") {
         next();
         return;
       }
 
+      // Step 2: Role-based Admin Override
+      // If the user has a specific 'admin' role assigned in the database,
+      // they also get full access.
       if (await requestUserIsAdmin(user.authUserId || user.id)) {
         next();
         return;
       }
 
+      // Step 3: Granular Permission Check
+      // For all other users, we load their specific permissions (abilities)
+      // and check if they are allowed to perform this exact action on this subject.
       const ability = await authPermissionService.getAbilityForUser(user.authUserId || user.id);
 
       if (!ability.can(action, subject)) {
@@ -55,10 +64,10 @@ export function authorize(action: AppActions, subject: AppSubjects) {
         return;
       }
 
+      // If they pass, attach their abilities to the request so later code can use it, and proceed!
       setRequestAbility(req, ability);
       next();
     } catch (error) {
-      console.error("Authorization check failed:", error);
       next(ApiError.internal("Failed to verify permissions"));
     }
   };
