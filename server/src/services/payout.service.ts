@@ -93,7 +93,8 @@ export class PayoutService {
     // Resolve user details for checkout
     const user = await userPersistenceService.findByAuthId(authUserId);
     const email = user?.email || "user@example.com";
-    const name = user?.name || "Account Holder";
+    const firstName = user?.firstName || user?.name?.split(" ")[0] || "Account";
+    const lastName = user?.lastName || user?.name?.split(" ").slice(1).join(" ") || "Holder";
 
     // Generate a unique transfer reference
     const transferRef = `payout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -132,7 +133,8 @@ export class PayoutService {
         amount: input.amount.toFixed(2),
         currency: "ETB",
         email: email,
-        first_name: name,
+        first_name: firstName,
+        last_name: lastName,
         tx_ref: transferRef,
         callback_url: returnUrl,
         customization: {
