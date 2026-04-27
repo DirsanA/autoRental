@@ -1,7 +1,7 @@
 import type { Request } from "express";
 import { ApiError } from "./ApiError.js";
 
-export type RequestUser = { id: string } & Record<string, unknown>;
+export type RequestUser = { id: string; authUserId?: string; accountType?: string } & Record<string, unknown>;
 
 type MutableRequest = Request & {
   user?: RequestUser;
