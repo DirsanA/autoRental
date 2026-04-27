@@ -6,13 +6,7 @@ import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
@@ -20,7 +14,6 @@ import {
   fetchMyPayouts,
   fetchMyWallet,
   type Payout,
-  type PayoutMethod,
   type WalletOwnerType,
   type WalletSnapshot,
 } from "@/lib/wallet-api";
@@ -58,12 +51,9 @@ export function WalletPage({
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [bookingId, setBookingId] = useState("");
   const [amount, setAmount] = useState("");
-  const [method, setMethod] = useState<PayoutMethod>("BANK_TRANSFER");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState<string | null>(null);
 
   async function refresh() {
     setIsLoading(true);
@@ -89,19 +79,14 @@ export function WalletPage({
   const currency = wallet?.currency || "ETB";
   const available = wallet?.availableBalance || 0;
   const pending = wallet?.pendingBalance || 0;
-  const canWithdraw = useMemo(() => available > 0, [available]);
+  const canWithdraw = useMemo(() => available >= 500, [available]);
 
   async function onSubmitWithdraw() {
     setSubmitError(null);
-    setSubmitSuccess(null);
 
     const parsedAmount = Number(amount);
-    if (!bookingId.trim()) {
-      setSubmitError("Booking ID is required for withdraw requests.");
-      return;
-    }
-    if (!Number.isFinite(parsedAmount) || parsedAmount <= 0) {
-      setSubmitError("Enter a valid withdraw amount.");
+    if (!Number.isFinite(parsedAmount) || parsedAmount < 500) {
+      setSubmitError("Minimum withdrawal amount is 500 ETB.");
       return;
     }
     if (wallet && parsedAmount > wallet.availableBalance) {
@@ -111,21 +96,21 @@ export function WalletPage({
 
     setIsSubmitting(true);
     try {
-      await createPayoutRequest({
-        bookingId: bookingId.trim(),
+      const result = await createPayoutRequest({
         amount: parsedAmount,
-        payoutMethod: method,
+        payoutMethod: "CHAPA",
         ownerType,
       });
-      setSubmitSuccess("Withdraw request submitted.");
-      setAmount("");
-      setBookingId("");
-      await refresh();
+      
+      if (result.checkoutUrl) {
+        window.location.href = result.checkoutUrl;
+      } else {
+        setSubmitError("No checkout URL returned from Chapa");
+      }
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : "Failed to create payout request",
+        err instanceof Error ? err.message : "Withdrawal request failed",
       );
-    } finally {
       setIsSubmitting(false);
     }
   }
@@ -192,49 +177,22 @@ export function WalletPage({
 
           <Card>
             <CardHeader className="pb-2">
-              <CardTitle className="text-base">Withdraw</CardTitle>
+              <CardTitle className="text-base">Withdraw via Chapa</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="space-y-1.5">
-                <div className="text-sm font-medium">Booking ID</div>
-                <Input
-                  value={bookingId}
-                  onChange={(e) => setBookingId(e.target.value)}
-                  placeholder="e.g. 6812f... (booking mongo id)"
-                />
-              </div>
               <div className="space-y-1.5">
                 <div className="text-sm font-medium">Amount ({currency})</div>
                 <Input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
-                  placeholder="e.g. 1200"
+                  placeholder="e.g. 1200 (Min. 500)"
                   inputMode="decimal"
                 />
-              </div>
-              <div className="space-y-1.5">
-                <div className="text-sm font-medium">Method</div>
-                <Select value={method} onValueChange={(v) => setMethod(v as PayoutMethod)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="BANK_TRANSFER">Bank Transfer</SelectItem>
-                    <SelectItem value="TELEBIRR">Telebirr</SelectItem>
-                    <SelectItem value="CHAPA">Chapa</SelectItem>
-                    <SelectItem value="MANUAL">Manual</SelectItem>
-                  </SelectContent>
-                </Select>
               </div>
 
               {submitError && (
                 <div className="text-xs text-red-600 dark:text-red-400">
                   {submitError}
-                </div>
-              )}
-              {submitSuccess && (
-                <div className="text-xs text-emerald-700 dark:text-emerald-400">
-                  {submitSuccess}
                 </div>
               )}
 
@@ -243,11 +201,11 @@ export function WalletPage({
                 onClick={onSubmitWithdraw}
                 disabled={isSubmitting || isLoading || !wallet || !canWithdraw}
               >
-                {isSubmitting ? "Submitting..." : "Request withdraw"}
+                {isSubmitting ? "Redirecting to Chapa..." : "Withdraw"}
               </Button>
 
               <p className="text-xs text-muted-foreground">
-                Withdraw requests will be reviewed by admins.
+                You will be redirected to Chapa to process the withdrawal request.
               </p>
             </CardContent>
           </Card>
@@ -305,4 +263,3 @@ export function WalletPage({
     </div>
   );
 }
-

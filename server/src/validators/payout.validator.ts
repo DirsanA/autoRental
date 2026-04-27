@@ -7,8 +7,8 @@ const objectIdSchema = z
 
 export const createPayoutSchema = z
   .object({
-    bookingId: objectIdSchema,
-    amount: z.number().positive(),
+    bookingId: objectIdSchema.optional(),
+    amount: z.number().positive().min(500, "Minimum withdrawal amount is 500 ETB"),
     payoutMethod: z.enum(["BANK_TRANSFER", "TELEBIRR", "CHAPA", "MANUAL"]).optional(),
     metadata: z.record(z.string(), z.unknown()).optional(),
     ownerType: z.enum(["User", "Company"]).optional(),

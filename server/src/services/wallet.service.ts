@@ -409,26 +409,24 @@ export class WalletService {
         throw ApiError.notFound("Payout request not found");
       }
 
-      const sourceTransaction = payout.transactionIds?.length
-        ? await Transaction.findById(payout.transactionIds[0])
-            .select("bookingId")
-            .session(session)
-        : null;
-      const bookingId = sourceTransaction?.bookingId;
-      if (!bookingId) {
-        throw ApiError.unprocessable(
-          "Payout request is missing a source booking reference",
-        );
+      // Resolve bookingId from linked transaction if available, otherwise null
+      let bookingId: mongoose.Types.ObjectId | undefined;
+      if (payout.transactionIds?.length) {
+        const sourceTransaction = await Transaction.findById(payout.transactionIds[0])
+          .select("bookingId")
+          .session(session);
+        bookingId = (sourceTransaction?.bookingId as unknown as mongoose.Types.ObjectId) ?? undefined;
       }
 
       const payoutTx = await new Transaction({
-        bookingId,
+        ...(bookingId ? { bookingId } : {}),
         payerId: input.ownerId,
         receiverModel: "System",
         amount: input.amount,
         currency: payout.currency,
         type: "PAYOUT",
         status: "COMPLETED",
+        paymentGatewayId: payout.gatewayReference || undefined,
         metadata: {
           payoutId: payout.id,
           ownerType: input.ownerType,
@@ -480,6 +478,42 @@ export class WalletService {
     const wallet = await Wallet.findOne({ ownerId, ownerType }).lean();
     if (!wallet) return [];
     return WalletEntry.find({ walletId: wallet._id }).sort({ createdAt: -1 }).lean();
+  }
+
+  /**
+   * Starts a MongoDB Change Stream to watch for direct database updates to Booking documents.
+   * If a booking is marked as COMPLETED directly in the database, this will trigger the escrow release automatically.
+   */
+  startWatcher() {
+    try {
+      console.log("[\uD83D\uDC40 Wallet Watcher] Starting database watcher for booking updates...");
+      
+      Booking.watch([
+        {
+          $match: {
+            operationType: { $in: ["update", "replace"] },
+            "updateDescription.updatedFields.status": "COMPLETED",
+          },
+        },
+      ]).on("change", async (change) => {
+        try {
+          // @ts-ignore
+          const bookingId = change.documentKey._id;
+          const booking = await Booking.findById(bookingId);
+          
+          if (booking && booking.status === "COMPLETED" && booking.payment.status === "PAID") {
+            console.log(`[\uD83D\uDC40 Wallet Watcher] Detected direct DB update for booking ${booking.id}. Attempting escrow release...`);
+            await this.releaseEscrowForBooking(booking.id, "COMPLETED");
+          }
+        } catch (err) {
+          console.error("[\uD83D\uDC40 Wallet Watcher] Error processing change stream event:", err);
+        }
+      }).on("error", (err) => {
+        console.warn("[\uD83D\uDC40 Wallet Watcher] Change streams are not supported in your MongoDB setup (likely a standalone local DB without a replica set). Direct DB updates won't trigger wallet updates automatically.");
+      });
+    } catch (err) {
+      console.warn("[\uD83D\uDC40 Wallet Watcher] Failed to initialize watcher.");
+    }
   }
 }
 

@@ -50,4 +50,9 @@ export const payoutController = {
     );
     res.json({ success: true, data });
   }),
+
+  getBanks: asyncHandler(async (_req: Request, res: Response) => {
+    const data = await payoutService.getBanks();
+    res.json({ success: true, data });
+  }),
 };

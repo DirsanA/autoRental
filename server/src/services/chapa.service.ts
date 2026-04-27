@@ -43,6 +43,29 @@ type ChapaVerifyResponse = {
   ref_id?: string;
 };
 
+type ChapaTransferPayload = {
+  account_name: string;
+  account_number: string;
+  amount: string;
+  currency?: string;
+  reference: string;
+  bank_code: string;
+};
+
+type ChapaTransferResponse = {
+  reference?: string;
+  status?: string;
+};
+
+type ChapaBankItem = {
+  id?: string;
+  name?: string;
+  slug?: string;
+  country_id?: number;
+  acct_length?: number;
+  currency?: string;
+};
+
 function ensureChapaConfigured() {
   if (!ENV.CHAPA_SECRET_KEY) {
     throw ApiError.internal("Chapa secret key is missing from server configuration");
@@ -182,6 +205,53 @@ export class ChapaService {
       referenceId: parsed.data?.reference || parsed.data?.ref_id || null,
       raw: parsed,
     };
+  }
+
+  async createTransfer(payload: ChapaTransferPayload) {
+    const response = await fetch(`${this.baseUrl}/v1/transfers`, {
+      method: "POST",
+      headers: this.headers,
+      body: JSON.stringify(payload),
+    });
+
+    const parsed = await parseChapaResponse<ChapaTransferResponse>(response);
+
+    return {
+      reference: parsed.data?.reference || payload.reference,
+      status: parsed.data?.status || "pending",
+      raw: parsed,
+    };
+  }
+
+  async getBanks(): Promise<ChapaBankItem[]> {
+    ensureChapaConfigured();
+
+    const response = await fetch(`${this.baseUrl}/v1/banks`, {
+      method: "GET",
+      headers: {
+        Authorization: `Bearer ${ENV.CHAPA_SECRET_KEY}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw ApiError.internal(`Failed to fetch banks from Chapa (HTTP ${response.status})`);
+    }
+
+    const payload = (await response.json().catch(() => null)) as
+      | { data?: ChapaBankItem[]; message?: string }
+      | ChapaBankItem[]
+      | null;
+
+    // Chapa may return { data: [...] } or just [...]
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+
+    if (payload && Array.isArray(payload.data)) {
+      return payload.data;
+    }
+
+    return [];
   }
 }
 

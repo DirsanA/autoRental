@@ -53,5 +53,12 @@ export function createPayoutRoutes(auth: Auth): Router {
     payoutController.decidePayout,
   );
 
+  router.get(
+    "/banks",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    payoutController.getBanks,
+  );
+
   return router;
 }

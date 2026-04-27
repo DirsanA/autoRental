@@ -3,6 +3,7 @@ import { Company } from "../models/Company.js";
 import { Payout } from "../models/Payout.js";
 import { Transaction } from "../models/Transaction.js";
 import { walletService } from "./wallet.service.js";
+import { chapaService } from "./chapa.service.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
@@ -54,6 +55,25 @@ export class PayoutService {
     return { ownerId: user._id, ownerType: "User", currency: "ETB" };
   }
 
+  private async resolveAccountName(
+    owner: OwnerContext,
+    authUserId: string,
+    providedName?: string,
+  ): Promise<string> {
+    if (providedName) return providedName;
+
+    if (owner.ownerType === "Company") {
+      const company = await Company.findById(owner.ownerId).select("name").lean();
+      return (company as any)?.name || "Account Holder";
+    }
+
+    const user = await userPersistenceService.findByAuthId(authUserId);
+    const name = user?.name
+      || [user?.firstName, user?.lastName].filter(Boolean).join(" ")
+      || "Account Holder";
+    return name;
+  }
+
   async createPayoutRequest(authUserId: string, input: CreatePayoutInput) {
     const owner = await this.resolveOwnerByAuthUser(
       authUserId,
@@ -62,37 +82,82 @@ export class PayoutService {
     const wallet = await walletService.getWalletByOwner(owner.ownerId, owner.ownerType);
     const available = wallet?.availableBalance || 0;
 
+    if (input.amount < 500) {
+      throw ApiError.unprocessable("Minimum withdrawal amount is 500 ETB");
+    }
+
     if (input.amount > available) {
       throw ApiError.unprocessable("Requested amount exceeds available balance");
     }
 
-    const releaseTransaction = await Transaction.findOne({
-      bookingId: input.bookingId,
-      receiverId: owner.ownerId,
-      receiverModel: owner.ownerType,
-      type: "ESCROW_RELEASE",
-      status: "COMPLETED",
-    })
-      .select("_id amount")
-      .lean();
-    if (!releaseTransaction) {
-      throw ApiError.unprocessable(
-        "No released escrow transaction found for the selected booking",
-      );
-    }
+    // Resolve user details for checkout
+    const user = await userPersistenceService.findByAuthId(authUserId);
+    const email = user?.email || "user@example.com";
+    const name = user?.name || "Account Holder";
 
+    // Generate a unique transfer reference
+    const transferRef = `payout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+    // Create payout record as PAID instantly
     const payout = await Payout.create({
       ownerId: owner.ownerId,
       ownerType: owner.ownerType,
       amount: input.amount,
       currency: owner.currency,
-      status: "PENDING",
-      payoutMethod: input.payoutMethod || undefined,
-      metadata: input.metadata || undefined,
-      transactionIds: [releaseTransaction._id],
+      status: "PAID", // Instantly approve
+      payoutMethod: "CHAPA",
+      paidAt: new Date(),
+      processedAt: new Date(),
+      metadata: {
+        transferRef,
+      },
+      transactionIds: [],
     });
 
-    return payout.toJSON();
+    try {
+      // Debit wallet immediately without waiting for admin
+      await walletService.debitAvailableForPayout({
+        ownerId: owner.ownerId,
+        ownerType: owner.ownerType,
+        amount: input.amount,
+        payoutId: payout._id as unknown as mongoose.Types.ObjectId,
+        idempotencyKey: `payout:${payout.id}:debit`,
+        currency: owner.currency,
+      });
+
+      const routePrefix = owner.ownerType === "User" ? "peerhost" : "company";
+      const returnUrl = `http://localhost:3000/${routePrefix}/wallet`;
+
+      const chapaResult = await chapaService.initializeTransaction({
+        amount: input.amount.toFixed(2),
+        currency: "ETB",
+        email: email,
+        first_name: name,
+        tx_ref: transferRef,
+        callback_url: returnUrl,
+        customization: {
+          title: "Withdrawal",
+          description: "Withdrawal from AutoRental Wallet",
+        },
+      });
+
+      payout.gatewayReference = transferRef;
+      await payout.save();
+
+      return {
+        ...payout.toJSON(),
+        checkoutUrl: chapaResult.checkoutUrl,
+      };
+    } catch (error) {
+      payout.status = "FAILED";
+      payout.failureReason = error instanceof Error ? error.message : "Chapa init failed";
+      await payout.save();
+      throw ApiError.unprocessable(payout.failureReason || "Withdrawal failed");
+    }
+  }
+
+  async getBanks() {
+    return chapaService.getBanks();
   }
 
   async listMyPayouts(authUserId: string, query: PayoutListQueryInput) {
