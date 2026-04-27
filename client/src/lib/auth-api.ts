@@ -90,8 +90,19 @@ export async function registerUser(input: {
   return payload.data;
 }
 
+let _clientSessionPromise: Promise<AuthSessionData | null> | null = null;
+let _clientSessionPromiseTime = 0;
+
 export async function fetchCurrentSession() {
-  const response = await fetch(`${API_BASE_URL}/auth/session`, {
+  const isClient = typeof window !== "undefined";
+  const now = Date.now();
+  
+  if (isClient && _clientSessionPromise && (now - _clientSessionPromiseTime < 5000)) {
+    return _clientSessionPromise;
+  }
+
+  const doFetch = async () => {
+    const response = await fetch(`${API_BASE_URL}/auth/session`, {
     method: "GET",
     credentials: "include",
     headers: {
@@ -108,6 +119,19 @@ export async function fetchCurrentSession() {
   };
 
   return payload.data || null;
+  };
+
+  if (!isClient) {
+    return doFetch();
+  }
+
+  _clientSessionPromise = doFetch().catch(e => {
+    _clientSessionPromise = null;
+    throw e;
+  });
+  _clientSessionPromiseTime = now;
+  
+  return _clientSessionPromise;
 }
 
 export async function logout() {
