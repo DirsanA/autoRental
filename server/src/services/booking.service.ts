@@ -7,7 +7,6 @@ import { ApiError } from "../utils/ApiError.js";
 import { ENV } from "../config/env.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type { ChapaCheckoutInput } from "../validators/booking.validator.js";
-import { walletService } from "./wallet.service.js";
 
 const COMMISSION_RATE = 0.08;
 const PAYMENT_WINDOW_MINUTES = 30;
@@ -491,14 +490,6 @@ export class BookingService {
       booking.isBlocked = false;
       booking.set("cancelReason", undefined);
       booking.set("cancelledAt", undefined);
-      // Escrow credit (idempotent via tx_ref)
-      await walletService.creditPendingOnPaymentSuccess({
-        bookingId: booking.id,
-        txRef: booking.payment.tx_ref,
-        totalAmount: booking.priceSnapshot.totalAmount,
-        systemCommission: booking.priceSnapshot.systemCommission,
-        currency: booking.priceSnapshot.currency,
-      });
     } else if (verificationStatus === "failed" || verificationStatus === "cancelled") {
       booking.payment.status = "FAILED";
       booking.status = "CANCELLED";
