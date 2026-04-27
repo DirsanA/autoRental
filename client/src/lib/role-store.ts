@@ -50,17 +50,37 @@ function extractCompanyStatus(source: RoleStateSource | null | undefined) {
 
 function hasPeerHostAccess(source: RoleStateSource | null | undefined) {
   const user = extractUser(source);
-  if (!user || user.accountType !== "USER") {
+  if (!user) {
     return false;
   }
 
+  // Some session payloads send `roles` as strings, others as objects like `{ name: "PEER_HOST" }`.
+  // Also, accountType casing can vary (e.g. "user" vs "USER").
+  const accountType =
+    typeof user.accountType === "string" ? user.accountType.toUpperCase() : null;
+  if (accountType && accountType !== "USER") return false;
+
   const roleNames = Array.isArray(user.roles)
-    ? user.roles.filter((role): role is string => typeof role === "string")
+    ? user.roles
+        .map((role) => {
+          if (!role) return null;
+          if (typeof role === "string") return role;
+          if (typeof role === "object" && "name" in role) {
+            const name = (role as { name?: unknown }).name;
+            return typeof name === "string" ? name : null;
+          }
+          return null;
+        })
+        .filter((r): r is string => typeof r === "string")
     : [];
+
+  const normalizedRoles = roleNames.map((r) =>
+    r.trim().toLowerCase().replaceAll("_", "").replaceAll("-", ""),
+  );
 
   return (
     user.verificationLevel === "PEER_HOST" ||
-    roleNames.some((role) => role.toLowerCase() === "peerhost")
+    normalizedRoles.some((role) => role === "peerhost")
   );
 }
 

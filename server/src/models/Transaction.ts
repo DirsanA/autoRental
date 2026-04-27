@@ -19,14 +19,18 @@ export interface ITransaction {
     | "COLLATERAL_DEPOSIT"
     | "REFUND"
     | "PAYOUT"
-    | "COMMISSION";
+    | "COMMISSION"
+    | "ESCROW_HOLD"
+    | "ESCROW_RELEASE"
+    | "REFUND_REVERSAL";
 
   status:
     | "PENDING"
     | "HELD_IN_ESCROW"
     | "COMPLETED"
     | "FAILED"
-    | "REFUNDED";
+    | "REFUNDED"
+    | "CANCELLED";
 
   paymentGatewayId?: string | undefined; // Chapa / Stripe / PayPal reference
   invoiceUrl?: string | undefined;
@@ -62,12 +66,28 @@ const transactionSchema = new Schema<ITransaction>(
     type: {
       type: String,
       required: true,
-      enum: ["RENTAL_FEE", "COLLATERAL_DEPOSIT", "REFUND", "PAYOUT", "COMMISSION"],
+      enum: [
+        "RENTAL_FEE",
+        "COLLATERAL_DEPOSIT",
+        "REFUND",
+        "PAYOUT",
+        "COMMISSION",
+        "ESCROW_HOLD",
+        "ESCROW_RELEASE",
+        "REFUND_REVERSAL",
+      ],
     },
 
     status: {
       type: String,
-      enum: ["PENDING", "HELD_IN_ESCROW", "COMPLETED", "FAILED", "REFUNDED"],
+      enum: [
+        "PENDING",
+        "HELD_IN_ESCROW",
+        "COMPLETED",
+        "FAILED",
+        "REFUNDED",
+        "CANCELLED",
+      ],
       default: "PENDING",
     },
 

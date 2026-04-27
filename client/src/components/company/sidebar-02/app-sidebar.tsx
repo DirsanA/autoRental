@@ -13,6 +13,7 @@ import { motion } from "framer-motion";
 import {
   ArrowLeftRight,
   Building2,
+  DollarSign,
   Handshake,
   Landmark,
   LayoutDashboard,
@@ -55,6 +56,12 @@ const dashboardRoutes: Route[] = [
     title: "Dashboard",
     icon: <LayoutDashboard className="size-4" />,
     link: "/company/dashboard",
+  },
+  {
+    id: "Wallet",
+    title: "Wallet",
+    icon: <DollarSign className="size-4" />,
+    link: "/company/wallet",
   },
   {
     id: "Fleet",

@@ -11,6 +11,7 @@ import {
   bookingReviewCreateSchema,
   bookingReviewParamsSchema,
   bookingReviewUpdateSchema,
+  bookingSettlementActionSchema,
   chapaCheckoutSchema,
   chapaVerifyQuerySchema,
   renterBookingListQuerySchema,
@@ -97,6 +98,42 @@ export function createBookingRoutes(auth: Auth): Router {
     authorize("create", "Review"),
     validate({ params: bookingReviewParamsSchema }),
     bookingController.deleteReview,
+  );
+
+  router.patch(
+    "/:bookingId/complete",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "Booking"),
+    validate({
+      params: bookingIdParamsSchema,
+      body: bookingSettlementActionSchema,
+    }),
+    bookingController.markBookingCompleted,
+  );
+
+  router.patch(
+    "/:bookingId/release-escrow",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "Booking"),
+    validate({
+      params: bookingIdParamsSchema,
+      body: bookingSettlementActionSchema,
+    }),
+    bookingController.releaseEscrowByAdmin,
+  );
+
+  router.patch(
+    "/:bookingId/cancel-refund",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "Booking"),
+    validate({
+      params: bookingIdParamsSchema,
+      body: bookingSettlementActionSchema,
+    }),
+    bookingController.cancelBookingWithRefund,
   );
 
   return router;

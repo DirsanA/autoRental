@@ -12,3 +12,5 @@ export * from "./Transaction.js";
 export * from "./User.js";
 export * from "./Verification.js";
 export * from "./Vehicle.js";
+export * from "./Wallet.js";
+export * from "./WalletEntry.js";

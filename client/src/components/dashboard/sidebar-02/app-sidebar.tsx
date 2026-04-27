@@ -113,6 +113,12 @@ const dashboardRoutes: Route[] = [
     title: "Revenue",
     icon: <Landmark className="size-4" />,
     link: "/sysadmin/revenue",
+    subs: [
+      {
+        title: "Transaction Log",
+        link: "/sysadmin/revenue/transactions",
+      },
+    ],
   },
   {
     id: "Disputes",

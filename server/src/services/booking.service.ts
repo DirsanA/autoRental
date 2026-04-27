@@ -4,6 +4,7 @@ import { Vehicle } from "../models/Vehicle.js";
 import { Review } from "../models/Review.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { chapaService } from "./chapa.service.js";
+import { walletService } from "./wallet.service.js";
 import { ApiError } from "../utils/ApiError.js";
 import { ENV } from "../config/env.js";
 import type { RequestUser } from "../utils/requestContext.js";
@@ -67,9 +68,13 @@ function canExposeServerCallback(url: string) {
     const parsed = new URL(url);
     const hostname = parsed.hostname.toLowerCase();
 
-    if (parsed.protocol !== "https:") {
-      return false;
+    // In production we require a public HTTPS callback (Chapa servers must reach it).
+    // In local/dev we allow HTTP + localhost so the return page can still verify.
+    if (ENV.NODE_ENV !== "production") {
+      return true;
     }
+
+    if (parsed.protocol !== "https:") return false;
 
     return !["localhost", "127.0.0.1", "::1"].includes(hostname);
   } catch {
@@ -78,6 +83,12 @@ function canExposeServerCallback(url: string) {
 }
 
 function canExposePublicReturnUrl(url: string) {
+  // In production, keep return_url restrictions aligned with callback_url.
+  // In local/dev, allow http://localhost return pages so verification can occur.
+  if (ENV.NODE_ENV !== "production") {
+    return true;
+  }
+
   return canExposeServerCallback(url);
 }
 
@@ -498,6 +509,7 @@ export class BookingService {
   async initializeChapaCheckout(
     caller: RequestUser,
     input: ChapaCheckoutInput,
+    baseUrls?: { serverBaseUrl?: string; frontendBaseUrl?: string },
   ) {
     const context = await this.buildCheckoutContext(caller, input);
 
@@ -535,12 +547,25 @@ export class BookingService {
       },
     });
 
-    const serverBaseUrl = this.buildServerBaseUrl();
-    const frontendBaseUrl = this.buildFrontendBaseUrl();
+    const serverBaseUrl = (baseUrls?.serverBaseUrl || this.buildServerBaseUrl()).replace(
+      /\/+$/,
+      "",
+    );
+    const frontendBaseUrl = (
+      baseUrls?.frontendBaseUrl || this.buildFrontendBaseUrl()
+    ).replace(/\/+$/, "");
     const callbackUrl = `${serverBaseUrl}/api/bookings/payments/chapa/callback`;
     const returnUrl = `${frontendBaseUrl}/payments/chapa/return?bookingId=${booking.id}&tx_ref=${encodeURIComponent(context.txRef)}`;
     const shouldSendCallbackUrl = canExposeServerCallback(serverBaseUrl);
     const shouldSendReturnUrl = canExposePublicReturnUrl(frontendBaseUrl);
+
+    console.log(
+      "[Chapa Init] booking=%s tx_ref=%s callback_url=%s return_url=%s",
+      booking.id,
+      context.txRef,
+      shouldSendCallbackUrl ? callbackUrl : "(disabled)",
+      shouldSendReturnUrl ? returnUrl : "(disabled)",
+    );
 
     let chapa;
     try {
@@ -694,6 +719,12 @@ export class BookingService {
       booking.payment.tx_ref,
     );
     const verificationStatus = verification.verificationStatus;
+    console.log(
+      "[Chapa Verify] booking=%s tx_ref=%s status=%s",
+      booking.id,
+      booking.payment.tx_ref,
+      verificationStatus,
+    );
     const amount = Number(verification.amount);
 
     if (
@@ -751,6 +782,10 @@ export class BookingService {
 
     await booking.save();
     await this.upsertTransactionForBooking(booking);
+    if (verificationStatus === "success") {
+      console.log("[Wallet Escrow] holding escrow for booking=%s", booking.id);
+      await walletService.holdEscrowForPaidBooking(booking);
+    }
     await this.syncVehicleStatus(booking.vehicleId.toString());
 
     return {
@@ -982,6 +1017,82 @@ export class BookingService {
     return reviews.map((review) =>
       mapBookingReviewItem(review as Record<string, any>, renter._id.toString()),
     );
+  }
+
+  async markBookingCompleted(caller: RequestUser, bookingId: string, reason?: string) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    if (booking.payment.status !== "PAID") {
+      throw ApiError.unprocessable("Cannot complete booking before successful payment");
+    }
+
+    booking.status = "COMPLETED";
+    booking.actualReturnTime = booking.actualReturnTime || new Date();
+    await booking.save();
+    await walletService.releaseEscrowForBooking(booking.id, "COMPLETED");
+
+    return {
+      booking: mapBookingResponse(booking),
+      settlement: {
+        released: true,
+        source: "COMPLETED",
+        reason: reason || null,
+      },
+    };
+  }
+
+  async releaseEscrowByAdmin(bookingId: string, reason?: string) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    if (booking.payment.status !== "PAID") {
+      throw ApiError.unprocessable("Cannot release escrow for unpaid booking");
+    }
+
+    await walletService.releaseEscrowForBooking(booking.id, "ADMIN_OVERRIDE");
+    return {
+      booking: mapBookingResponse(booking),
+      settlement: {
+        released: true,
+        source: "ADMIN_OVERRIDE",
+        reason: reason || null,
+      },
+    };
+  }
+
+  async cancelBookingWithRefund(bookingId: string, reason?: string) {
+    const booking = await Booking.findById(bookingId);
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    if (booking.payment.status !== "PAID") {
+      throw ApiError.unprocessable("Cannot refund an unpaid booking");
+    }
+
+    const wasCompleted = booking.status === "COMPLETED";
+    booking.status = "CANCELLED";
+    booking.cancelledAt = new Date();
+    booking.cancelReason =
+      fitForBookingCancelReason(reason || "Cancelled and refunded by admin") ||
+      "Cancelled and refunded by admin";
+    await booking.save();
+
+    const refundSource = booking.actualReturnTime || wasCompleted ? "AVAILABLE" : "PENDING";
+    await walletService.applyRefundReversal(booking.id, refundSource);
+
+    return {
+      booking: mapBookingResponse(booking),
+      refund: {
+        status: "processed",
+        sourceBalance: refundSource.toLowerCase(),
+      },
+    };
   }
 }
 
