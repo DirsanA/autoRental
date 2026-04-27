@@ -193,8 +193,8 @@ export function RenterBookingHistoryPage() {
     reloadKey,
   });
   const loading = requestKey !== lastCompletedRequestKey;
-  const showingTableData = !loading && !error;
-  const displayedBookings = showingTableData ? bookings : [];
+  const isFetching = loading && bookings.length === 0;
+  const displayedBookings = bookings;
   const tableRecordCount = displayedBookings.length;
 
   useEffect(() => {
@@ -275,25 +275,25 @@ export function RenterBookingHistoryPage() {
 
           <div className="grid gap-4 md:grid-cols-3">
             <SummaryCard
-              title="Bookings On This Page"
-              value={tableRecordCount}
+              title="Total Bookings"
+              value={pagination.total}
               icon={CarFront}
-              note="Visible results"
-              loading={loading}
+              note="All matching records"
+              loading={isFetching}
             />
             <SummaryCard
               title="Pending Bookings"
               value={summary.pendingBookings}
               icon={CalendarDays}
               note={`Confirmed ${summary.confirmedBookings} | Active ${summary.activeTrips}`}
-              loading={loading}
+              loading={isFetching}
             />
             <SummaryCard
               title="Paid Bookings"
               value={summary.paidBookings}
               icon={Wallet}
               note={`Completed ${summary.completedTrips}`}
-              loading={loading}
+              loading={isFetching}
             />
           </div>
 
@@ -326,14 +326,14 @@ export function RenterBookingHistoryPage() {
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div>
-              Showing {tableRecordCount} of {pagination.total} matching bookings
+              Showing {tableRecordCount} records on this page (out of {pagination.total} total)
             </div>
             <div>
               Page {pagination.page} of {pagination.totalPages}
             </div>
           </div>
 
-          {loading ? (
+          {isFetching ? (
             <div className="flex items-center justify-center rounded-xl border bg-card p-10 text-muted-foreground">
               <Loader2 className="h-5 w-5 animate-spin" />
             </div>
@@ -350,9 +350,9 @@ export function RenterBookingHistoryPage() {
             </div>
           ) : (
             <>
-              <div className=" rounded-xl border bg-card shadow-sm">
-                <div className="border-b bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
-                  Booking records
+              <div className={cn("rounded-xl border bg-card shadow-sm transition-opacity", loading && "opacity-50")}>
+                <div className="flex items-center justify-between border-b bg-muted/20 px-4 py-3 text-sm text-muted-foreground">
+                  <span>Booking records (Page {pagination.page})</span>
                 </div>
                 <Table className="min-w-[1100px] overflow-y-scroll">
                   <TableHeader className="bg-muted/40">
