@@ -84,11 +84,20 @@ export type PayoutStatus =
   | "CANCELLED";
 
 export type CreatePayoutInput = {
-  bookingId: string;
+  bookingId?: string;
   amount: number;
   payoutMethod?: PayoutMethod;
   metadata?: Record<string, unknown>;
   ownerType?: WalletOwnerType;
+};
+
+export type BankItem = {
+  id?: string;
+  name?: string;
+  slug?: string;
+  country_id?: number;
+  acct_length?: number;
+  currency?: string;
 };
 
 export type Payout = {
@@ -102,6 +111,7 @@ export type Payout = {
   status: PayoutStatus;
   payoutMethod?: PayoutMethod;
   gatewayReference?: string | null;
+  checkoutUrl?: string | null;
   failureReason?: string | null;
   processedAt?: string | null;
   paidAt?: string | null;
@@ -187,5 +197,16 @@ export async function fetchMyPayouts(
     };
   }
   return payload.data;
+}
+
+export async function fetchBanks(): Promise<BankItem[]> {
+  const response = await fetch(
+    `${API_BASE_URL}/payouts/banks`,
+    buildRequestInit(),
+  );
+  if (!response.ok) throw new Error(await parseApiError(response));
+
+  const payload = (await response.json()) as { data?: BankItem[] };
+  return payload.data || [];
 }
 

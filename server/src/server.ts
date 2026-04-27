@@ -13,7 +13,11 @@ async function bootstrap() {
   // 3. Create Express app with auth injected
   const app = createApp(auth);
 
-  // 4. Start listening
+  // 4. Start background watchers
+  const { walletService } = await import("./services/wallet.service.js");
+  walletService.startWatcher();
+
+  // 5. Start listening
   const PORT = ENV.PORT;
   app.listen(PORT, () => {
     console.log(`🚀 Server running on port ${PORT}`);

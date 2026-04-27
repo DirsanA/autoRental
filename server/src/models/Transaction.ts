@@ -4,7 +4,7 @@ import { Schema, model, type HydratedDocument } from "mongoose";
  * 1. Interface Definition
  */
 export interface ITransaction {
-  bookingId: Schema.Types.ObjectId;
+  bookingId?: Schema.Types.ObjectId | undefined;
   payerId: Schema.Types.ObjectId;
 
   // Polymorphic receiver — a User, Company, or the platform itself ("System")
@@ -47,7 +47,7 @@ export type TransactionDocument = HydratedDocument<ITransaction>;
  */
 const transactionSchema = new Schema<ITransaction>(
   {
-    bookingId: { type: Schema.Types.ObjectId, ref: "Booking", required: true },
+    bookingId: { type: Schema.Types.ObjectId, ref: "Booking" },
     payerId: { type: Schema.Types.ObjectId, ref: "User", required: true },
 
     receiverId: { type: Schema.Types.ObjectId, refPath: "receiverModel" },
