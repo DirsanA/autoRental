@@ -136,7 +136,7 @@ export class CompanyService {
    * Returns the company owned by a specific auth account.
    */
   async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
-    return Company.findOne({ authUserId });
+    return Company.findOne({ authUserId }).select("-logoUrl -licenseDocumentUrl");
   }
 
   /**

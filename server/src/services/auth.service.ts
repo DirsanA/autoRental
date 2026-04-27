@@ -344,9 +344,20 @@ export class AuthService {
       throw ApiError.unauthorized("No active session");
     }
 
-    const company = await companyService.getByAuthUserId(
+    const companyDoc = await companyService.getByAuthUserId(
       String((resolvedUser as { id?: string }).id || ""),
     );
+    
+    const company = companyDoc ? companyDoc.toJSON() : null;
+
+    if (resolvedUser && typeof resolvedUser === "object") {
+      delete (resolvedUser as any).idImageUrl;
+    }
+
+    if (company && typeof company === "object") {
+      delete (company as any).licenseDocumentUrl;
+      delete (company as any).logoUrl;
+    }
 
     return {
       user: resolvedUser,

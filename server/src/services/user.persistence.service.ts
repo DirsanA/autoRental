@@ -82,7 +82,7 @@ export class UserPersistenceService {
   async findByAuthId(authUserId: string): Promise<UserDocument | null> {
     return this.withResolvedPrimaryKey(
       authUserId,
-      (primaryKey) => User.findById(primaryKey),
+      (primaryKey) => User.findById(primaryKey).select("-idImageUrl"),
       null,
     );
   }
@@ -97,9 +97,11 @@ export class UserPersistenceService {
     return this.withResolvedPrimaryKey(
       authUserId,
       (primaryKey) =>
-        User.findById(primaryKey).populate(
-          populate as PopulateOptions | (string | PopulateOptions)[],
-        ),
+        User.findById(primaryKey)
+          .select("-idImageUrl")
+          .populate(
+            populate as PopulateOptions | (string | PopulateOptions)[],
+          ),
       null,
     );
   }
