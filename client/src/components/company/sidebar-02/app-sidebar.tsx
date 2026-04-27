@@ -16,7 +16,6 @@ import {
   Landmark,
   LayoutDashboard,
   MessageCircleCheckIcon,
-  Wallet,
   ShoppingCart,
   Store,
   UserCheck,
@@ -102,12 +101,6 @@ const dashboardRoutes: Route[] = [
     title: "Earnings",
     icon: <Handshake className="size-4" />,
     link: "/company/earnings",  
-  },
-  {
-    id: "Wallet",
-    title: "Wallet",
-    icon: <Wallet className="size-4" />,
-    link: "/company/wallet",
   },
   // {
   //   id: "customers",

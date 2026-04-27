@@ -64,12 +64,6 @@ const dashboardRoutes: Route[] = [
     link: "/peerhost/dashboard",
   },
   {
-    id: "wallet",
-    title: "Wallet",
-    icon: <DollarSign className="size-4" />,
-    link: "/peerhost/wallet",
-  },
-  {
     id: "my-vehicles",
     title: "My Vehicles",
     icon: <Car className="size-4" />,
