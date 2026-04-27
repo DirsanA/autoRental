@@ -11,6 +11,7 @@ import { fetchCurrentSession, loginWithEmail } from "@/lib/auth-api";
 import { writeAuthToken } from "@/lib/auth-token";
 import { buildUserRoleState, writeUserRoleState } from "@/lib/role-store";
 import { useToast } from "@/hooks/use-toast";
+import { Eye, EyeOff } from "lucide-react";
 
 function SignInContent() {
   const router = useRouter();
@@ -22,11 +23,17 @@ function SignInContent() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+const [showPassword, setShowPassword] = useState(false);
+const [fieldErrors, setFieldErrors] = useState<{
+  email?: string;
+  password?: string;
+}>({});
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setFieldErrors({});
     try {
       const data = await loginWithEmail({
         email: email.trim().toLowerCase(),
@@ -48,11 +55,38 @@ function SignInContent() {
 
       router.push(nextUrl || "/");
     } catch (err: unknown) {
-      const msg = err instanceof Error ? err.message : "Login failed";
-      setError(msg);
+      let errorMessage = "Login failed";
+
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message);
+          const backendMessage = parsed?.error?.message || "Login failed";
+          const details = parsed?.error?.details;
+
+          errorMessage = backendMessage;
+
+          if (Array.isArray(details)) {
+            const mappedErrors: Record<string, string> = {};
+
+            details.forEach((item: { field: string; message: string }) => {
+              mappedErrors[item.field] = item.message;
+            });
+
+            setFieldErrors(mappedErrors);
+          }
+
+          setError(backendMessage);
+        } catch {
+          errorMessage = err.message;
+          setError(err.message);
+        }
+      } else {
+        setError("Login failed");
+      }
+
       toast({
         title: "Login failed",
-        description: msg,
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -116,10 +150,18 @@ function SignInContent() {
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+                 onChange={(e) => {
+  setEmail(e.target.value);
+  setFieldErrors((prev) => ({ ...prev, email: undefined }));
+}}
+
                   className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
+              {fieldErrors.email && (
+  <p className="text-sm text-red-500">{fieldErrors.email}</p>
+)}
+
             </div>
 
             <div className="space-y-2">
@@ -128,14 +170,33 @@ function SignInContent() {
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                <input
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-                />
+                  <input
+    type={showPassword ? "text" : "password"}
+    placeholder="••••••••"
+    value={password}
+ onChange={(e) => {
+  setPassword(e.target.value);
+  setFieldErrors((prev) => ({ ...prev, password: undefined }));
+}}
+
+    className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+  />
+                <button
+    type="button"
+    onClick={() => setShowPassword((prev) => !prev)}
+    className="absolute right-3 top-3 text-muted-foreground"
+  >
+    {showPassword ? (
+      <EyeOff className="h-4 w-4" />
+    ) : (
+      <Eye className="h-4 w-4" />
+    )}
+  </button>
               </div>
+              {fieldErrors.password && (
+  <p className="text-sm text-red-500">{fieldErrors.password}</p>
+)}
+
             </div>
 
             {error && (

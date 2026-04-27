@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import {
   Building2,
   Car,
+  Loader2,
   LayoutDashboard,
   LogOut,
   User,
@@ -41,11 +42,13 @@ const Navbar = () => {
   const handleLogout = async () => {
     try {
       await logout();
-    } finally {
       router.push("/");
       router.refresh();
+    } catch (err) {
+      console.error(err);
     }
   };
+
 
   const companyStatus = company?.status;
   const companyMenuLabel =
@@ -61,6 +64,18 @@ const Navbar = () => {
         <Logo />
 
         <div className="flex items-center gap-3">
+          {loading && (
+            <Button
+              variant="outline"
+              size="icon"
+              className="rounded-full"
+              aria-label="Loading user menu"
+              disabled
+            >
+              <Loader2 className="h-4 w-4 animate-spin" />
+            </Button>
+          )}
+
           {!loading && !user && (
             <>
               <Button asChild variant="ghost">
