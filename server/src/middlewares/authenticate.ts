@@ -82,7 +82,10 @@ export function createAuthMiddleware(auth: Auth) {
         if (user) {
           setRequestAuth(
             req,
-            user.toJSON() as unknown as RequestUser,
+            {
+              ...(user.toJSON() as unknown as RequestUser),
+              authUserId: session.user.id,
+            },
             session.session,
           );
           next();
@@ -107,7 +110,10 @@ export function createAuthMiddleware(auth: Auth) {
 
       setRequestAuth(
         req,
-        user.toJSON() as unknown as RequestUser,
+        {
+          ...(user.toJSON() as unknown as RequestUser),
+          authUserId: userId,
+        },
         tokenSession,
       );
       next();

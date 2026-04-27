@@ -66,6 +66,12 @@ export const bookingIdParamsSchema = z
   })
   .strict();
 
+export const bookingSettlementActionSchema = z
+  .object({
+    reason: z.string().trim().max(300).optional(),
+  })
+  .strict();
+
 export const bookingReviewParamsSchema = z
   .object({
     bookingId: objectIdSchema,
@@ -104,3 +110,6 @@ export type RenterBookingListQueryInput = z.infer<
 >;
 export type BookingReviewCreateInput = z.infer<typeof bookingReviewCreateSchema>;
 export type BookingReviewUpdateInput = z.infer<typeof bookingReviewUpdateSchema>;
+export type BookingSettlementActionInput = z.infer<
+  typeof bookingSettlementActionSchema
+>;

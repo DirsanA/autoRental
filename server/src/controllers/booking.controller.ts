@@ -27,9 +27,28 @@ export const bookingController = {
   }),
 
   initializeChapaCheckout: asyncHandler(async (req: Request, res: Response) => {
+    const forwardedProtoRaw = req.headers["x-forwarded-proto"];
+    const forwardedProto =
+      typeof forwardedProtoRaw === "string"
+        ? forwardedProtoRaw.split(",")[0]?.trim()
+        : undefined;
+    const protocol = forwardedProto || req.protocol;
+    const host = req.get("host");
+    const serverBaseUrl = host ? `${protocol}://${host}` : undefined;
+
+    const originHeader = req.headers.origin;
+    const frontendBaseUrl =
+      typeof originHeader === "string" && originHeader.trim()
+        ? originHeader.trim()
+        : undefined;
+
     const data = await bookingService.initializeChapaCheckout(
       requireRequestUser(req, "Please sign in before booking a vehicle"),
       req.body,
+      {
+        serverBaseUrl,
+        frontendBaseUrl,
+      },
     );
 
     res.status(201).json({
@@ -142,6 +161,46 @@ export const bookingController = {
     const data = await bookingService.getBookingReviews(
       requireRequestUser(req, "Please sign in to view reviews"),
       bookingId as string,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
+  markBookingCompleted: asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const data = await bookingService.markBookingCompleted(
+      requireRequestUser(req, "Please sign in as admin"),
+      bookingId as string,
+      typeof req.body?.reason === "string" ? req.body.reason : undefined,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
+  releaseEscrowByAdmin: asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const data = await bookingService.releaseEscrowByAdmin(
+      bookingId as string,
+      typeof req.body?.reason === "string" ? req.body.reason : undefined,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
+  cancelBookingWithRefund: asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const data = await bookingService.cancelBookingWithRefund(
+      bookingId as string,
+      typeof req.body?.reason === "string" ? req.body.reason : undefined,
     );
 
     res.json({
