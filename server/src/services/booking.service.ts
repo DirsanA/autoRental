@@ -635,11 +635,10 @@ export class BookingService {
     caller: RequestUser,
     query: RenterBookingListQueryInput,
   ) {
-    const renter = await this.resolveRenter(caller);
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
     const filter: Record<string, unknown> = {
-      renterId: renter._id,
+      renterId: caller.id,
     };
 
     if (query.status) {
@@ -682,7 +681,7 @@ export class BookingService {
         .limit(limit)
         .populate({
           path: "vehicleId",
-          select: "make model year plate photos availability delivery",
+          select: "make model year plate availability delivery",
         })
         .lean(),
       Booking.countDocuments(filter as any),

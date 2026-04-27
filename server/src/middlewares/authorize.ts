@@ -38,12 +38,17 @@ export function authorize(action: AppActions, subject: AppSubjects) {
     }
 
     try {
-      if (await requestUserIsAdmin(user.id)) {
+      if (String(user.accountType || "").toUpperCase() === "ADMIN") {
         next();
         return;
       }
 
-      const ability = await authPermissionService.getAbilityForUser(user.id);
+      if (await requestUserIsAdmin(user.authUserId || user.id)) {
+        next();
+        return;
+      }
+
+      const ability = await authPermissionService.getAbilityForUser(user.authUserId || user.id);
 
       if (!ability.can(action, subject)) {
         next(ApiError.forbidden(`Insufficient permissions to ${action} ${subject}`));
