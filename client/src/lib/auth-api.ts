@@ -18,7 +18,6 @@ async function parseError(response: Response) {
   });
 }
 
-
 export type AuthSessionUser = {
   id?: string;
   name?: string;
@@ -64,10 +63,16 @@ export function writeCachedAuthSession(session: AuthSessionSnapshot | null) {
     return;
   }
 
-  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.setItem(
+    AUTH_SESSION_STORAGE_KEY,
+    JSON.stringify(session),
+  );
 }
 
-export async function loginWithEmail(input: { email: string; password: string }) {
+export async function loginWithEmail(input: {
+  email: string;
+  password: string;
+}) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     credentials: "include",
@@ -127,31 +132,43 @@ let _clientSessionPromiseTime = 0;
 export async function fetchCurrentSession() {
   const isClient = typeof window !== "undefined";
   const now = Date.now();
-  
-  if (isClient && _clientSessionPromise && (now - _clientSessionPromiseTime < 5000)) {
+
+  if (
+    isClient &&
+    _clientSessionPromise &&
+    now - _clientSessionPromiseTime < 5000
+  ) {
     return _clientSessionPromise;
   }
 
   const doFetch = async () => {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      ...buildAuthHeader(),
-    },
-    cache: "no-store",
-  });
+      method: "GET",
+      credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
+      cache: "no-store",
+    });
 
-  if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response));
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: AuthSessionSnapshot;
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: AuthSessionSnapshot;
+    };
+
+    const data = payload.data || null;
+    writeCachedAuthSession(data);
+    return data;
   };
 
-  const data = payload.data || null;
-  writeCachedAuthSession(data);
-  return data;
+  if (isClient) {
+    _clientSessionPromise = doFetch();
+    _clientSessionPromiseTime = now;
+  }
+
+  return doFetch();
 }
 
 export async function logout() {
@@ -169,9 +186,9 @@ export async function logout() {
 
   if (!response.ok) throw new Error(await parseError(response));
 
-  const payload = (await response.json().catch(() => null)) as
-    | { data?: { message?: string } }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    data?: { message?: string };
+  } | null;
 
   return payload?.data || null;
 }
