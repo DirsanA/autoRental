@@ -1,4 +1,5 @@
 const STORAGE_KEY = "autorent.authToken";
+export const AUTH_TOKEN_CHANGED_EVENT = "autorent:auth-token-changed";
 
 let cachedRaw: string | null | undefined = undefined;
 let cachedToken: string | null = null;
@@ -23,10 +24,20 @@ export function writeAuthToken(token: string | null) {
 
   if (!next) {
     window.localStorage.removeItem(STORAGE_KEY);
+    window.dispatchEvent(
+      new CustomEvent(AUTH_TOKEN_CHANGED_EVENT, {
+        detail: { token: null },
+      }),
+    );
     return;
   }
 
   window.localStorage.setItem(STORAGE_KEY, next);
+  window.dispatchEvent(
+    new CustomEvent(AUTH_TOKEN_CHANGED_EVENT, {
+      detail: { token: next },
+    }),
+  );
 }
 
 export function buildAuthHeader(): Record<string, string> {
