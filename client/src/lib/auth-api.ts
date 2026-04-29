@@ -18,7 +18,6 @@ async function parseError(response: Response) {
   });
 }
 
-
 export type AuthSessionUser = {
   id?: string;
   name?: string;
@@ -70,10 +69,16 @@ export function writeCachedAuthSession(session: AuthSessionSnapshot | null) {
     return;
   }
 
-  window.localStorage.setItem(AUTH_SESSION_STORAGE_KEY, JSON.stringify(session));
+  window.localStorage.setItem(
+    AUTH_SESSION_STORAGE_KEY,
+    JSON.stringify(session),
+  );
 }
 
-export async function loginWithEmail(input: { email: string; password: string }) {
+export async function loginWithEmail(input: {
+  email: string;
+  password: string;
+}) {
   const response = await fetch(`${API_BASE_URL}/auth/login`, {
     method: "POST",
     credentials: "include",
@@ -164,20 +169,12 @@ export async function fetchCurrentSession() {
     return data;
   };
 
-  const request = doFetch().catch((error) => {
-    writeCachedAuthSession(null);
-    throw error;
-  });
-
   if (isClient) {
-    _clientSessionPromise = request.finally(() => {
-      _clientSessionPromise = null;
-    });
+    _clientSessionPromise = doFetch();
     _clientSessionPromiseTime = now;
-    return _clientSessionPromise;
   }
 
-  return request;
+  return doFetch();
 }
 
 export async function logout() {
@@ -195,9 +192,9 @@ export async function logout() {
 
   if (!response.ok) throw new Error(await parseError(response));
 
-  const payload = (await response.json().catch(() => null)) as
-    | { data?: { message?: string } }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    data?: { message?: string };
+  } | null;
 
   return payload?.data || null;
 }

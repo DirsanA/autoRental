@@ -222,12 +222,13 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
   };
 }
 
-function mapBookingReviewItem(review: Record<string, any>, currentUserId?: string) {
+function mapBookingReviewItem(
+  review: Record<string, any>,
+  currentUserId?: string,
+) {
   const reviewerSource = review.reviewerId;
   const reviewerId =
-    reviewerSource?._id?.toString?.() ??
-    reviewerSource?.toString?.() ??
-    null;
+    reviewerSource?._id?.toString?.() ?? reviewerSource?.toString?.() ?? null;
   const reviewerName =
     reviewerSource?.name ||
     [reviewerSource?.firstName, reviewerSource?.lastName]
@@ -235,7 +236,9 @@ function mapBookingReviewItem(review: Record<string, any>, currentUserId?: strin
       .join(" ") ||
     null;
   const targetSource =
-    review.targetId && typeof review.targetId === "object" ? review.targetId : null;
+    review.targetId && typeof review.targetId === "object"
+      ? review.targetId
+      : null;
 
   return {
     id: review._id?.toString?.() ?? review.id ?? String(review._id),
@@ -547,10 +550,9 @@ export class BookingService {
       },
     });
 
-    const serverBaseUrl = (baseUrls?.serverBaseUrl || this.buildServerBaseUrl()).replace(
-      /\/+$/,
-      "",
-    );
+    const serverBaseUrl = (
+      baseUrls?.serverBaseUrl || this.buildServerBaseUrl()
+    ).replace(/\/+$/, "");
     const frontendBaseUrl = (
       baseUrls?.frontendBaseUrl || this.buildFrontendBaseUrl()
     ).replace(/\/+$/, "");
@@ -955,7 +957,10 @@ export class BookingService {
       throw ApiError.notFound("Review not found");
     }
 
-    return mapBookingReviewItem(review as Record<string, any>, renter._id.toString());
+    return mapBookingReviewItem(
+      review as Record<string, any>,
+      renter._id.toString(),
+    );
   }
 
   async deleteReview(caller: RequestUser, bookingId: string, reviewId: string) {
@@ -1014,18 +1019,27 @@ export class BookingService {
       .lean();
 
     return reviews.map((review) =>
-      mapBookingReviewItem(review as Record<string, any>, renter._id.toString()),
+      mapBookingReviewItem(
+        review as Record<string, any>,
+        renter._id.toString(),
+      ),
     );
   }
 
-  async markBookingCompleted(caller: RequestUser, bookingId: string, reason?: string) {
+  async markBookingCompleted(
+    caller: RequestUser,
+    bookingId: string,
+    reason?: string,
+  ) {
     const booking = await Booking.findById(bookingId);
     if (!booking) {
       throw ApiError.notFound("Booking not found");
     }
 
     if (booking.payment.status !== "PAID") {
-      throw ApiError.unprocessable("Cannot complete booking before successful payment");
+      throw ApiError.unprocessable(
+        "Cannot complete booking before successful payment",
+      );
     }
 
     booking.status = "COMPLETED";
@@ -1082,7 +1096,8 @@ export class BookingService {
       "Cancelled and refunded by admin";
     await booking.save();
 
-    const refundSource = booking.actualReturnTime || wasCompleted ? "AVAILABLE" : "PENDING";
+    const refundSource =
+      booking.actualReturnTime || wasCompleted ? "AVAILABLE" : "PENDING";
     await walletService.applyRefundReversal(booking.id, refundSource);
 
     return {
