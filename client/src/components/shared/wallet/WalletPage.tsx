@@ -117,12 +117,11 @@ export function WalletPage({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <Header />
       <Main className="gap-6 p-6 md:p-8">
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex sm:flex-row flex-col sm:justify-between sm:items-start gap-2">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight">{title}</h1>
-            <p className="text-muted-foreground mt-1">
+            <h1 className="font-bold text-3xl tracking-tight">{title}</h1>
+            <p className="mt-1 text-muted-foreground">
               Track escrow funds, available balance, and request withdrawals.
             </p>
           </div>
@@ -132,43 +131,43 @@ export function WalletPage({
         </div>
 
         {error && (
-          <Card className="border-red-200 bg-red-50/40 dark:border-red-900/40 dark:bg-red-950/20">
-            <CardContent className="py-4 text-sm text-red-700 dark:text-red-300">
+          <Card className="bg-red-50/40 dark:bg-red-950/20 border-red-200 dark:border-red-900/40">
+            <CardContent className="py-4 text-red-700 dark:text-red-300 text-sm">
               {error}
             </CardContent>
           </Card>
         )}
 
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="gap-6 grid lg:grid-cols-3">
           <Card className="lg:col-span-2">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Balances</CardTitle>
             </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="rounded-lg border bg-card p-4">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+            <CardContent className="gap-4 grid sm:grid-cols-2">
+              <div className="bg-card p-4 border rounded-lg">
+                <div className="text-muted-foreground text-xs uppercase tracking-wide">
                   Escrow (Pending)
                 </div>
-                <div className="mt-2 text-2xl font-bold tabular-nums">
+                <div className="mt-2 font-bold tabular-nums text-2xl">
                   {isLoading || !wallet
                     ? "—"
                     : formatMoney(pending, currency)}
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-muted-foreground text-xs">
                   Funds locked until completion or admin release.
                 </p>
               </div>
 
-              <div className="rounded-lg border bg-card p-4">
-                <div className="text-xs uppercase tracking-wide text-muted-foreground">
+              <div className="bg-card p-4 border rounded-lg">
+                <div className="text-muted-foreground text-xs uppercase tracking-wide">
                   Available
                 </div>
-                <div className="mt-2 text-2xl font-bold tabular-nums">
+                <div className="mt-2 font-bold tabular-nums text-2xl">
                   {isLoading || !wallet
                     ? "—"
                     : formatMoney(available, currency)}
                 </div>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="mt-1 text-muted-foreground text-xs">
                   Withdrawable balance.
                 </p>
               </div>
@@ -181,7 +180,7 @@ export function WalletPage({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="space-y-1.5">
-                <div className="text-sm font-medium">Amount ({currency})</div>
+                <div className="font-medium text-sm">Amount ({currency})</div>
                 <Input
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
@@ -191,7 +190,7 @@ export function WalletPage({
               </div>
 
               {submitError && (
-                <div className="text-xs text-red-600 dark:text-red-400">
+                <div className="text-red-600 dark:text-red-400 text-xs">
                   {submitError}
                 </div>
               )}
@@ -204,7 +203,7 @@ export function WalletPage({
                 {isSubmitting ? "Redirecting to Chapa..." : "Withdraw"}
               </Button>
 
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 You will be redirected to Chapa to process the withdrawal request.
               </p>
             </CardContent>
@@ -217,9 +216,9 @@ export function WalletPage({
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-sm text-muted-foreground">Loading...</div>
+              <div className="text-muted-foreground text-sm">Loading...</div>
             ) : payouts.length === 0 ? (
-              <div className="text-sm text-muted-foreground">
+              <div className="text-muted-foreground text-sm">
                 No payout requests yet.
               </div>
             ) : (
@@ -230,7 +229,7 @@ export function WalletPage({
                   return (
                     <div
                       key={id}
-                      className="flex flex-col gap-2 rounded-lg border p-3 sm:flex-row sm:items-center sm:justify-between"
+                      className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 p-3 border rounded-lg"
                     >
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
@@ -244,12 +243,12 @@ export function WalletPage({
                             {status}
                           </Badge>
                         </div>
-                        <div className="mt-1 text-xs text-muted-foreground">
+                        <div className="mt-1 text-muted-foreground text-xs">
                           Requested: {formatDate(payout.createdAt)}{" "}
                           {payout.payoutMethod ? `• ${payout.payoutMethod}` : ""}
                         </div>
                       </div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-muted-foreground text-xs">
                         Paid at: {formatDate(payout.paidAt)}
                       </div>
                     </div>
