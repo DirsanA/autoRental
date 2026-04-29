@@ -32,6 +32,10 @@ export type AuthSessionUser = {
   status?: string;
 } & Record<string, unknown>;
 
+export type AuthSessionRole = {
+  name?: string;
+} & Record<string, unknown>;
+
 export type AuthSessionCompany = {
   status?: string | null;
 } & Record<string, unknown>;
@@ -41,6 +45,8 @@ export type AuthSessionSnapshot = {
   session?: Record<string, unknown>;
   company?: Record<string, unknown> | null;
 };
+
+export type AuthSessionData = AuthSessionSnapshot;
 
 export function readCachedAuthSession(): AuthSessionSnapshot | null {
   if (typeof window === "undefined") return null;
@@ -127,31 +133,51 @@ let _clientSessionPromiseTime = 0;
 export async function fetchCurrentSession() {
   const isClient = typeof window !== "undefined";
   const now = Date.now();
-  
-  if (isClient && _clientSessionPromise && (now - _clientSessionPromiseTime < 5000)) {
+
+  if (
+    isClient &&
+    _clientSessionPromise &&
+    now - _clientSessionPromiseTime < 5000
+  ) {
     return _clientSessionPromise;
   }
 
   const doFetch = async () => {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
-    method: "GET",
-    credentials: "include",
-    headers: {
-      ...buildAuthHeader(),
-    },
-    cache: "no-store",
-  });
+      method: "GET",
+      credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
+      cache: "no-store",
+    });
 
-  if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) throw new Error(await parseError(response));
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: AuthSessionSnapshot;
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: AuthSessionSnapshot;
+    };
+
+    const data = payload.data || null;
+    writeCachedAuthSession(data);
+    return data;
   };
 
-  const data = payload.data || null;
-  writeCachedAuthSession(data);
-  return data;
+  const request = doFetch().catch((error) => {
+    writeCachedAuthSession(null);
+    throw error;
+  });
+
+  if (isClient) {
+    _clientSessionPromise = request.finally(() => {
+      _clientSessionPromise = null;
+    });
+    _clientSessionPromiseTime = now;
+    return _clientSessionPromise;
+  }
+
+  return request;
 }
 
 export async function logout() {
