@@ -9,6 +9,7 @@ import { resolveApiBaseUrl } from "@/lib/api-base-url";
 
 type ApiVehicle = {
   id: string;
+  ownerType?: "User" | "Company";
   make?: string;
   model?: string;
   year?: number;
@@ -62,6 +63,7 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
 
   return {
     id: vehicle.id,
+    ownerType: vehicle.ownerType,
     make: vehicle.make || "Unknown",
     model: vehicle.model || "Vehicle",
     year: vehicle.year || new Date().getFullYear(),

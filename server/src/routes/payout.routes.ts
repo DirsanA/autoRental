@@ -21,7 +21,6 @@ export function createPayoutRoutes(auth: Auth): Router {
     "/",
     authenticate,
     requireAccountType(AccountType.USER, AccountType.COMPANY),
-    authorize("create", "Payout"),
     validate({ body: createPayoutSchema }),
     payoutController.createPayout,
   );
@@ -30,7 +29,6 @@ export function createPayoutRoutes(auth: Auth): Router {
     "/me",
     authenticate,
     requireAccountType(AccountType.USER, AccountType.COMPANY),
-    authorize("read", "Payout"),
     validate({ query: payoutListQuerySchema }),
     payoutController.listMyPayouts,
   );

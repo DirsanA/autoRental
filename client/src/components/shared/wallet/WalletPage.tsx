@@ -59,12 +59,34 @@ export function WalletPage({
     setIsLoading(true);
     setError(null);
     try {
-      const [walletSnapshot, payoutList] = await Promise.all([
+      const [walletResult, payoutResult] = await Promise.allSettled([
         fetchMyWallet({ ownerType }),
         fetchMyPayouts({ page: 1, limit: 20, ownerType }),
       ]);
-      setWallet(walletSnapshot);
-      setPayouts(payoutList.payouts || []);
+
+      if (walletResult.status === "fulfilled") {
+        setWallet(walletResult.value);
+      } else {
+        setWallet(null);
+      }
+
+      if (payoutResult.status === "fulfilled") {
+        setPayouts(payoutResult.value.payouts || []);
+      } else {
+        setPayouts([]);
+      }
+
+      if (walletResult.status === "rejected") {
+        throw walletResult.reason;
+      }
+
+      if (payoutResult.status === "rejected") {
+        setError(
+          payoutResult.reason instanceof Error
+            ? payoutResult.reason.message
+            : "Failed to load payout history",
+        );
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load wallet");
     } finally {
