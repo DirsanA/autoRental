@@ -29,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { submitCompanyVehicle } from "./api";
 
 type AddCompanyVehicleDialogProps = {
@@ -59,6 +60,7 @@ type DraftVehicle = {
   transmission: "automatic" | "manual" | "cvt";
   seats: string;
   features: string[];
+  description: string;
   photos: Record<PhotoSlot, UploadedAsset | null>;
 };
 
@@ -93,6 +95,7 @@ const defaultDraft: DraftVehicle = {
   transmission: "automatic",
   seats: "5",
   features: [],
+  description: "",
   photos: {
     front: null,
     back: null,
@@ -246,6 +249,7 @@ export function AddCompanyVehicleDialog({
         features: draft.features,
         price,
         status: draft.initialAvailability,
+        condition: draft.description.trim() || undefined,
         photos: {
           front: draft.photos.front.preview,
           back: draft.photos.back.preview,
@@ -539,6 +543,17 @@ export function AddCompanyVehicleDialog({
                         );
                       })}
                     </div>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Description</Label>
+                    <Textarea
+                      value={draft.description}
+                      onChange={(event) =>
+                        setDraft((current) => ({ ...current, description: event.target.value }))
+                      }
+                      placeholder="Describe the vehicle condition and details..."
+                      rows={4}
+                    />
                   </div>
                 </div>
               </div>

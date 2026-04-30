@@ -62,6 +62,7 @@ export function CompanyFleetManagementPage({
   const [vehicles, setVehicles] = useState<CompanyVehicle[]>(() =>
     readCompanyFleetVehicles(initialVehicles),
   );
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [activeFilter, setActiveFilter] = useState<FleetFilter>("all");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -74,8 +75,14 @@ export function CompanyFleetManagementPage({
         const backendVehicles = await fetchCompanyVehicles();
         if (cancelled) return;
         setVehicles(backendVehicles);
-      } catch {
-        // Keep cached/mock vehicles when the backend is unavailable.
+        setLoadError(null);
+      } catch (error) {
+        if (cancelled) return;
+        setLoadError(
+          error instanceof Error
+            ? error.message
+            : "Failed to load company fleet vehicles.",
+        );
       }
     }
 
@@ -114,6 +121,12 @@ export function CompanyFleetManagementPage({
   return (
     <>
       <div className="space-y-8 pb-8">
+        {loadError ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
+            {loadError}
+          </div>
+        ) : null}
+
         <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
             <div className="relative w-full xl:max-w-md">
