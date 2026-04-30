@@ -26,6 +26,7 @@ export type VehicleFilterStatus = "available" | "rented" | "maintenance";
 
 export type Vehicle = {
   id: string;
+  ownerType?: "User" | "Company";
   make: string;
   model: string;
   year: number;

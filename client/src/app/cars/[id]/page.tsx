@@ -300,6 +300,7 @@ const Index = () => {
               vehicleName={car.name}
               dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
+              ownerType={vehicle?.ownerType}
               vehicleStatus={vehicle?.status}
               availabilityBlocks={availabilityBlocks}
             />

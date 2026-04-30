@@ -209,6 +209,7 @@ export class VehicleService {
   private async uploadVehicleAssets(
     data: CreateVehicleInput,
     folder: string,
+    ownerType: "User" | "Company",
   ): Promise<{
     photos: {
       front: string;
@@ -223,7 +224,7 @@ export class VehicleService {
     };
   }> {
     const documents = data.documents;
-    if (!documents) {
+    if (ownerType !== "Company" && !documents) {
       throw ApiError.badRequest(
         "Ownership and insurance documents are required",
       );
@@ -235,8 +236,12 @@ export class VehicleService {
         resolveUploadValue(data.photos.back, folder, "back"),
         resolveUploadValue(data.photos.side, folder, "side"),
         resolveUploadValue(data.photos.interior, folder, "interior"),
-        resolveUploadValue(documents.ownership, folder, "ownership"),
-        resolveUploadValue(documents.insurance, folder, "insurance"),
+        documents?.ownership
+          ? resolveUploadValue(documents.ownership, folder, "ownership")
+          : Promise.resolve(undefined),
+        documents?.insurance
+          ? resolveUploadValue(documents.insurance, folder, "insurance")
+          : Promise.resolve(undefined),
       ]);
 
     return {
@@ -324,7 +329,13 @@ export class VehicleService {
       data.ownerType,
     );
     const folder = this.buildVehicleFolder(data.plate);
-    const assets = await this.uploadVehicleAssets(data, folder);
+    const assets = await this.uploadVehicleAssets(data, folder, ownerType);
+    const initialStatus =
+      ownerType === "Company"
+        ? data.status && data.status !== "PENDING_APPROVAL"
+          ? data.status
+          : "AVAILABLE"
+        : "PENDING_APPROVAL";
 
     return Vehicle.create({
       ownerId,
@@ -347,7 +358,7 @@ export class VehicleService {
       delivery: data.delivery,
       photos: assets.photos,
       documents: assets.documents,
-      status: "PENDING_APPROVAL",
+      status: initialStatus,
     });
   }
 }

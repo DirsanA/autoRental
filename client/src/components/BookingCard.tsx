@@ -16,6 +16,7 @@ interface BookingCardProps {
   vehicleName: string;
   dailyRate: number;
   location: string;
+  ownerType?: "User" | "Company";
   vehicleStatus?: "available" | "rented" | "maintenance" | "pending_approval" | "retired";
   availabilityBlocks?: VehicleAvailabilityBlock[];
 }
@@ -40,6 +41,7 @@ export default function BookingCard({
   vehicleName,
   dailyRate,
   location,
+  ownerType,
   vehicleStatus,
   availabilityBlocks = [],
 }: BookingCardProps) {
@@ -141,6 +143,9 @@ export default function BookingCard({
 
     switch (vehicleStatus) {
       case "pending_approval":
+        if (ownerType === "Company") {
+          break;
+        }
         return {
           valid: false,
           message: "This vehicle is still pending approval and cannot be booked yet.",

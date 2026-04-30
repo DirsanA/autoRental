@@ -1,4 +1,6 @@
 import type { Vehicle as CompanyVehicle } from "@/app/(dashboard)/company/types";
+import { resolveApiBaseUrl } from "@/lib/api-base-url";
+import { buildAuthHeader } from "@/lib/auth-token";
 
 type ApiVehicle = {
   id: string;
@@ -65,8 +67,7 @@ export type CreateCompanyVehiclePayload = {
   };
 };
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+const API_BASE_URL = resolveApiBaseUrl();
 
 function formatDisplayDate(date: Date) {
   return new Intl.DateTimeFormat("en-US", {
@@ -152,6 +153,7 @@ export async function submitCompanyVehicle(
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        ...buildAuthHeader(),
       },
       credentials: "include",
       body: JSON.stringify({
@@ -200,6 +202,9 @@ export async function fetchCompanyVehicleById(id: string): Promise<CompanyVehicl
     response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
       cache: "no-store",
       credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
     });
   } catch {
     throw new Error("Could not reach backend API at http://localhost:5000");
@@ -227,9 +232,12 @@ export async function fetchCompanyVehicleById(id: string): Promise<CompanyVehicl
 export async function fetchCompanyVehicles(): Promise<CompanyVehicle[]> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/vehicles`, {
+    response = await fetch(`${API_BASE_URL}/vehicles/mine`, {
       cache: "no-store",
       credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
     });
   } catch {
     throw new Error("Could not reach backend API at http://localhost:5000");
@@ -265,7 +273,10 @@ export async function updateCompanyVehicleById(
   try {
     response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
       method: "PATCH",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        ...buildAuthHeader(),
+      },
       credentials: "include",
       body: JSON.stringify(updates),
     });
@@ -300,6 +311,9 @@ export async function deleteCompanyVehicleById(id: string): Promise<void> {
     response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
       method: "DELETE",
       credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
     });
   } catch {
     throw new Error("Could not reach backend API at http://localhost:5000");

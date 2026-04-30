@@ -414,7 +414,10 @@ export class BookingService {
       throw ApiError.notFound("Vehicle not found");
     }
 
-    if (vehicle.status === "PENDING_APPROVAL") {
+    if (
+      vehicle.status === "PENDING_APPROVAL" &&
+      vehicle.ownerType !== "Company"
+    ) {
       throw ApiError.conflict(
         "This vehicle is still pending approval and cannot be booked yet",
       );
