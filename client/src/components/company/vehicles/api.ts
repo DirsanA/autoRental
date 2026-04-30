@@ -57,6 +57,7 @@ export type CreateCompanyVehiclePayload = {
   transmission?: "manual" | "automatic" | "cvt";
   seats?: number;
   features: string[];
+  condition?: string;
   price: number;
   status?: "AVAILABLE" | "MAINTENANCE";
   photos: {
@@ -232,7 +233,7 @@ export async function fetchCompanyVehicleById(id: string): Promise<CompanyVehicl
 export async function fetchCompanyVehicles(): Promise<CompanyVehicle[]> {
   let response: Response;
   try {
-    response = await fetch(`${API_BASE_URL}/vehicles/mine`, {
+    response = await fetch(`${API_BASE_URL}/vehicles/mine?ownerType=Company`, {
       cache: "no-store",
       credentials: "include",
       headers: {

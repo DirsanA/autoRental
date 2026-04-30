@@ -49,6 +49,29 @@ export function errorHandler(
     return;
   }
 
+  if (err.name === "MongoServerError" && (err as any).code === 11000) {
+    const field = Object.keys((err as any).keyPattern || {})[0] || "field";
+    res.status(409).json({
+      success: false,
+      error: {
+        code: "CONFLICT",
+        message: `A record with that ${field} already exists.`,
+      },
+    });
+    return;
+  }
+
+  if (err.name === "ValidationError") {
+    res.status(400).json({
+      success: false,
+      error: {
+        code: "VALIDATION_ERROR",
+        message: err.message,
+      },
+    });
+    return;
+  }
+
   console.error("Unhandled error:", err);
 
   res.status(500).json({

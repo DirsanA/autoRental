@@ -134,8 +134,9 @@ export class VehicleService {
   async listMine(
     caller: RequestUser,
     filter?: "available" | "rented" | "maintenance",
+    requestedOwnerType?: "User" | "Company",
   ) {
-    const owner = await this.resolveVehicleOwner(caller);
+    const owner = await this.resolveVehicleOwner(caller, requestedOwnerType);
 
     return Vehicle.find({
       ownerId: owner.ownerId,
@@ -269,11 +270,14 @@ export class VehicleService {
     ownerId: mongoose.Types.ObjectId;
     ownerType: "User" | "Company";
   }> {
+    const authUserId =
+      typeof caller.authUserId === "string" ? caller.authUserId : caller.id;
+
     if (
       requestedOwnerType === "Company" ||
       caller.accountType === AccountType.COMPANY
     ) {
-      const company = await companyService.getByAuthUserId(caller.id);
+      const company = await companyService.getByAuthUserId(authUserId);
       if (!company) {
         throw ApiError.notFound("You don't have a registered company");
       }
@@ -294,7 +298,7 @@ export class VehicleService {
       throw ApiError.forbidden("This account cannot upload vehicles");
     }
 
-    const user = await userPersistenceService.findByAuthId(caller.id);
+    const user = await userPersistenceService.findByAuthId(authUserId);
     if (!user) {
       throw ApiError.notFound("User not found");
     }

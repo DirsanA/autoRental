@@ -17,6 +17,14 @@ function getVehicleFilter(query: Request["query"]) {
     : undefined;
 }
 
+function getRequestedOwnerType(query: Request["query"]) {
+  const ownerType = query.ownerType;
+
+  return ownerType === "Company" || ownerType === "User"
+    ? ownerType
+    : undefined;
+}
+
 export const vehicleController = {
   /**
    * Lists vehicles with an optional status shortcut filter.
@@ -41,6 +49,7 @@ export const vehicleController = {
     const vehicles = await vehicleService.listMine(
       user,
       getVehicleFilter(req.query),
+      getRequestedOwnerType(req.query),
     );
 
     res.json({
