@@ -219,7 +219,7 @@ const exportToCSV = () => {
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 text-sm">
-                          {booking.customerName}
+                          {booking.name || booking.customerName}
                         </p>
                         <p className="text-slate-500 text-xs">
                           ID: {booking.bookingId}

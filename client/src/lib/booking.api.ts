@@ -74,7 +74,7 @@ export async function fetchCompanyBookings(): Promise<CompanyBooking[]> {
 
   return bookings.map((b: any) => ({
     id: b.id,
-    customerName: b.contactPhone || "Unknown Customer",
+    customerName: b.renter.name || "Unknown Customer",
     vehicleName: b.vehicle
       ? `${b.vehicle.make} ${b.vehicle.model}`
       : "Unknown Vehicle",
