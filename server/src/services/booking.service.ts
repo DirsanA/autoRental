@@ -163,11 +163,20 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
       ? booking.vehicleId
       : null;
 
-  // ✅ NEW: safely detect populated renter
   const renter =
     booking.renterId && typeof booking.renterId === "object"
       ? booking.renterId
       : null;
+
+  const renterName =
+    renter?.name ||
+    [renter?.firstName, renter?.lastName].filter(Boolean).join(" ") ||
+    "Anonymous renter";
+
+  const renterPhone =
+    renter?.phoneNumber
+      ? renter.phoneNumber.replace(/^251/, "0")
+      : booking.contactPhone;
 
   const gallery = Array.isArray(vehicle?.photos?.gallery)
     ? vehicle.photos.gallery.filter(Boolean)
@@ -183,7 +192,6 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
   return {
     id: booking._id?.toString?.() ?? String(booking._id),
 
-    // ✅ NEW: safe renterId (works for both ObjectId and populated object)
     renterId: booking.renterId
       ? typeof booking.renterId === "object"
         ? booking.renterId._id?.toString?.() ??
@@ -192,15 +200,12 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
           String(booking.renterId)
       : undefined,
 
-    
     renter: renter
       ? {
           id: renter._id?.toString?.() ?? String(renter._id),
-          firstName: renter.firstName ?? null,
-          lastName: renter.lastName ?? null,
-          email: renter.email ?? null,
-          phoneNumber: renter.phoneNumber ?? null,
-          image: renter.image ?? null,
+          name: renterName,
+          phone: renterPhone,
+          email: renter.email || null,
         }
       : null,
 
@@ -725,6 +730,10 @@ export class BookingService {
           path: "vehicleId",
           select: "make model year plate availability delivery",
         })
+         .populate({
+    path: "renterId",
+    select: "name firstName lastName email phoneNumber profilePicture",
+  })
         .lean(),
       Booking.countDocuments(filter as any),
     ]);
@@ -861,15 +870,16 @@ export class BookingService {
       _id: bookingId,
       renterId: renter._id,
     })
-        .populate({
-      path: "renterId",
-      select: "firstName lastName  phoneNumber ",
-    })
+       
       .populate({
         path: "vehicleId",
         select:
           "make model year plate photos availability delivery ownerType ownerId",
       })
+        .populate({
+    path: "renterId",
+    select: "name firstName lastName email phoneNumber profilePicture",
+  })
       .populate({
         path: "driverAssigned",
         select: "firstName lastName email phoneNumber profilePicture",
