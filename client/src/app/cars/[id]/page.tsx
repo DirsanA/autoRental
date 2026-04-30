@@ -31,6 +31,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   fetchPeerHostVehicleById,
   fetchVehicleAvailability,
+  fetchVehicleReviews,
 } from "@/components/peer-host/vehicles/api";
 import type {
   Vehicle,
@@ -49,6 +50,8 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useParams<{ id: string }>();
+  const [reviews, setReviews] = useState<null[]>([]);
+  const [ratingStats, setRatingStats] = useState<null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -85,6 +88,17 @@ const Index = () => {
           if (cancelled) return;
           setAvailabilityBlocks([]);
         }
+        try {
+          const reviewData = await fetchVehicleReviews(vehicleId);
+          if (cancelled) return;
+
+          setReviews(reviewData.reviews);
+          setRatingStats(reviewData.ratingStats);
+        } catch {
+          if (cancelled) return;
+          setReviews([]);
+          setRatingStats(null);
+        }
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Failed to load vehicle");
@@ -107,15 +121,21 @@ const Index = () => {
       ...(vehicle?.galleryImages ?? []),
       ...(vehicle?.imageUrl ? [vehicle.imageUrl] : []),
     ].filter(Boolean) as string[];
-    const images = photosFromApi.length > 0 ? Array.from(new Set(photosFromApi)) : FALLBACK_IMAGES;
+    const images =
+      photosFromApi.length > 0
+        ? Array.from(new Set(photosFromApi))
+        : FALLBACK_IMAGES;
     const dailyRate = vehicle?.dailyRate ?? 0;
     const monthlyDiscount = Math.round(dailyRate * 30 * 0.12);
     const originalPrice = Math.round(dailyRate * 30 + monthlyDiscount);
 
     return {
       name,
-      subtitle: vehicle ? `${vehicle.year} ${vehicle.model}` : "Vehicle details",
-      rating: vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
+      subtitle: vehicle
+        ? `${vehicle.year} ${vehicle.model}`
+        : "Vehicle details",
+      rating:
+        vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
       trips: vehicle?.ratingCount ?? 0,
       seats: vehicle?.seats ?? 5,
       fuel: vehicle?.fuel ?? "Petrol",
@@ -157,15 +177,16 @@ const Index = () => {
         <Navbar />
         <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 space-y-4">
           <p className="text-lg font-medium text-red-600">{error}</p>
-          <Button onClick={() => router.push("/#cars-section")}>Back to cars</Button>
+          <Button onClick={() => router.push("/#cars-section")}>
+            Back to cars
+          </Button>
         </main>
       </div>
     );
   }
 
   return (
-  <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
-
+    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
       <Navbar />
 
       <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 space-y-10">
@@ -247,7 +268,9 @@ const Index = () => {
                   <span className="font-semibold dark:text-gray-300 text-gray-800">
                     {car.rating}
                   </span>
-                  <span className="text-gray-500 dark:text-gray-300">({car.trips} trips)</span>
+                  <span className="text-gray-500 dark:text-gray-300">
+                    ({car.trips} trips)
+                  </span>
                 </div>
                 <span>•</span>
                 {car.host.allStar && (
@@ -291,6 +314,105 @@ const Index = () => {
             </div>
 
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
+            <div className="py-2">
+              <h2 className="text-2xl font-bold dark:text-gray-300 text-gray-900 mb-3">
+                Rating and Reviews
+              </h2>
+
+              <div className="flex items-center mb-2">
+                <h2 className="text-3xl font-bold dark:text-gray-300 text-gray-900">
+                  {ratingStats?.avg?.toFixed(2) ?? car.rating}
+                </h2>
+                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400 ml-2" />
+              </div>
+
+              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg mb-4">
+                ({ratingStats?.count ?? car.trips} ratings)
+              </p>
+
+              <div className="space-y-2">
+                {[
+                  { label: "Cleanliness", value: 5 },
+                  { label: "Maintenance", value: 4.8 },
+                  { label: "Communication", value: 4.9 },
+                  { label: "Convenience", value: 4.7 },
+                  { label: "Accuracy", value: 5 },
+                ].map((item, i) => (
+                  <div key={i} className="flex items-center gap-5">
+                    {/* Label */}
+                    <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+                      {item.label}
+                    </div>
+
+                    {/* Progress Bar */}
+                    <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-blue-700 rounded-full"
+                        style={{ width: `${(item.value / 5) * 100}%` }}
+                      ></div>
+                    </div>
+
+                    {/* Value */}
+                    <div className=" mr-48 text-lg text-gray-700 dark:text-gray-300 text-right">
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+            <div className="mt-6">
+              <h3 className="text-xl font-semibold mb-4 dark:text-gray-300 text-gray-900">
+                Reviews
+              </h3>
+
+              <div className="space-y-2">
+                {reviews.length === 0 ? (
+                  <p className="text-gray-500 dark:text-gray-400">
+                    No reviews yet for this vehicle.
+                  </p>
+                ) : (
+                  reviews.map((review, i) => (
+                    <div key={i} className="flex gap-4">
+                      {/* Avatar */}
+                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-bold">
+                        {review.name?.charAt(0) ?? "U"}
+                      </div>
+
+                      <div className="flex-1">
+                        {/* Stars */}
+                        <div className="flex mt-1">
+                          {[...Array(5)].map((_, index) => (
+                            <Star
+                              key={index}
+                              className={`w-4 h-4 ${
+                                index < review.rating
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+
+                        {/* Name + Date */}
+                        <div className="flex items-center gap-2">
+                          <h4 className="text-gray-900 dark:text-gray-300">
+                            {review.name}
+                          </h4>
+                          <span className="text-sm text-gray-500">
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </span>
+                        </div>
+
+                        {/* Comment */}
+                        <p className="mt-2 text-gray-700 dark:text-gray-300 text-sm">
+                          {review.comment}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
           </div>
 
           {/* Right Sidebar */}
@@ -320,11 +442,21 @@ const Index = () => {
           </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             {[
-  { id: "audi-a6", name: "Audi A6", price: 1650, image: car2 },
-  { id: "mercedes-e-class", name: "Mercedes E-Class", price: 1750, image: car3 },
-  { id: "tesla-model-s", name: "Tesla Model S", price: 2100, image: car4 },
-  { id: "lexus-es", name: "Lexus ES", price: 1600, image: car5 },
-].map((sc) => (
+              { id: "audi-a6", name: "Audi A6", price: 1650, image: car2 },
+              {
+                id: "mercedes-e-class",
+                name: "Mercedes E-Class",
+                price: 1750,
+                image: car3,
+              },
+              {
+                id: "tesla-model-s",
+                name: "Tesla Model S",
+                price: 2100,
+                image: car4,
+              },
+              { id: "lexus-es", name: "Lexus ES", price: 1600, image: car5 },
+            ].map((sc) => (
               <Link href={`/cars/${sc.id}`} key={sc.id}>
                 <div className="group rounded-2xl overflow-hidden border dark:bg-gray-800 dark:border-gray-700 border-gray-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 active:scale-[0.98]">
                   <div className="aspect-[4/3] overflow-hidden relative">
@@ -373,11 +505,15 @@ const Index = () => {
       <footer className="bg-gray-900 dark:bg-gray-800 dark:border-gray-700 text-gray-300 py-12 mt-20">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
           <div>
-            <h3 className="font-bold mb-3 dark:bg-gray-800 dark:border-gray-700 text-white">CarRental</h3>
+            <h3 className="font-bold mb-3 dark:bg-gray-800 dark:border-gray-700 text-white">
+              CarRental
+            </h3>
             <p>Premium cars at your fingertips. Drive with style.</p>
           </div>
           <div>
-            <h3 className="font-bold mb-3  dark:border-gray-700  text-white">Company</h3>
+            <h3 className="font-bold mb-3  dark:border-gray-700  text-white">
+              Company
+            </h3>
             <ul className="space-y-1">
               <li className="hover:underline cursor-pointer">About Us</li>
               <li className="hover:underline cursor-pointer">Careers</li>
@@ -385,7 +521,9 @@ const Index = () => {
             </ul>
           </div>
           <div>
-            <h3 className="font-bold mb-3  dark:border-gray-700 dark:bg-gray-800 text-white">Support</h3>
+            <h3 className="font-bold mb-3  dark:border-gray-700 dark:bg-gray-800 text-white">
+              Support
+            </h3>
             <ul className="space-y-1">
               <li className="hover:underline cursor-pointer">Help Center</li>
               <li className="hover:underline cursor-pointer">FAQs</li>
