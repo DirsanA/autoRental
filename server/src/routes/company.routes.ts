@@ -13,6 +13,7 @@ export function createCompanyRoutes(auth: Auth): Router {
 
   // Company self-service routes
   router.get("/me", authenticate, companyController.getMyCompany);
+  router.get("/me/dashboard", authenticate, companyController.getMyCompanyDashboard);
 
   router.patch("/:id", authenticate, validate({ body: updateCompanySchema }), companyController.update);
 
