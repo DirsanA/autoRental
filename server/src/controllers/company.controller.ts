@@ -125,6 +125,16 @@ export const companyController = {
     });
   }),
 
+  getMyCompanyDashboard: asyncHandler(async (req: Request, res: Response) => {
+    const user = requireRequestUser(req);
+    const dashboard = await companyService.getDashboardForAuthUser(user.id);
+
+    res.json({
+      success: true,
+      data: { dashboard },
+    });
+  }),
+
   /**
    * GET /api/companies/:id
    * Returns a single company by id.

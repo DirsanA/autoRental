@@ -1,6 +1,8 @@
 import mongoose from "mongoose";
 import { Company, type CompanyDocument } from "../models/Company.js";
 import { User } from "../models/User.js";
+import { Vehicle } from "../models/Vehicle.js";
+import { Booking } from "../models/Booking.js";
 import { ApiError } from "../utils/ApiError.js";
 import type {
   CreateCompanyInput,
@@ -137,6 +139,180 @@ export class CompanyService {
    */
   async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
     return Company.findOne({ authUserId }).select("-logoUrl -licenseDocumentUrl");
+  }
+
+  async getDashboardForAuthUser(authUserId: string) {
+    const company = await Company.findOne({ authUserId }).select("_id").lean();
+    if (!company) {
+      throw ApiError.notFound("You don't have a registered company account");
+    }
+
+    const companyVehicles = await Vehicle.find({
+      ownerType: "Company",
+      ownerId: company._id,
+    })
+      .select("_id status")
+      .lean();
+
+    const totalFleet = companyVehicles.length;
+    const fleetStatus = companyVehicles.reduce(
+      (acc, vehicle) => {
+        switch (vehicle.status) {
+          case "AVAILABLE":
+            acc.available += 1;
+            break;
+          case "BOOKED":
+            acc.booked += 1;
+            break;
+          case "MAINTENANCE":
+            acc.maintenance += 1;
+            break;
+          case "RETIRED":
+            acc.retired += 1;
+            break;
+          case "PENDING_APPROVAL":
+            acc.pendingApproval += 1;
+            break;
+        }
+
+        return acc;
+      },
+      {
+        available: 0,
+        booked: 0,
+        maintenance: 0,
+        retired: 0,
+        pendingApproval: 0,
+      },
+    );
+
+    const vehicleIds = companyVehicles.map((vehicle) => vehicle._id);
+
+    if (vehicleIds.length === 0) {
+      return {
+        totalFleet: 0,
+        fleetStatus,
+        activeBookings: 0,
+        completedBookings: 0,
+        earnings: 0,
+        revenueTrend: {
+          weekly: Array.from({ length: 7 }, (_, index) => ({
+            day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index],
+            revenue: 0,
+            bookings: 0,
+          })),
+          monthly: Array.from({ length: 4 }, (_, index) => ({
+            period: `W${index + 1}`,
+            revenue: 0,
+            bookings: 0,
+          })),
+        },
+      };
+    }
+
+    const [activeBookings, completedBookings, earningsResult] = await Promise.all([
+      Booking.countDocuments({
+        vehicleId: { $in: vehicleIds },
+        status: { $in: ["PENDING", "CONFIRMED", "ACTIVE"] },
+      }),
+      Booking.countDocuments({
+        vehicleId: { $in: vehicleIds },
+        status: "COMPLETED",
+      }),
+      Booking.aggregate([
+        {
+          $match: {
+            vehicleId: { $in: vehicleIds },
+            "payment.status": "PAID",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$priceSnapshot.totalAmount" },
+          },
+        },
+      ]),
+    ]);
+
+    const earnings = earningsResult?.[0]?.total ?? 0;
+
+    const now = new Date();
+    const weeklyStart = new Date(now);
+    weeklyStart.setHours(0, 0, 0, 0);
+    weeklyStart.setDate(weeklyStart.getDate() - 6);
+
+    const monthlyStart = new Date(now);
+    monthlyStart.setHours(0, 0, 0, 0);
+    monthlyStart.setDate(monthlyStart.getDate() - 27);
+
+    const recentBookings = await Booking.find({
+      vehicleId: { $in: vehicleIds },
+      "payment.status": "PAID",
+      createdAt: { $gte: monthlyStart },
+    })
+      .select("createdAt priceSnapshot.totalAmount")
+      .lean();
+
+    const weeklyMap = new Map<string, { revenue: number; bookings: number }>();
+    const monthMap = new Map<number, { revenue: number; bookings: number }>();
+
+    recentBookings.forEach((booking) => {
+      const createdAt = new Date(booking.createdAt);
+      const dateKey = createdAt.toISOString().slice(0, 10);
+      const revenue = booking.priceSnapshot?.totalAmount ?? 0;
+
+      if (createdAt >= weeklyStart) {
+        const existing = weeklyMap.get(dateKey) ?? { revenue: 0, bookings: 0 };
+        existing.revenue += revenue;
+        existing.bookings += 1;
+        weeklyMap.set(dateKey, existing);
+      }
+
+      const daysSinceStart = Math.max(
+        0,
+        Math.floor((createdAt.getTime() - monthlyStart.getTime()) / (1000 * 60 * 60 * 24)),
+      );
+      const monthIndex = Math.min(3, Math.floor(daysSinceStart / 7));
+      const existingMonth = monthMap.get(monthIndex) ?? { revenue: 0, bookings: 0 };
+      existingMonth.revenue += revenue;
+      existingMonth.bookings += 1;
+      monthMap.set(monthIndex, existingMonth);
+    });
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const weekly = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(weeklyStart);
+      day.setDate(day.getDate() + index);
+      const key = day.toISOString().slice(0, 10);
+      const stats = weeklyMap.get(key) ?? { revenue: 0, bookings: 0 };
+      return {
+        day: dayNames[day.getDay()],
+        revenue: stats.revenue,
+        bookings: stats.bookings,
+      };
+    });
+
+    const monthly = Array.from({ length: 4 }, (_, index) => {
+      const stats = monthMap.get(index) ?? { revenue: 0, bookings: 0 };
+      return {
+        period: `W${index + 1}`,
+        revenue: stats.revenue,
+        bookings: stats.bookings,
+      };
+    });
+
+    return {
+      totalFleet,
+      fleetStatus,
+      activeBookings,
+      completedBookings,
+      earnings,
+      revenueTrend: {
+        weekly,
+        monthly,
+      },
+    };
   }
 
   /**
