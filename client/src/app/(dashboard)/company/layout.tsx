@@ -6,7 +6,7 @@ import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useSyncUserRoleState } from "@/hooks/use-sync-user-role-state";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Clock,
   Mail,
@@ -150,7 +150,7 @@ function PendingApproval({ status }: { status: string }) {
   );
 }
 
-export default function companyDashboard({
+export default function CompanyDashboard({
   children,
 }: {
   children: React.ReactNode;
@@ -158,6 +158,19 @@ export default function companyDashboard({
   const router = useRouter();
   const { isSyncing } = useSyncUserRoleState();
   const { activeRole, roles, companyStatus } = useUserRoleState();
+  const [isInitialSidebarLoading, setIsInitialSidebarLoading] = useState(true);
+  const isRedirecting = !isSyncing && !roles.company && !companyStatus;
+  const isSidebarLoading = isInitialSidebarLoading || isSyncing || isRedirecting;
+
+  useEffect(() => {
+    if (isSyncing) return;
+
+    const timeout = window.setTimeout(() => {
+      setIsInitialSidebarLoading(false);
+    }, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, [isSyncing]);
 
   useEffect(() => {
     if (isSyncing) return;
@@ -180,19 +193,10 @@ export default function companyDashboard({
     return <PendingApproval status={companyStatus} />;
   }
 
-  // If still syncing or no company access, show minimal layout
-  if (isSyncing || !roles.company) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-      </div>
-    );
-  }
-
   return (
     <SidebarProvider suppressHydrationWarning>
       <div className="relative flex w-full h-dvh">
-        <DashboardSidebar />
+        <DashboardSidebar isLoading={isSidebarLoading} />
         <SidebarInset className="flex flex-col min-w-0 bg-slate-50 dark:bg-slate-950">
           <Header />
           <div className="flex-1 overflow-y-auto">

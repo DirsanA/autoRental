@@ -28,6 +28,7 @@ import { TeamSwitcher } from "@/components/dashboard/sidebar-02/team-switcher";
 import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { writeUserRoleState } from "@/lib/role-store";
+import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 
 const sampleNotifications = [
   {
@@ -149,11 +150,19 @@ const teams = [
   { id: "3", name: "Gamma Tech", logo: Logo, plan: "Free" },
 ];
 
-export function DashboardSidebar() {
+export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const router = useRouter();
   const roleState = useUserRoleState();
+
+  if (isLoading) {
+    return (
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarLoadingSkeleton />
+      </Sidebar>
+    );
+  }
 
   function switchToRenter() {
     writeUserRoleState({ ...roleState, activeRole: "renter" });
