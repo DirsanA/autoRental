@@ -4,6 +4,7 @@ import { vehicleService } from "../services/vehicle.service.js";
 import type { UpdateVehicleStatusInput } from "../validators/vehicle.validator.js";
 import { ApiError } from "../utils/ApiError.js";
 import { getRequestUser } from "../utils/requestContext.js";
+import { Review } from "../models/Review.js";
 
 /**
  * Parses the supported vehicle list filter from the request query.
@@ -151,4 +152,48 @@ export const vehicleController = {
       },
     });
   }),
+  
+  getReviews: asyncHandler(async (req: Request, res: Response) => {
+  const vehicleId = req.params.id;
+
+  const reviews = await Review.find({
+    targetId: vehicleId,
+    targetType: "Vehicle",
+  })
+    .populate("reviewerId", "name image")
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const count = reviews.length;
+
+  const avg =
+    count > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / count
+      : 0;
+
+  const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+  reviews.forEach((r) => {
+    breakdown[r.rating as 1 | 2 | 3 | 4 | 5]++;
+  });
+
+  res.json({
+    success: true,
+    data: {
+      reviews: reviews.map((r) => ({
+        id: r._id,
+        name: r.reviewerId?.name || "User",
+        image: r.reviewerId?.image || null,
+        rating: r.rating,
+        comment: r.comment,
+        createdAt: r.createdAt,
+      })),
+      ratingStats: {
+        avg,
+        count,
+        breakdown,
+      },
+    },
+  });
+}),
 };

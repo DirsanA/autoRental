@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import {
   Search,
   Filter,
@@ -15,7 +14,15 @@ import {
   Star,
   Wallet,
 } from "lucide-react";
-import { MOCK_BOOKINGS, Booking } from "../types";
+import { useEffect, useState } from "react";
+import {
+  fetchCompanyBookings,
+  approveBooking,
+  rejectBooking,
+  CompanyBooking,
+  normalizeStatus,
+} from "@/lib/booking.api";
+
 import {
   Dialog,
   DialogContent,
@@ -33,11 +40,32 @@ const formatSubmittedDate = (isoDate: string) =>
   });
 
 export default function BookingManagement() {
-  const [bookings] = useState<Booking[]>(MOCK_BOOKINGS);
-  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
+  const [bookings, setBookings] = useState<CompanyBooking[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<CompanyBooking | null>(
+    null,
+  );
   const [isDetailOpen, setIsDetailOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const formatDate = (date: string) =>
+    new Date(date).toLocaleDateString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+    });
+  useEffect(() => {
+    const loadBookings = async () => {
+      try {
+        const data = await fetchCompanyBookings();
+        setBookings(data);
+      } catch (error) {
+        console.error("Failed to fetch bookings:", error);
+      }
+    };
 
-  const getStatusStyle = (status: Booking["status"]) => {
+    loadBookings();
+  }, []);
+  const getStatusStyle = (status: CompanyBooking["status"]) => {
     switch (status) {
       case "approved":
         return "bg-emerald-100 text-emerald-700";
@@ -52,10 +80,59 @@ export default function BookingManagement() {
     }
   };
 
-  const openBookingDetail = (booking: Booking) => {
+  const openBookingDetail = (booking: CompanyBooking) => {
     setSelectedBooking(booking);
     setIsDetailOpen(true);
   };
+  const filteredBookings = bookings.filter((b) => {
+  const matchesSearch =
+    b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    b.vehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    b.bookingId.toLowerCase().includes(searchQuery.toLowerCase());
+
+  const matchesStatus =
+    statusFilter === "all" || b.status === statusFilter;
+
+  return matchesSearch && matchesStatus;
+});
+const exportToCSV = () => {
+  const headers = [
+    "Booking ID",
+    "Customer",
+    "Vehicle",
+    "Start Date",
+    "End Date",
+    "Amount",
+    "Status",
+  ];
+
+  const rows = filteredBookings.map((b) => [
+    b.bookingId,
+    b.customerName,
+    b.vehicleName,
+    formatDate(b.startDate),
+    formatDate(b.endDate),
+    b.totalAmount,
+    b.status,
+  ]);
+
+  const csvContent =
+    [headers, ...rows]
+      .map((row) => row.map(String).join(","))
+      .join("\n");
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+
+  link.href = url;
+  link.setAttribute("download", "bookings.csv");
+
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+};
 
   return (
     <div className="space-y-6">
@@ -80,15 +157,26 @@ export default function BookingManagement() {
             <input
               type="text"
               placeholder="Search bookings..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
               className="py-2 pr-4 pl-10 border border-slate-200 focus:border-emerald-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full text-sm transition-all"
             />
           </div>
           <div className="flex sm:flex-row flex-col gap-2 w-full sm:w-auto">
             <button className="flex flex-1 sm:flex-none justify-center items-center gap-2 hover:bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 text-sm transition-colors">
-              <Filter size={16} />
-              <span>Filter</span>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="px-4 py-2 border border-slate-200 rounded-xl text-sm"
+              >
+                <option value="all">All</option>
+                <option value="pending">Pending</option>
+                <option value="approved">Approved</option>
+                <option value="rejected">Rejected</option>
+                <option value="completed">Completed</option>
+              </select>
             </button>
-            <button className="flex flex-1 sm:flex-none justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-xl font-medium text-white text-sm transition-colors">
+            <button onClick={exportToCSV} className="flex flex-1 sm:flex-none justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-xl font-medium text-white text-sm transition-colors">
               <span>Export CSV</span>
             </button>
           </div>
@@ -119,7 +207,7 @@ export default function BookingManagement() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {bookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <tr
                   key={booking.id}
                   className="group hover:bg-slate-50/50 transition-colors"
@@ -131,10 +219,10 @@ export default function BookingManagement() {
                       </div>
                       <div>
                         <p className="font-bold text-slate-900 text-sm">
-                          {booking.customerName}
+                          {booking.name || booking.customerName}
                         </p>
                         <p className="text-slate-500 text-xs">
-                          ID: {booking.id}
+                          ID: {booking.bookingId}
                         </p>
                       </div>
                     </div>
@@ -152,12 +240,13 @@ export default function BookingManagement() {
                       <div className="flex items-center gap-2 text-slate-600 text-xs">
                         <Calendar size={14} />
                         <span>
-                          {booking.startDate} to {booking.endDate}
+                          {formatDate(booking.startDate)} →{" "}
+                          {formatDate(booking.endDate)}
                         </span>
                       </div>
                       <div className="flex items-center gap-2 text-[10px] text-slate-400">
                         <Clock size={12} />
-                        <span>Booked on {booking.createdAt}</span>
+                        <span>Booked on {formatDate(booking.createdAt)}</span>
                       </div>
                     </div>
                   </td>
@@ -261,7 +350,8 @@ export default function BookingManagement() {
                     Trip dates
                   </div>
                   <p className="mt-2 font-semibold text-slate-900 text-sm">
-                    {selectedBooking.startDate} to {selectedBooking.endDate}
+                    {formatDate(selectedBooking.startDate)} →{" "}
+                    {formatDate(selectedBooking.endDate)}
                   </p>
                 </div>
                 <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
@@ -283,10 +373,10 @@ export default function BookingManagement() {
                 </div>
                 <div className="divide-y divide-slate-100">
                   {[
-                    ["Booking ID", selectedBooking.id],
+                    ["Booking ID", selectedBooking.bookingId],
                     ["Status", selectedBooking.status],
                     ["Pickup location", selectedBooking.pickupLocation],
-                    ["Booked on", selectedBooking.createdAt],
+                    ["Booked on", formatDate(selectedBooking.createdAt)],
                   ].map(([label, value]) => (
                     <div
                       key={label}
@@ -376,7 +466,7 @@ export default function BookingManagement() {
 
                   <div className="flex items-center gap-2 text-slate-500 text-xs">
                     <MapPin size={14} />
-                    Review is linked to booking {selectedBooking.id}
+                    Review is linked to booking {selectedBooking.bookingId}
                   </div>
                 </div>
               </div>

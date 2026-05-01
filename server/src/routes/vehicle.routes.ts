@@ -29,6 +29,11 @@ export function createVehicleRoutes(auth: Auth): Router {
     vehicleController.getById,
   );
   router.get(
+  "/:id/reviews",
+  validate({ params: vehicleIdParamsSchema }),
+  vehicleController.getReviews,
+);
+  router.get(
     "/:id/availability",
     validate({ params: vehicleIdParamsSchema }),
     vehicleController.getAvailability,

@@ -109,6 +109,7 @@ function mapBookingResponse(booking: BookingDocument) {
 
   return {
     id: booking.id,
+    renterId: booking.renterId.toString(),
     bookingId: booking.bookingId,
     vehicleId: booking.vehicleId.toString(),
     status: booking.status,
@@ -156,13 +157,31 @@ function mapPaymentStateToStatus(value?: "pending" | "paid" | "failed") {
 
 function mapRenterBookingListItem(booking: Record<string, any>) {
   const payment = booking.payment || {};
+
   const vehicle =
     booking.vehicleId && typeof booking.vehicleId === "object"
       ? booking.vehicleId
       : null;
+
+  const renter =
+    booking.renterId && typeof booking.renterId === "object"
+      ? booking.renterId
+      : null;
+
+  const renterName =
+    renter?.name ||
+    [renter?.firstName, renter?.lastName].filter(Boolean).join(" ") ||
+    "Anonymous renter";
+
+  const renterPhone =
+    renter?.phoneNumber
+      ? renter.phoneNumber.replace(/^251/, "0")
+      : booking.contactPhone;
+
   const gallery = Array.isArray(vehicle?.photos?.gallery)
     ? vehicle.photos.gallery.filter(Boolean)
     : [];
+
   const imageUrl =
     vehicle?.photos?.front ||
     vehicle?.photos?.side ||
@@ -172,14 +191,34 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
 
   return {
     id: booking._id?.toString?.() ?? String(booking._id),
+
+    renterId: booking.renterId
+      ? typeof booking.renterId === "object"
+        ? booking.renterId._id?.toString?.() ??
+          String(booking.renterId._id)
+        : booking.renterId.toString?.() ??
+          String(booking.renterId)
+      : undefined,
+
+    renter: renter
+      ? {
+          id: renter._id?.toString?.() ?? String(renter._id),
+          name: renterName,
+          phone: renterPhone,
+          email: renter.email || null,
+        }
+      : null,
+
     bookingId: booking.bookingId,
     status: booking.status,
+
     paymentState:
       payment.status === "PAID"
         ? ("paid" as const)
         : payment.status === "FAILED" || booking.status === "CANCELLED"
-          ? ("failed" as const)
-          : ("pending" as const),
+        ? ("failed" as const)
+        : ("pending" as const),
+
     startTime: booking.startTime ?? null,
     endTime: booking.endTime ?? null,
     actualReturnTime: booking.actualReturnTime ?? null,
@@ -190,6 +229,7 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
     cancelReason: booking.cancelReason ?? null,
     createdAt: booking.createdAt ?? null,
     updatedAt: booking.updatedAt ?? null,
+
     pricing: {
       pricePerHour: booking.priceSnapshot?.pricePerHour ?? 0,
       totalHours: booking.priceSnapshot?.totalHours ?? 0,
@@ -197,6 +237,7 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
       totalAmount: booking.priceSnapshot?.totalAmount ?? 0,
       currency: booking.priceSnapshot?.currency ?? "ETB",
     },
+
     payment: {
       method: payment.method ?? null,
       status: payment.status ?? null,
@@ -207,6 +248,7 @@ function mapRenterBookingListItem(booking: Record<string, any>) {
       paidAt: payment.paidAt ?? null,
       lastVerifiedAt: payment.lastVerifiedAt ?? null,
     },
+
     vehicle: vehicle
       ? {
           id: vehicle._id?.toString?.() ?? String(vehicle._id),
@@ -688,6 +730,10 @@ export class BookingService {
           path: "vehicleId",
           select: "make model year plate availability delivery",
         })
+         .populate({
+    path: "renterId",
+    select: "name firstName lastName email phoneNumber profilePicture",
+  })
         .lean(),
       Booking.countDocuments(filter as any),
     ]);
@@ -824,11 +870,16 @@ export class BookingService {
       _id: bookingId,
       renterId: renter._id,
     })
+       
       .populate({
         path: "vehicleId",
         select:
           "make model year plate photos availability delivery ownerType ownerId",
       })
+        .populate({
+    path: "renterId",
+    select: "name firstName lastName email phoneNumber profilePicture",
+  })
       .populate({
         path: "driverAssigned",
         select: "firstName lastName email phoneNumber profilePicture",
