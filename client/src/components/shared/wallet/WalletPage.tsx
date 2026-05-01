@@ -6,6 +6,7 @@ import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -28,6 +29,32 @@ function formatMoney(value: number, currency: string) {
 
 function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : "—";
+}
+
+function WalletAmountSkeleton() {
+  return <Skeleton className="mt-2 h-8 w-36 bg-black/15 dark:bg-white/15" />;
+}
+
+function PayoutListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 p-3 border rounded-lg"
+        >
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-28 bg-black/15 dark:bg-white/15" />
+              <Skeleton className="h-5 w-20 rounded-full bg-black/15 dark:bg-white/15" />
+            </div>
+            <Skeleton className="h-3 w-56 max-w-full bg-black/15 dark:bg-white/15" />
+          </div>
+          <Skeleton className="h-3 w-32 bg-black/15 dark:bg-white/15" />
+        </div>
+      ))}
+    </div>
+  );
 }
 
 const payoutStatusStyles: Record<string, string> = {
@@ -171,9 +198,11 @@ export function WalletPage({
                   Escrow (Pending)
                 </div>
                 <div className="mt-2 font-bold tabular-nums text-2xl">
-                  {isLoading || !wallet
-                    ? "—"
-                    : formatMoney(pending, currency)}
+                  {isLoading || !wallet ? (
+                    <WalletAmountSkeleton />
+                  ) : (
+                    formatMoney(pending, currency)
+                  )}
                 </div>
                 <p className="mt-1 text-muted-foreground text-xs">
                   Funds locked until completion or admin release.
@@ -185,9 +214,11 @@ export function WalletPage({
                   Available
                 </div>
                 <div className="mt-2 font-bold tabular-nums text-2xl">
-                  {isLoading || !wallet
-                    ? "—"
-                    : formatMoney(available, currency)}
+                  {isLoading || !wallet ? (
+                    <WalletAmountSkeleton />
+                  ) : (
+                    formatMoney(available, currency)
+                  )}
                 </div>
                 <p className="mt-1 text-muted-foreground text-xs">
                   Withdrawable balance.
@@ -238,7 +269,7 @@ export function WalletPage({
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-muted-foreground text-sm">Loading...</div>
+              <PayoutListSkeleton />
             ) : payouts.length === 0 ? (
               <div className="text-muted-foreground text-sm">
                 No payout requests yet.
