@@ -25,6 +25,7 @@ import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
 import { TeamSwitcher } from "@/components/dashboard/sidebar-02/team-switcher";
+import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 
 const sampleNotifications = [
   {
@@ -146,9 +147,17 @@ const teams = [
   { id: "3", name: "Gamma Tech", logo: Logo, plan: "Free" },
 ];
 
-export function DashboardSidebar()  {
+export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })  {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  if (isLoading) {
+    return (
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarLoadingSkeleton />
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon">

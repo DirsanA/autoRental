@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -16,6 +16,19 @@ export default function RenterLayout({
   const router = useRouter();
   const { isSyncing } = useSyncUserRoleState();
   const { activeRole } = useUserRoleState();
+  const [isInitialSidebarLoading, setIsInitialSidebarLoading] = useState(true);
+  const isRedirecting = !isSyncing && activeRole !== "renter";
+  const isSidebarLoading = isInitialSidebarLoading || isSyncing || isRedirecting;
+
+  useEffect(() => {
+    if (isSyncing) return;
+
+    const timeout = window.setTimeout(() => {
+      setIsInitialSidebarLoading(false);
+    }, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, [isSyncing]);
 
   useEffect(() => {
     if (isSyncing) return;
@@ -32,7 +45,7 @@ export default function RenterLayout({
   return (
     <SidebarProvider suppressHydrationWarning>
       <div className="relative flex h-dvh w-full">
-        <RenterSidebar />
+        <RenterSidebar isLoading={isSidebarLoading} />
         <SidebarInset className="flex flex-col">{children}</SidebarInset>
       </div>
     </SidebarProvider>
