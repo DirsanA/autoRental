@@ -69,3 +69,37 @@ export const createCompany = async (data: any) => {
 
   return res.json();
 };
+
+export type CompanyDashboardData = {
+  totalFleet: number;
+  fleetStatus: {
+    available: number;
+    booked: number;
+    maintenance: number;
+    retired: number;
+    pendingApproval: number;
+  };
+  activeBookings: number;
+  completedBookings: number;
+  earnings: number;
+  revenueTrend: {
+    weekly: Array<{ day: string; revenue: number; bookings: number }>;
+    monthly: Array<{ period: string; revenue: number; bookings: number }>;
+  };
+};
+
+export const fetchCompanyDashboard = async (): Promise<CompanyDashboardData> => {
+  const res = await fetch(`${API_BASE_URL}/companies/me/dashboard`, {
+    headers: {
+      ...buildAuthHeader(),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.error?.message || "Failed to load company dashboard");
+  }
+
+  const payload = await res.json();
+  return payload.data.dashboard;
+};

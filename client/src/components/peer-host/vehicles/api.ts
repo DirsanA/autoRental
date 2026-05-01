@@ -218,3 +218,33 @@ export async function updatePeerHostVehicleAvailability(
 
   return mapApiVehicleToCard(vehicle);
 }
+export async function fetchVehicleReviews(vehicleId: string) {
+  const res = await fetch(
+    `${API_BASE_URL}/vehicles/${vehicleId}/reviews`,
+    {
+      cache: "no-store",
+      headers: {
+        ...buildAuthHeader(),
+      },
+    }
+  );
+
+  if (!res.ok) {
+    const payload = await res.json().catch(() => null);
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to fetch reviews (HTTP ${res.status})`
+    );
+  }
+
+  const payload = await res.json();
+
+  return {
+    reviews: payload.data?.reviews || [],
+    ratingStats: payload.data?.ratingStats || {
+      avg: 0,
+      count: 0,
+      breakdown: {},
+    },
+  };
+}

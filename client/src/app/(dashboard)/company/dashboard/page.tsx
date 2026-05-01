@@ -1,5 +1,5 @@
 'use client';
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Car,
   CalendarCheck,
@@ -24,41 +24,140 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { motion } from "framer-motion";
+import { fetchCompanyDashboard, type CompanyDashboardData } from "@/lib/companyApi";
+
 export default function Dashboard() {
   const [activeTab, setActiveTab] = useState<"weekly" | "monthly">("weekly");
+  const [dashboardData, setDashboardData] = useState<CompanyDashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Sample data
+  useEffect(() => {
+    let isMounted = true;
+
+    const loadDashboard = async () => {
+      try {
+        const result = await fetchCompanyDashboard();
+        if (isMounted) {
+          setDashboardData(result);
+        }
+      } catch (fetchError) {
+        if (isMounted) {
+          console.error(fetchError);
+          setError("Unable to load dashboard data");
+        }
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   const revenueData = {
-    weekly: [
-      { day: "Mon", revenue: 4200, bookings: 12 },
-      { day: "Tue", revenue: 3800, bookings: 10 },
-      { day: "Wed", revenue: 5100, bookings: 15 },
-      { day: "Thu", revenue: 4800, bookings: 14 },
-      { day: "Fri", revenue: 6200, bookings: 18 },
-      { day: "Sat", revenue: 7500, bookings: 22 },
-      { day: "Sun", revenue: 6800, bookings: 20 },
-    ],
-    monthly: [
-      { day: "W1", revenue: 28500, bookings: 82 },
-      { day: "W2", revenue: 31200, bookings: 91 },
-      { day: "W3", revenue: 29800, bookings: 87 },
-      { day: "W4", revenue: 35600, bookings: 104 },
-    ],
+    weekly:
+      dashboardData?.revenueTrend?.weekly ?? [
+        { day: "Mon", revenue: 4200, bookings: 12 },
+        { day: "Tue", revenue: 3800, bookings: 10 },
+        { day: "Wed", revenue: 5100, bookings: 15 },
+        { day: "Thu", revenue: 4800, bookings: 14 },
+        { day: "Fri", revenue: 6200, bookings: 18 },
+        { day: "Sat", revenue: 7500, bookings: 22 },
+        { day: "Sun", revenue: 6800, bookings: 20 },
+      ],
+    monthly:
+      dashboardData?.revenueTrend?.monthly?.map((item: { period: string; revenue: number; bookings: number }) => ({
+        day: item.period,
+        revenue: item.revenue,
+        bookings: item.bookings,
+      })) ?? [
+        { day: "W1", revenue: 28500, bookings: 82 },
+        { day: "W2", revenue: 31200, bookings: 91 },
+        { day: "W3", revenue: 29800, bookings: 87 },
+        { day: "W4", revenue: 35600, bookings: 104 },
+      ],
   };
 
   const fleetData = [
-    { name: "Available", value: 12, color: "#10B981", icon: CheckCircle },
-    { name: "Booked", value: 9, color: "#3B82F6", icon: CalendarCheck },
-    { name: "Maintenance", value: 3, color: "#EF4444", icon: Wrench },
+    {
+      name: "Available",
+      value: dashboardData?.fleetStatus.available ?? 12,
+      color: "#10B981",
+      icon: CheckCircle,
+    },
+    {
+      name: "Booked",
+      value: dashboardData?.fleetStatus.booked ?? 9,
+      color: "#3B82F6",
+      icon: CalendarCheck,
+    },
+    {
+      name: "Maintenance",
+      value: dashboardData?.fleetStatus.maintenance ?? 3,
+      color: "#EF4444",
+      icon: Wrench,
+    },
   ];
 
   const stats = [
-    { icon: Car, label: "Total Fleet", value: "24", trend: "+2", color: "bg-blue-500" },
-    { icon: CalendarCheck, label: "Active Bookings", value: "18", trend: "+15%", color: "bg-emerald-500" },
-    { icon: CheckCircle, label: "Completed", value: "142", trend: "+23%", color: "bg-indigo-500" },
-    { icon: DollarSign, label: "Earnings", value: "$12.4k", trend: "+8.2%", color: "bg-amber-500" },
-    { icon: Wrench, label: "Maintenance", value: "3", trend: "-1", color: "bg-rose-500" },
+    {
+      icon: Car,
+      label: "Total Fleet",
+      value: dashboardData?.totalFleet != null ? dashboardData.totalFleet.toString() : "24",
+      trend: "+2",
+      color: "bg-blue-500",
+    },
+    {
+      icon: CalendarCheck,
+      label: "Active Bookings",
+      value: dashboardData?.activeBookings != null ? dashboardData.activeBookings.toString() : "18",
+      trend: "+15%",
+      color: "bg-emerald-500",
+    },
+    {
+      icon: CheckCircle,
+      label: "Completed",
+      value: dashboardData?.completedBookings != null ? dashboardData.completedBookings.toString() : "142",
+      trend: "+23%",
+      color: "bg-indigo-500",
+    },
+    {
+      icon: DollarSign,
+      label: "Earnings",
+      value: dashboardData?.earnings != null ? `$${dashboardData.earnings.toLocaleString()}` : "$12.4k",
+      trend: "+8.2%",
+      color: "bg-amber-500",
+    },
+    {
+      icon: Wrench,
+      label: "Maintenance",
+      value: dashboardData?.fleetStatus.maintenance != null ? dashboardData.fleetStatus.maintenance.toString() : "3",
+      trend: "-1",
+      color: "bg-rose-500",
+    },
   ];
+
+  if (loading) {
+    return (
+      <div className="p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
+        <p className="text-slate-600">Loading dashboard data...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
+        <p className="text-rose-600">{error}</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">

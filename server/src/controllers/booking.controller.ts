@@ -207,5 +207,5 @@ export const bookingController = {
       success: true,
       data,
     });
-  }),
+  }), 
 };
