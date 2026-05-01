@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
@@ -16,6 +16,21 @@ export default function PeerHostLayout({
   const router = useRouter();
   const { isSyncing } = useSyncUserRoleState();
   const { activeRole, companyStatus, roles } = useUserRoleState();
+  const [isInitialSidebarLoading, setIsInitialSidebarLoading] = useState(true);
+  const isCorrectingRole = !isSyncing && roles.peerhost && activeRole !== "peerhost";
+  const isRedirecting = !isSyncing && !roles.peerhost;
+  const isSidebarLoading =
+    isInitialSidebarLoading || isSyncing || isCorrectingRole || isRedirecting;
+
+  useEffect(() => {
+    if (isSyncing) return;
+
+    const timeout = window.setTimeout(() => {
+      setIsInitialSidebarLoading(false);
+    }, 450);
+
+    return () => window.clearTimeout(timeout);
+  }, [isSyncing]);
 
   useEffect(() => {
     if (isSyncing) return;
@@ -37,7 +52,7 @@ export default function PeerHostLayout({
   return (
     <SidebarProvider suppressHydrationWarning>
       <div className="relative flex h-dvh w-full">
-        <PeerToPeerSidebar />
+        <PeerToPeerSidebar isLoading={isSidebarLoading} />
         <SidebarInset className="flex flex-col">{children}</SidebarInset>
       </div>
     </SidebarProvider>
