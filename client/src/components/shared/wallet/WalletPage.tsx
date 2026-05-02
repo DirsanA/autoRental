@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -83,7 +83,7 @@ export function WalletPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -120,11 +120,12 @@ export function WalletPage({
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [ownerType, setIsLoading, setError, setWallet, setPayouts]);
 
   useEffect(() => {
     refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
 
   const currency = wallet?.currency || "ETB";
   const available = wallet?.availableBalance || 0;
