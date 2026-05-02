@@ -11,7 +11,7 @@ import type {
   UpdateVehicleInput,
   UpdateVehicleStatusInput,
 } from "../validators/vehicle.validator.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { uploadToCloudinary, resolveUploadValue } from "../utils/cloudinary.js";
 import { ApiError } from "../utils/ApiError.js";
 import { companyService } from "./company.service.js";
 import { userPersistenceService } from "./user.persistence.service.js";
@@ -47,31 +47,6 @@ function normalizeFeatures(features: string[]) {
   return normalized;
 }
 
-/**
- * Checks whether a string is already a hosted http(s) URL.
- */
-function isHttpUrl(value: string) {
-  return /^https?:\/\//.test(value);
-}
-
-/**
- * Normalizes upload input into a persisted asset URL.
- */
-async function resolveUploadValue(
-  value: string,
-  folder: string,
-  fieldName: string,
-) {
-  if (isHttpUrl(value)) return value;
-
-  if (value.startsWith("data:")) {
-    return uploadToCloudinary(value, `${folder}/${fieldName}`);
-  }
-
-  throw ApiError.badRequest(
-    `${fieldName} must be a valid data URL or http(s) URL`,
-  );
-}
 
 export class VehicleService {
   /**

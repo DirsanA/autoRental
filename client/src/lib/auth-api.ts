@@ -179,3 +179,29 @@ export async function logout() {
 
   return payload?.data || null;
 }
+
+export async function updateProfile(input: {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  image?: string;
+}) {
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) throw new Error(await parseError(response));
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { user: AuthSessionUser };
+  };
+
+  return payload.data;
+}

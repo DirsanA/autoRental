@@ -11,6 +11,7 @@ import { Vehicle } from "../models/Vehicle.js";
 import { Verification } from "../models/Verification.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
+import { uploadToCloudinary, resolveUploadValue } from "../utils/cloudinary.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type { UpdateProfileInput } from "../validators/user.validator.js";
@@ -215,10 +216,23 @@ export class UserService {
       updateData.name = `${data.firstName ?? user.firstName} ${data.lastName ?? user.lastName}`;
     }
 
-    const updatedUser = await this.auth.api.updateUser({
-      headers,
-      body: updateData,
-    });
+    if (data.image !== undefined) {
+      updateData.image = await resolveUploadValue(
+        data.image,
+        `auto-rental/users/${user.id}`,
+        "avatar",
+      );
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      user.id,
+      { $set: updateData },
+      { new: true, runValidators: true },
+    ).lean();
+
+    if (!updatedUser) {
+      throw ApiError.notFound("User not found");
+    }
 
     return { user: updatedUser };
   }
@@ -527,7 +541,7 @@ export class UserService {
           side: vehicle.photos?.side ?? null,
           interior: vehicle.photos?.interior ?? null,
           gallery: Array.isArray(vehicle.photos?.gallery)
-            ? vehicle.photos.gallery.filter(Boolean)
+            ? vehicle?.photos?.gallery.filter(Boolean)
             : [],
         },
         documents: {
