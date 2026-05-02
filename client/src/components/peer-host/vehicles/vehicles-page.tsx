@@ -70,10 +70,10 @@ export function PeerHostVehiclesPage({
   );
 
   useEffect(() => {
+    // If we already have vehicles or a load error provided via props, 
+    // we don't need to fetch anything. The state is already initialized 
+    // from these props in the useState calls above.
     if (providedVehicles || providedLoadError) {
-      setVehicles(providedVehicles ?? []);
-      setLoadError(providedLoadError ?? null);
-      setIsLoading(false);
       return;
     }
 
