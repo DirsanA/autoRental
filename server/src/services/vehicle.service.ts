@@ -5,7 +5,8 @@ import {
   type VehicleStatus,
 } from "../models/Vehicle.js";
 import { Booking } from "../models/Booking.js";
-import { AccountType, VerificationLevel } from "../models/User.js";
+import { AccountType, VerificationLevel, User } from "../models/User.js";
+import { Company } from "../models/Company.js";
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -97,10 +98,113 @@ export class VehicleService {
 
   /**
    * Lists vehicles with an optional API shorthand filter.
+   * Standard lean query, no owner enrichment.
    */
   async list(filter?: "available" | "rented" | "maintenance") {
     const query = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
     return Vehicle.find(query).sort({ createdAt: -1 });
+  }
+
+  /**
+   * Lists vehicles for the public marketplace, enriched with owner summaries.
+   */
+  async listPublic(filter?: "available" | "rented" | "maintenance") {
+    const query = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
+    const vehicles = await Vehicle.find(query).sort({ createdAt: -1 }).lean();
+
+    if (vehicles.length === 0) return [];
+
+    return this.enrichWithOwners(vehicles);
+  }
+
+  /**
+   * Returns a public vehicle by id, enriched with owner summary.
+   */
+  async getPublicById(id: string) {
+    const vehicle = await Vehicle.findById(id).lean();
+    if (!vehicle) return null;
+
+    const [enriched] = await this.enrichWithOwners([vehicle]);
+    return enriched;
+  }
+
+  /**
+   * Batches owner lookups and attaches summaries to vehicle objects.
+   */
+  private async enrichWithOwners(vehicles: any[]) {
+    // Group ownerIds by type for batched fetching
+    const userOwnerIds = new Set<string>();
+    const companyOwnerIds = new Set<string>();
+
+    for (const v of vehicles) {
+      if (v.ownerType === "User") {
+        userOwnerIds.add(v.ownerId.toString());
+      } else if (v.ownerType === "Company") {
+        companyOwnerIds.add(v.ownerId.toString());
+      }
+    }
+
+    // Fetch User owners
+    const userOwnersMap = new Map<string, any>();
+    if (userOwnerIds.size > 0) {
+      const users = await User.find({
+        _id: { $in: Array.from(userOwnerIds) },
+      })
+        .select("firstName lastName name image")
+        .lean();
+
+      for (const u of users) {
+        userOwnersMap.set(u._id.toString(), {
+          id: u._id.toString(),
+          name:
+            u.name ||
+            `${u.firstName || ""} ${u.lastName || ""}`.trim() ||
+            "Peer Host",
+          image: u.image,
+          type: "peerhost",
+        });
+      }
+    }
+
+    // Fetch Company owners
+    const companyOwnersMap = new Map<string, any>();
+    if (companyOwnerIds.size > 0) {
+      const companies = await Company.find({
+        _id: { $in: Array.from(companyOwnerIds) },
+      })
+        .select("name logoUrl")
+        .lean();
+
+      for (const c of companies) {
+        companyOwnersMap.set(c._id.toString(), {
+          id: c._id.toString(),
+          name: c.name || "Rental Company",
+          image: c.logoUrl,
+          type: "company",
+        });
+      }
+    }
+
+    // Attach owner summaries back to lean vehicle objects
+    return vehicles.map((v) => {
+      const ownerIdStr = v.ownerId.toString();
+      const ownerSummary =
+        v.ownerType === "User"
+          ? userOwnersMap.get(ownerIdStr) || {
+              name: "Peer Host",
+              type: "peerhost",
+            }
+          : companyOwnersMap.get(ownerIdStr) || {
+              name: "Rental Company",
+              type: "company",
+            };
+
+      return {
+        ...v,
+        id: v._id?.toString() || v.id,
+        owner: ownerSummary,
+      };
+    });
   }
 
   /**

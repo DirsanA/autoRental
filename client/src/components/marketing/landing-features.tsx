@@ -1,5 +1,6 @@
 "use client";
 import { SectionContainer } from "@/components/marketing/section-container";
+import { CarLoadingState } from "@/components/shared/car-loading-state";
 import {
   Calendar,
   ChevronLeft,
@@ -74,12 +75,12 @@ function createPlaceholders(
 function normalizeVehiclesEndpoint(baseUrl: string) {
   const trimmedBase = baseUrl.replace(/\/+$/, "");
   if (trimmedBase.endsWith("/api")) {
-    return `${trimmedBase}/vehicles`;
+    return `${trimmedBase}/vehicles/marketplace`;
   }
   if (trimmedBase.endsWith("/api/vehicles")) {
-    return trimmedBase;
+    return `${trimmedBase}/marketplace`;
   }
-  return `${trimmedBase}/api/vehicles`;
+  return `${trimmedBase}/api/vehicles/marketplace`;
 }
 
 function parseVehiclesPayload(payload: unknown): ApiVehicle[] {
@@ -228,6 +229,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
 
 export function LandingFeatures() {
   const [sections, setSections] = useState<CompanySection[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isCancelled = false;
@@ -235,7 +237,7 @@ export function LandingFeatures() {
     const loadCars = async () => {
       try {
         const preferredEndpoint = normalizeVehiclesEndpoint(API_BASE_URL);
-        const fallbackEndpoint = "http://localhost:5000/api/vehicles";
+        const fallbackEndpoint = "http://localhost:5000/api/vehicles/marketplace";
         const endpoints = Array.from(new Set([preferredEndpoint, fallbackEndpoint]));
 
         let allCars: ApiVehicle[] = [];
@@ -277,10 +279,12 @@ export function LandingFeatures() {
 
         if (!isCancelled) {
           setSections(mapped);
+          setIsLoading(false);
         }
       } catch {
         if (!isCancelled) {
           setSections([]);
+          setIsLoading(false);
         }
       }
     };
@@ -293,9 +297,11 @@ export function LandingFeatures() {
 
   return (
     <SectionContainer className="py-0 space-y-0 bg-white dark:bg-gray-900 transition-colors duration-300">
-      {sections.map((section) => (
-        <CarRow key={section.id} section={section} />
-      ))}
+      {isLoading ? (
+        <CarLoadingState message="Discovering top rentals..." className="py-24" />
+      ) : (
+        sections.map((section) => <CarRow key={section.id} section={section} />)
+      )}
     </SectionContainer>
   );
 }
