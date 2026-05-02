@@ -24,7 +24,7 @@ import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
-import { TeamSwitcher } from "@/components/dashboard/sidebar-02/team-switcher";
+import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 
 const sampleNotifications = [
   {
@@ -140,15 +140,17 @@ const dashboardRoutes: Route[] = [
   },
 ];
 
-const teams = [
-  { id: "1", name: "Alpha Inc.", logo: Logo, plan: "Free" },
-  { id: "2", name: "Beta Corp.", logo: Logo, plan: "Free" },
-  { id: "3", name: "Gamma Tech", logo: Logo, plan: "Free" },
-];
-
-export function DashboardSidebar()  {
+export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })  {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+
+  if (isLoading) {
+    return (
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarLoadingSkeleton />
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -187,7 +189,7 @@ export function DashboardSidebar()  {
         <DashboardNavigation routes={dashboardRoutes} />
       </SidebarContent>
       <SidebarFooter className="px-2">
-        <TeamSwitcher teams={teams} />
+
       </SidebarFooter>
     </Sidebar>
   );

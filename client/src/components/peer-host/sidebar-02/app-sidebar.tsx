@@ -34,6 +34,7 @@ import { NotificationsPopover } from "@/components/peer-host/sidebar-02/nav-noti
 import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { toggleActiveRole, writeUserRoleState } from "@/lib/role-store";
+import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 
 const sampleNotifications = [
   {
@@ -95,11 +96,20 @@ const dashboardRoutes: Route[] = [
   },
 ];
 
-export function PeerToPeerSidebar() {
+export function PeerToPeerSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const router = useRouter();
   const roleState = useUserRoleState();
+
+  if (isLoading) {
+    return (
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarLoadingSkeleton />
+      </Sidebar>
+    );
+  }
+
   const routes = roleState.roles.peerhost
     ? dashboardRoutes
     : dashboardRoutes.filter((route) => route.id === "become-a-host");

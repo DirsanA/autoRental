@@ -6,11 +6,9 @@ import {
 import { AUTH_TOKEN_CHANGED_EVENT, readAuthToken } from "@/lib/auth-token";
 
 export function useAuth() {
-  const [user, setUser] = useState(() => readCachedAuthSession()?.user || null);
-  const [company, setCompany] = useState(
-    () => readCachedAuthSession()?.company || null,
-  );
-  const [loading, setLoading] = useState(() => !!readAuthToken() && !readCachedAuthSession()?.user);
+  const [user, setUser] = useState<any>(null);
+  const [company, setCompany] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let active = true;

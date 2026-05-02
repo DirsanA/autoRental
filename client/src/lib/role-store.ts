@@ -1,9 +1,10 @@
-export type ActiveRole = "peerhost" | "renter" | "company";
+export type ActiveRole = "peerhost" | "renter" | "company" | "admin";
 
 export type Roles = {
   peerhost: boolean;
   renter: boolean;
   company: boolean;
+  admin: boolean;
 };
 
 export type UserRoleState = {
@@ -32,15 +33,15 @@ const STORAGE_KEY = "autorent.userRoleState";
 const ROLE_CHANGE_EVENT = "autorent:role-changed";
 
 const DEFAULT_STATE: UserRoleState = {
-  roles: { peerhost: false, renter: true, company: false },
+  roles: { peerhost: false, renter: true, company: false, admin: false },
   activeRole: "renter",
   companyStatus: null,
 };
 
-function extractUser(source: RoleStateSource | null | undefined) {
+function extractUser(source: RoleStateSource | null | undefined): RoleStateSourceUser | null {
   if (!source) return null;
-  if ("user" in source) return source.user || null;
-  return source;
+  if ("user" in source) return (source.user as RoleStateSourceUser) || null;
+  return source as RoleStateSourceUser;
 }
 
 function extractCompanyStatus(source: RoleStateSource | null | undefined) {
@@ -61,8 +62,8 @@ function hasPeerHostAccess(source: RoleStateSource | null | undefined) {
   if (accountType && accountType !== "USER") return false;
 
   const roleNames = Array.isArray(user.roles)
-    ? user.roles
-        .map((role) => {
+    ? (user.roles as unknown[])
+        .map((role: unknown) => {
           if (!role) return null;
           if (typeof role === "string") return role;
           if (typeof role === "object" && "name" in role) {
@@ -71,21 +72,29 @@ function hasPeerHostAccess(source: RoleStateSource | null | undefined) {
           }
           return null;
         })
-        .filter((r): r is string => typeof r === "string")
+        .filter((r: string | null): r is string => typeof r === "string")
     : [];
 
-  const normalizedRoles = roleNames.map((r) =>
+  const normalizedRoles = roleNames.map((r: string) =>
     r.trim().toLowerCase().replaceAll("_", "").replaceAll("-", ""),
   );
 
   return (
     user.verificationLevel === "PEER_HOST" ||
-    normalizedRoles.some((role) => role === "peerhost")
+    normalizedRoles.some((role: string) => role === "peerhost")
   );
 }
 
 function hasCompanyAccess(source: RoleStateSource | null | undefined) {
   return extractCompanyStatus(source) === "ACTIVE";
+}
+
+function hasAdminAccess(source: RoleStateSource | null | undefined) {
+  const user = extractUser(source);
+  if (!user || !("accountType" in user)) return false;
+  const accountType =
+    typeof user.accountType === "string" ? user.accountType.toUpperCase() : null;
+  return accountType === "ADMIN";
 }
 
 let cachedRaw: string | null | undefined = undefined;
@@ -106,7 +115,8 @@ function isUserRoleState(value: unknown): value is UserRoleState {
   if (
     v.activeRole !== "peerhost" &&
     v.activeRole !== "renter" &&
-    v.activeRole !== "company"
+    v.activeRole !== "company" &&
+    v.activeRole !== "admin"
   ) {
     return false;
   }
@@ -115,6 +125,8 @@ function isUserRoleState(value: unknown): value is UserRoleState {
   if (typeof r.peerhost !== "boolean") return false;
   if (typeof r.renter !== "boolean") return false;
   if (typeof r.company !== "boolean") return false;
+  // Tolerate missing admin flag from older localStorage entries
+  if (r.admin !== undefined && typeof r.admin !== "boolean") return false;
   if (v.companyStatus !== null && typeof v.companyStatus !== "string") return false;
   return true;
 }
@@ -145,12 +157,17 @@ export function buildUserRoleState(
   source: RoleStateSource | null | undefined,
   current: UserRoleState = DEFAULT_STATE,
 ): UserRoleState {
+  const admin = hasAdminAccess(source);
   const peerhost = hasPeerHostAccess(source);
   const company = hasCompanyAccess(source);
   const companyStatus = extractCompanyStatus(source);
 
-  const activeRole =
-    current.activeRole === "company" && company
+  // Admin and company are exclusive roles — they don't get renter access
+  const renter = !admin && !company;
+
+  const activeRole: ActiveRole = admin
+    ? "admin"
+    : company
       ? "company"
       : current.activeRole === "peerhost" && peerhost
         ? "peerhost"
@@ -158,9 +175,10 @@ export function buildUserRoleState(
 
   return {
     roles: {
-      renter: true,
-      peerhost,
+      renter,
+      peerhost: admin || company ? false : peerhost,
       company,
+      admin,
     },
     activeRole,
     companyStatus,
@@ -172,6 +190,9 @@ export function resetUserRoleState() {
 }
 
 export function toggleActiveRole(state: UserRoleState): UserRoleState {
+  // Admin is exclusive — no toggling
+  if (state.roles.admin) return state;
+
   if (state.activeRole === "peerhost") {
     return {
       ...state,

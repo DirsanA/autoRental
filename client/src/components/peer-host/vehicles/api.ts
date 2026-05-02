@@ -6,6 +6,7 @@ import type {
 } from "./types";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
+import { coalesceRequest } from "@/lib/api-coalesce";
 
 type ApiVehicle = {
   id: string;
@@ -88,92 +89,98 @@ const API_BASE_URL = resolveApiBaseUrl();
 
 export async function fetchPeerHostVehicles(filter?: VehicleFilterStatus) {
   const query = filter ? `?filter=${encodeURIComponent(filter)}` : "";
-  const response = await fetch(`${API_BASE_URL}/vehicles/mine${query}`, {
-    cache: "no-store",
-    credentials: "include",
-    headers: {
-      ...buildAuthHeader(),
-    },
+  const cacheKey = `peer-host-vehicles-${filter || "all"}`;
+
+  return coalesceRequest(cacheKey, async () => {
+    const response = await fetch(`${API_BASE_URL}/vehicles/mine${query}`, {
+      cache: "no-store",
+      credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Failed to load vehicles");
+    }
+
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicles?: ApiVehicle[] };
+    };
+
+    const vehicles = payload.data?.vehicles || [];
+    return vehicles.map(mapApiVehicleToCard);
   });
-
-  if (!response.ok) {
-    throw new Error("Failed to load vehicles");
-  }
-
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: { vehicles?: ApiVehicle[] };
-  };
-
-  const vehicles = payload.data?.vehicles || [];
-  return vehicles.map(mapApiVehicleToCard);
 }
 
 export async function fetchPeerHostVehicleById(id: string) {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
-      cache: "no-store",
-    });
-  } catch {
-    throw new Error("Could not reach backend API at http://localhost:5000");
-  }
+  return coalesceRequest(`vehicle-${id}`, async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        cache: "no-store",
+      });
+    } catch {
+      throw new Error("Could not reach backend API at http://localhost:5000");
+    }
 
-  if (response.status === 404) {
-    return null;
-  }
+    if (response.status === 404) {
+      return null;
+    }
 
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      error?: { message?: string };
-    } | null;
-    throw new Error(
-      payload?.error?.message ||
-        `Failed to load vehicle details (HTTP ${response.status})`,
-    );
-  }
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      throw new Error(
+        payload?.error?.message ||
+          `Failed to load vehicle details (HTTP ${response.status})`,
+      );
+    }
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: { vehicle?: ApiVehicle };
-  };
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicle?: ApiVehicle };
+    };
 
-  const vehicle = payload.data?.vehicle;
-  if (!vehicle) return null;
+    const vehicle = payload.data?.vehicle;
+    if (!vehicle) return null;
 
-  return mapApiVehicleToCard(vehicle);
+    return mapApiVehicleToCard(vehicle);
+  });
 }
 
 export async function fetchVehicleAvailability(
   id: string,
 ): Promise<VehicleAvailabilityBlock[]> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/vehicles/${id}/availability`, {
-      cache: "no-store",
-    });
-  } catch {
-    throw new Error("Could not reach backend API at http://localhost:5000");
-  }
+  return coalesceRequest(`availability-${id}`, async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/${id}/availability`, {
+        cache: "no-store",
+      });
+    } catch {
+      throw new Error("Could not reach backend API at http://localhost:5000");
+    }
 
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as {
-      error?: { message?: string };
-    } | null;
-    throw new Error(
-      payload?.error?.message ||
-        `Failed to load vehicle availability (HTTP ${response.status})`,
-    );
-  }
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      throw new Error(
+        payload?.error?.message ||
+          `Failed to load vehicle availability (HTTP ${response.status})`,
+      );
+    }
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: { availability?: VehicleAvailabilityBlock[] };
-  };
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { availability?: VehicleAvailabilityBlock[] };
+    };
 
-  return Array.isArray(payload.data?.availability)
-    ? payload.data.availability
-    : [];
+    return payload.data?.availability || [];
+  });
 }
 
 export async function updatePeerHostVehicleAvailability(
