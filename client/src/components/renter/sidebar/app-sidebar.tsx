@@ -13,11 +13,20 @@ import {
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
+import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 import { cn } from "@/lib/utils";
 
-export function RenterSidebar() {
+export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
+
+  if (isLoading) {
+    return (
+      <Sidebar variant="inset" collapsible="icon">
+        <SidebarLoadingSkeleton />
+      </Sidebar>
+    );
+  }
 
   return (
     <Sidebar variant="inset" collapsible="icon">
