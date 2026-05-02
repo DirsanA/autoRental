@@ -56,7 +56,6 @@ async function findSessionByToken(token: string): Promise<TokenSession | null> {
 export function createAuthMiddleware(auth: Auth) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-
       const session = await auth.api.getSession({
         headers: fromNodeHeaders(req.headers),
       });
@@ -77,31 +76,9 @@ export function createAuthMiddleware(auth: Auth) {
         }
       }
 
-      const token = getBearerToken(req);
-      const tokenSession = token ? await findSessionByToken(token) : null;
-      const userId = tokenSession?.userId;
-
-      if (!userId) {
-        sendUnauthorized(res, "Authentication required");
-        return;
-      }
-
-      const user = await userPersistenceService.findByAuthId(userId);
-      if (!user) {
-        sendUnauthorized(res, "Authentication required");
-        return;
-      }
-
-      setRequestAuth(
-        req,
-        {
-          ...(user.toJSON() as unknown as RequestUser),
-          authUserId: userId,
-        },
-        tokenSession,
-      );
-      next();
-    } catch {
+      sendUnauthorized(res, "Authentication required");
+    } catch (error) {
+      console.error("Auth middleware error:", error);
       sendUnauthorized(res, "Invalid or expired session");
     }
   };

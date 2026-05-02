@@ -8,6 +8,7 @@ import {
   loginSchema,
   forgotPasswordSchema,
   resetPasswordSchema,
+  changePasswordSchema,
 } from "../validators/auth.validator.js";
 import { authLimiter } from "../middlewares/rateLimiter.js";
 import { createAuthMiddleware } from "../middlewares/authenticate.js";
@@ -135,6 +136,15 @@ export function createAuthRoutes(auth: Auth): Router {
     "/reset-password",
     validate({ body: resetPasswordSchema }),
     authController.resetPassword,
+  );
+ 
+  // POST /api/auth/change-password
+  router.post(
+    "/change-password",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY, AccountType.ADMIN),
+    validate({ body: changePasswordSchema }),
+    authController.changePassword,
   );
 
   return router;

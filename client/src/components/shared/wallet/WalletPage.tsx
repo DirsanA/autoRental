@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -58,12 +57,13 @@ function PayoutListSkeleton() {
 }
 
 const payoutStatusStyles: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  PROCESSING:
-    "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
+  PENDING:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  PROCESSING: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
   PAID: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   FAILED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  CANCELLED: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
+  CANCELLED:
+    "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
 };
 
 export function WalletPage({
@@ -150,7 +150,7 @@ export function WalletPage({
         payoutMethod: "CHAPA",
         ownerType,
       });
-      
+
       if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else {
@@ -257,7 +257,8 @@ export function WalletPage({
               </Button>
 
               <p className="text-muted-foreground text-xs">
-                You will be redirected to Chapa to process the withdrawal request.
+                You will be redirected to Chapa to process the withdrawal
+                request.
               </p>
             </CardContent>
           </Card>
@@ -287,18 +288,26 @@ export function WalletPage({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="font-medium tabular-nums">
-                            {formatMoney(payout.amount, payout.currency || currency)}
+                            {formatMoney(
+                              payout.amount,
+                              payout.currency || currency,
+                            )}
                           </div>
                           <Badge
                             variant="outline"
-                            className={cn("border-0", payoutStatusStyles[status] || "")}
+                            className={cn(
+                              "border-0",
+                              payoutStatusStyles[status] || "",
+                            )}
                           >
                             {status}
                           </Badge>
                         </div>
                         <div className="mt-1 text-muted-foreground text-xs">
                           Requested: {formatDate(payout.createdAt)}{" "}
-                          {payout.payoutMethod ? `• ${payout.payoutMethod}` : ""}
+                          {payout.payoutMethod
+                            ? `• ${payout.payoutMethod}`
+                            : ""}
                         </div>
                       </div>
                       <div className="text-muted-foreground text-xs">

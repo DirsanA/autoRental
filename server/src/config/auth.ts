@@ -4,6 +4,7 @@ import { getMongoClient } from "./database.js";
 import { ENV } from "./env.js";
 import { emailService } from "../services/email.service.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
+import { bearer } from "better-auth/plugins";
 
 /**
  * better-auth instance configured for MongoDB via Mongoose's underlying client.
@@ -132,6 +133,7 @@ export function createAuth() {
     },
 
     trustedOrigins: [ENV.FRONTEND_URL],
+    plugins: [bearer()],
   });
 
   return auth;
