@@ -82,3 +82,30 @@ export async function uploadToCloudinary(
     `Unable to reach Cloudinary. Check server internet/firewall and CLOUDINARY_CLOUD_NAME. (${(lastError as Error)?.message || "upload failed"})`,
   );
 }
+
+/**
+ * Checks whether a string is already a hosted http(s) URL.
+ */
+export function isHttpUrl(value: string): boolean {
+  return /^https?:\/\//.test(value);
+}
+
+/**
+ * Normalizes upload input into a persisted asset URL.
+ * If it's already a URL, returns it. If it's a data URL, uploads to Cloudinary.
+ */
+export async function resolveUploadValue(
+  value: string,
+  folder: string,
+  fieldName: string,
+): Promise<string> {
+  if (isHttpUrl(value)) return value;
+
+  if (value.startsWith("data:")) {
+    return uploadToCloudinary(value, `${folder}/${fieldName}`);
+  }
+
+  throw ApiError.badRequest(
+    `${fieldName} must be a valid data URL or http(s) URL`,
+  );
+}

@@ -27,6 +27,8 @@ import { cn } from "@/lib/utils";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { coalesceRequest } from "@/lib/api-coalesce";
+import { updateProfile, fetchCurrentSession } from "@/lib/auth-api";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type Status = "not_submitted" | "pending" | "approved" | "rejected";
 type VerificationAudience = "renter" | "peerhost";
@@ -331,6 +333,8 @@ export function ProfileVerificationPage({
   const [isReplacingId, setIsReplacingId] = useState(false);
   const [isReplacingLicense, setIsReplacingLicense] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -430,6 +434,11 @@ export function ProfileVerificationPage({
         setIsReplacingLicense(false);
         setSubmitError(null);
         setLoadError(null);
+
+        const session = await fetchCurrentSession().catch(() => null);
+        if (session?.user?.image && !cancelled) {
+          setAvatarPreview(session.user.image);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -604,6 +613,44 @@ export function ProfileVerificationPage({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const preview = await readFileAsDataUrl(file);
+      setAvatarPreview(preview);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to read image file",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function saveAvatar() {
+    if (!avatarPreview || !avatarPreview.startsWith("data:")) return;
+
+    setIsUpdatingAvatar(true);
+    try {
+      await updateProfile({ image: avatarPreview });
+      await fetchCurrentSession(); // Refresh session to get the new Cloudinary URL
+      toast({
+        title: "Avatar updated",
+        description: "Your profile picture has been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update avatar",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingAvatar(false);
     }
   }
 
@@ -805,6 +852,72 @@ export function ProfileVerificationPage({
             {loadError}
           </div>
         ) : null}
+
+        <Card className="mb-8 border-0 bg-white/85 shadow-xl backdrop-blur dark:border dark:border-slate-800 dark:bg-slate-900/80">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
+              <div className="relative group">
+                <Avatar className="h-32 w-32 border-4 border-white shadow-2xl dark:border-slate-800">
+                  <AvatarImage src={avatarPreview || ""} className="object-cover" />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-3xl font-bold text-white">
+                    <UserRound className="h-12 w-12" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <Upload className="h-8 w-8 text-white" />
+                  </Label>
+                </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => void handleAvatarUpload(e)}
+                />
+              </div>
+
+              <div className="flex-1 space-y-2 text-center md:text-left">
+                <h3 className="text-xl font-bold dark:text-slate-100">Profile Picture</h3>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">
+                  Upload a clear photo of yourself. This will be visible to hosts and help in the verification process.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3 pt-2 md:justify-start">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="relative"
+                    asChild
+                  >
+                    <Label htmlFor="avatar-upload" className="cursor-pointer">
+                      Choose Photo
+                    </Label>
+                  </Button>
+                  {avatarPreview?.startsWith("data:") && (
+                    <Button
+                      size="sm"
+                      onClick={() => void saveAvatar()}
+                      disabled={isUpdatingAvatar}
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      {isUpdatingAvatar ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Profile Picture"
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground dark:text-slate-500">
+                  Accepted formats: JPG, PNG. Max size: 5MB.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mb-6">{renderStatusMessage()}</div>
 
