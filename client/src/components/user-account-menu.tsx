@@ -1,7 +1,6 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import {
   Loader2,
   LogOut,
@@ -183,7 +182,6 @@ export function UserAccountMenuContent({
   className,
   auth,
 }: UserAccountMenuContentProps) {
-  const router = useRouter();
   const { user, company, loading } = auth;
   const { roles } = useUserRoleState();
 
@@ -208,8 +206,7 @@ export function UserAccountMenuContent({
     try {
       await logout();
     } finally {
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     }
   };
 

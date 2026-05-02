@@ -222,5 +222,23 @@ export function createAuthController(authService: AuthService) {
         data,
       });
     }),
+ 
+    /**
+     * POST /api/auth/change-password
+     * Changes the authenticated user's password.
+     */
+    changePassword: asyncHandler(async (req: Request, res: Response) => {
+      const { currentPassword, newPassword } = req.body;
+      const data = await authService.changePassword(
+        currentPassword,
+        newPassword,
+        toNodeHeaders(req),
+      );
+ 
+      res.json({
+        success: true,
+        data,
+      });
+    }),
   };
 }

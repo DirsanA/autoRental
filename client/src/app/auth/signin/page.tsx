@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense, useState, type FormEvent } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { Car, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
@@ -15,10 +15,8 @@ import { Eye, EyeOff } from "lucide-react";
 
 function SignInContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
-  const nextUrl = searchParams.get("next") || searchParams.get("redirect") || "";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -48,12 +46,8 @@ const [fieldErrors, setFieldErrors] = useState<{
         title: "Signed in",
         description: data.message || "Login successful",
       });
-      if (session?.user?.accountType === "ADMIN") {
-        router.push(nextUrl || "/sysadmin/dashboard");
-        return;
-      }
 
-      router.push(nextUrl || "/");
+      router.push("/");
     } catch (err: unknown) {
       let errorMessage = "Login failed";
 

@@ -1,13 +1,16 @@
 import { useEffect, useState } from "react";
 import {
+  type AuthSessionCompany,
+  type AuthSessionUser,
   fetchCurrentSession,
+  isUnauthorizedError,
   readCachedAuthSession,
 } from "@/lib/auth-api";
 import { AUTH_TOKEN_CHANGED_EVENT, readAuthToken } from "@/lib/auth-token";
 
 export function useAuth() {
-  const [user, setUser] = useState<any>(null);
-  const [company, setCompany] = useState<any>(null);
+  const [user, setUser] = useState<AuthSessionUser | null>(null);
+  const [company, setCompany] = useState<AuthSessionCompany | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -39,10 +42,12 @@ export function useAuth() {
         if (!active) return;
         setUser(data?.user || null);
         setCompany(data?.company || null);
-      } catch {
+      } catch (error) {
         if (!active) return;
-        setUser(null);
-        setCompany(null);
+        if (isUnauthorizedError(error)) {
+          setUser(null);
+          setCompany(null);
+        }
       } finally {
         if (active) {
           setLoading(false);

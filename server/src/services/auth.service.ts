@@ -405,6 +405,26 @@ export class AuthService {
         "Password reset successfully. You can now log in with your new password.",
     };
   }
+
+  /**
+   * Changes the authenticated user's password.
+   */
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+    headers: Headers,
+  ): Promise<{ message: string }> {
+    await this.auth.api.changePassword({
+      headers,
+      body: {
+        currentPassword,
+        newPassword,
+        revokeOtherSessions: true,
+      },
+    });
+
+    return { message: "Password changed successfully." };
+  }
 }
 
 /**
