@@ -1,6 +1,7 @@
 import type { Vehicle as CompanyVehicle } from "@/app/(dashboard)/company/types";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
+import { coalesceRequest } from "@/lib/api-coalesce";
 
 type ApiVehicle = {
   id: string;
@@ -128,9 +129,8 @@ export function mapApiVehicleToCompanyVehicle(
     status: mapApiStatusToCompanyStatus(vehicle.status),
     pricePerDay: typeof vehicle.price === "number" ? vehicle.price : 0,
     image: mainImage,
-    galleryImages: Array.isArray(vehicle.photos?.gallery)
-      ? vehicle.photos.gallery.filter(Boolean)
-      : [mainImage],
+    galleryImages:
+      vehicle.photos?.gallery?.filter(Boolean).length ? (vehicle.photos.gallery.filter(Boolean) as string[]) : [mainImage],
     lastMaintenance: formatDisplayDate(createdAt),
     nextMaintenance: formatDisplayDate(addDays(createdAt, 90)),
     mileage: vehicle.mileage,
@@ -197,73 +197,79 @@ export async function submitCompanyVehicle(
   return mapApiVehicleToCompanyVehicle(vehicle);
 }
 
+
+
 export async function fetchCompanyVehicleById(id: string): Promise<CompanyVehicle | null> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
-      cache: "no-store",
-      credentials: "include",
-      headers: {
-        ...buildAuthHeader(),
-      },
-    });
-  } catch {
-    throw new Error("Could not reach backend API at http://localhost:5000");
-  }
+  return coalesceRequest(`vehicle-${id}`, async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          ...buildAuthHeader(),
+        },
+      });
+    } catch {
+      throw new Error("Could not reach backend API at http://localhost:5000");
+    }
 
-  if (response.status === 404) return null;
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: { message?: string } }
-      | null;
-    throw new Error(
-      payload?.error?.message ||
-        `Failed to load vehicle details (HTTP ${response.status})`,
-    );
-  }
+    if (response.status === 404) return null;
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: { message?: string } }
+        | null;
+      throw new Error(
+        payload?.error?.message ||
+          `Failed to load vehicle details (HTTP ${response.status})`,
+      );
+    }
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: { vehicle?: ApiVehicle };
-  };
-  const vehicle = payload.data?.vehicle;
-  return vehicle ? mapApiVehicleToCompanyVehicle(vehicle) : null;
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicle?: ApiVehicle };
+    };
+    const vehicle = payload.data?.vehicle;
+    return vehicle ? mapApiVehicleToCompanyVehicle(vehicle) : null;
+  });
 }
 
 export async function fetchCompanyVehicles(): Promise<CompanyVehicle[]> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_BASE_URL}/vehicles/mine?ownerType=Company`, {
-      cache: "no-store",
-      credentials: "include",
-      headers: {
-        ...buildAuthHeader(),
-      },
-    });
-  } catch {
-    throw new Error("Could not reach backend API at http://localhost:5000");
-  }
+  return coalesceRequest("company-fleet", async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/mine?ownerType=Company`, {
+        cache: "no-store",
+        credentials: "include",
+        headers: {
+          ...buildAuthHeader(),
+        },
+      });
+    } catch {
+      throw new Error("Could not reach backend API at http://localhost:5000");
+    }
 
-  if (!response.ok) {
-    const payload = (await response.json().catch(() => null)) as
-      | { error?: { message?: string } }
-      | null;
-    throw new Error(
-      payload?.error?.message ||
-        `Failed to load fleet vehicles (HTTP ${response.status})`,
-    );
-  }
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as
+        | { error?: { message?: string } }
+        | null;
+      throw new Error(
+        payload?.error?.message ||
+          `Failed to load fleet vehicles (HTTP ${response.status})`,
+      );
+    }
 
-  const payload = (await response.json()) as {
-    success?: boolean;
-    data?: { vehicles?: ApiVehicle[] };
-  };
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicles?: ApiVehicle[] };
+    };
 
-  const vehicles = Array.isArray(payload.data?.vehicles) ? payload.data.vehicles : [];
+    const vehicles = payload.data?.vehicles || [];
 
-  return vehicles
-    .filter((vehicle) => vehicle.ownerType === "Company")
-    .map(mapApiVehicleToCompanyVehicle);
+    return vehicles
+      .filter((vehicle) => vehicle.ownerType === "Company")
+      .map(mapApiVehicleToCompanyVehicle);
+  });
 }
 
 export async function updateCompanyVehicleById(

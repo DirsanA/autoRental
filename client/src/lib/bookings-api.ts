@@ -201,42 +201,48 @@ export async function initializeChapaCheckout(input: ChapaCheckoutInput) {
   return payload.data;
 }
 
+import { coalesceRequest } from "@/lib/api-coalesce";
+
 export async function fetchRenterBookings(
   filters: RenterBookingListFilters = {},
 ): Promise<RenterBookingListResult> {
-  const query = new URLSearchParams();
+  const cacheKey = `bookings-${JSON.stringify(filters)}`;
 
-  if (filters.search?.trim()) query.set("search", filters.search.trim());
-  if (filters.status) query.set("status", filters.status);
-  if (filters.paymentState) query.set("paymentState", filters.paymentState);
-  if (filters.page) query.set("page", String(filters.page));
-  if (filters.limit) query.set("limit", String(filters.limit));
+  return coalesceRequest(cacheKey, async () => {
+    const query = new URLSearchParams();
 
-  const response = await fetch(
-    `${API_BASE_URL}/bookings${query.toString() ? `?${query.toString()}` : ""}`,
-    buildRequestInit(),
-  );
+    if (filters.search?.trim()) query.set("search", filters.search.trim());
+    if (filters.status) query.set("status", filters.status);
+    if (filters.paymentState) query.set("paymentState", filters.paymentState);
+    if (filters.page) query.set("page", String(filters.page));
+    if (filters.limit) query.set("limit", String(filters.limit));
 
-  if (!response.ok) {
-    throw new Error(await parseApiError(response));
-  }
+    const response = await fetch(
+      `${API_BASE_URL}/bookings${query.toString() ? `?${query.toString()}` : ""}`,
+      buildRequestInit(),
+    );
 
-  const payload = (await response.json()) as {
-    data?: {
-      bookings?: RenterBookingListItem[];
-      pagination?: Partial<RenterBookingsPagination>;
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
+
+    const payload = (await response.json()) as {
+      data?: {
+        bookings?: RenterBookingListItem[];
+        pagination?: Partial<RenterBookingsPagination>;
+      };
     };
-  };
 
-  return {
-    bookings: payload.data?.bookings || [],
-    pagination: {
-      page: payload.data?.pagination?.page || filters.page || 1,
-      limit: payload.data?.pagination?.limit || filters.limit || 10,
-      total: payload.data?.pagination?.total || 0,
-      totalPages: payload.data?.pagination?.totalPages || 1,
-    },
-  };
+    return {
+      bookings: payload.data?.bookings || [],
+      pagination: {
+        page: payload.data?.pagination?.page || filters.page || 1,
+        limit: payload.data?.pagination?.limit || filters.limit || 10,
+        total: payload.data?.pagination?.total || 0,
+        totalPages: payload.data?.pagination?.totalPages || 1,
+      },
+    };
+  });
 }
 
 export async function verifyChapaBookingPayment(input: {
