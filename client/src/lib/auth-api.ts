@@ -132,22 +132,10 @@ export async function registerUser(input: {
   return payload.data;
 }
 
-let _clientSessionPromise: Promise<AuthSessionData | null> | null = null;
-let _clientSessionPromiseTime = 0;
+import { coalesceRequest } from "@/lib/api-coalesce";
 
 export async function fetchCurrentSession() {
-  const isClient = typeof window !== "undefined";
-  const now = Date.now();
-
-  if (
-    isClient &&
-    _clientSessionPromise &&
-    now - _clientSessionPromiseTime < 5000
-  ) {
-    return _clientSessionPromise;
-  }
-
-  const doFetch = async () => {
+  return coalesceRequest("auth-session", async () => {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
       method: "GET",
       credentials: "include",
@@ -167,14 +155,7 @@ export async function fetchCurrentSession() {
     const data = payload.data || null;
     writeCachedAuthSession(data);
     return data;
-  };
-
-  if (isClient) {
-    _clientSessionPromise = doFetch();
-    _clientSessionPromiseTime = now;
-  }
-
-  return doFetch();
+  });
 }
 
 export async function logout() {

@@ -51,7 +51,9 @@ export async function connectDatabase(): Promise<void> {
   const uri = getRequiredDatabaseUrl();
 
   try {
-    await mongoose.connect(uri);
+    await mongoose.connect(uri, {
+      maxPoolSize: 10, // Increased to handle more concurrent dashboard requests
+    });
     await connectAuthMongoClient();
     console.log("MongoDB connected successfully");
   } catch (error) {
