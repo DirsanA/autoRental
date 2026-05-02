@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { ProtectedRoute } from "@/components/ProtectedRoute";
 import { useSyncUserRoleState } from "@/hooks/use-sync-user-role-state";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { writeUserRoleState } from "@/lib/role-store";
@@ -13,14 +13,13 @@ export default function PeerHostLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const router = useRouter();
   const { isSyncing } = useSyncUserRoleState();
   const { activeRole, companyStatus, roles } = useUserRoleState();
   const [isInitialSidebarLoading, setIsInitialSidebarLoading] = useState(true);
-  const isCorrectingRole = !isSyncing && roles.peerhost && activeRole !== "peerhost";
-  const isRedirecting = !isSyncing && !roles.peerhost;
+  const isCorrectingRole =
+    !isSyncing && roles.peerhost && activeRole !== "peerhost";
   const isSidebarLoading =
-    isInitialSidebarLoading || isSyncing || isCorrectingRole || isRedirecting;
+    isInitialSidebarLoading || isSyncing || isCorrectingRole;
 
   useEffect(() => {
     if (isSyncing) return;
@@ -32,6 +31,7 @@ export default function PeerHostLayout({
     return () => window.clearTimeout(timeout);
   }, [isSyncing]);
 
+  // Ensure the active role is set to peerhost when visiting this layout
   useEffect(() => {
     if (isSyncing) return;
 
@@ -41,20 +41,17 @@ export default function PeerHostLayout({
         activeRole: "peerhost",
         companyStatus,
       });
-      return;
     }
-
-    if (!roles.peerhost) {
-      router.replace("/renter/dashboard");
-    }
-  }, [activeRole, companyStatus, isSyncing, roles, router]);
+  }, [activeRole, companyStatus, isSyncing, roles]);
 
   return (
-    <SidebarProvider suppressHydrationWarning>
-      <div className="relative flex h-dvh w-full">
-        <PeerToPeerSidebar isLoading={isSidebarLoading} />
-        <SidebarInset className="flex flex-col">{children}</SidebarInset>
-      </div>
-    </SidebarProvider>
+    <ProtectedRoute allowedRoles={["peerhost"]}>
+      <SidebarProvider suppressHydrationWarning>
+        <div className="relative flex h-dvh w-full">
+          <PeerToPeerSidebar isLoading={isSidebarLoading} />
+          <SidebarInset className="flex flex-col">{children}</SidebarInset>
+        </div>
+      </SidebarProvider>
+    </ProtectedRoute>
   );
 }
