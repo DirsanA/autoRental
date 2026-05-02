@@ -57,7 +57,7 @@ export class EmailService {
         </a>
         <p>Or copy and paste this URL into your browser:</p>
         <p>${url}</p>
-        <p>This link will expire in 1 hour.</p>
+        <p>This link will expire in 24 hours.</p>
         <hr style="border-top: 1px solid #eee; margin-top: 30px;">
         <p style="font-size: 12px; color: #666;">If you did not sign up for an account, please ignore this email.</p>
       </div>
@@ -83,7 +83,7 @@ export class EmailService {
         </a>
         <p>Or copy and paste this URL into your browser:</p>
         <p>${url}</p>
-        <p>This link will expire in 1 hour.</p>
+        <p>This link will expire in 2 hours.</p>
         <hr style="border-top: 1px solid #eee; margin-top: 30px;">
         <p style="font-size: 12px; color: #666;">If you did not request a password reset, you can safely ignore this email.</p>
       </div>
