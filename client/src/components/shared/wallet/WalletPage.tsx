@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -166,6 +167,7 @@ export function WalletPage({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      <Header />
       <Main className="gap-6 p-6 md:p-8">
         <div className="flex sm:flex-row flex-col sm:justify-between sm:items-start gap-2">
           <div>

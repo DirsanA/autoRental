@@ -69,6 +69,16 @@ export function PeerHostVehiclesPage({
     !providedVehicles && !providedLoadError,
   );
 
+  // Render-time state synchronization: 
+  // If the filter changes, reset the state immediately during the render phase.
+  // This avoids the "cascading render" warning triggered by updating state in useEffect.
+  const [prevFilter, setPrevFilter] = useState(filter);
+  if (filter !== prevFilter) {
+    setPrevFilter(filter);
+    setIsLoading(true);
+    setLoadError(null);
+  }
+
   useEffect(() => {
     // If we already have vehicles or a load error provided via props, 
     // we don't need to fetch anything. The state is already initialized 
@@ -79,8 +89,8 @@ export function PeerHostVehiclesPage({
 
     let cancelled = false;
 
-    setIsLoading(true);
-    setLoadError(null);
+    // Loading and error states are now handled during render synchronization 
+    // above if the filter changes.
 
     fetchPeerHostVehicles(filter)
       .then((nextVehicles) => {
