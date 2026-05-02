@@ -26,6 +26,7 @@ import {
 import { cn } from "@/lib/utils";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
+import { coalesceRequest } from "@/lib/api-coalesce";
 
 type Status = "not_submitted" | "pending" | "approved" | "rejected";
 type VerificationAudience = "renter" | "peerhost";
@@ -382,26 +383,31 @@ export function ProfileVerificationPage({
   useEffect(() => {
     let cancelled = false;
 
+
+
     async function loadVerificationState() {
       try {
-        const response = await fetch(`${apiBaseUrl}/verifications/me`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            ...buildAuthHeader(),
-          },
-          cache: "no-store",
+        const payload = await coalesceRequest("verifications-me", async () => {
+          const response = await fetch(`${apiBaseUrl}/verifications/me`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              ...buildAuthHeader(),
+            },
+            cache: "no-store",
+          });
+
+          const result = (await response.json().catch(() => null)) as
+            | VerificationApiResponse
+            | null;
+
+          if (!response.ok) {
+            throw new Error(
+              result?.error?.message || "Failed to load saved verification details",
+            );
+          }
+          return result;
         });
-
-        const payload = (await response.json().catch(() => null)) as
-          | VerificationApiResponse
-          | null;
-
-        if (!response.ok) {
-          throw new Error(
-            payload?.error?.message || "Failed to load saved verification details",
-          );
-        }
 
         if (cancelled) {
           return;
