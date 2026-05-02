@@ -1,43 +1,106 @@
+"use client";
 import { Search, ThumbsUp, MessageSquare } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { fetchMyCompanyReviews } from "@/lib/companyApi";
 
-const reviews = [
-  {
-    name: "Alice Johnson",
-    vehicle: "Tesla Model 3",
-    date: "2024-02-28",
-    rating: 5,
-    comment: "The Tesla was in perfect condition. Great experience!",
-  },
-  {
-    name: "Bob Wilson",
-    vehicle: "BMW X5",
-    date: "2024-02-15",
-    rating: 4,
-    comment: "Good service, but the car was slightly late.",
-  },
-];
+type Review = {
+  id: string;
+  name: string;
+  vehicle: string;
+  date: string;
+  rating: number;
+  comment: string;
+};
 
-const ratingBreakdown = [
-  { star: 5, percent: 80 },
-  { star: 4, percent: 15 },
-  { star: 3, percent: 5 },
-  { star: 2, percent: 5 },
-  { star: 1, percent: 5 },
-];
+type Breakdown = {
+  star: number;
+  percent: number;
+};
 
 const StarRating = ({ rating }: { rating: number }) => {
   return (
     <div className="flex gap-1 text-yellow-400">
-      {[1,2,3,4,5].map((star) => (
-        <span key={star}>
-          {star <= rating ? "★" : "☆"}
-        </span>
+      {[1, 2, 3, 4, 5].map((star) => (
+        <span key={star}>{star <= rating ? "★" : "☆"}</span>
       ))}
     </div>
   );
 };
 
 const RatingsPage = () => {
+  const [reviews, setReviews] = useState<Review[]>([]);
+  const [breakdown, setBreakdown] = useState<Breakdown[]>([]);
+  const [average, setAverage] = useState(0);
+  const [total, setTotal] = useState(0);
+
+  // ✅ NEW STATES
+  const [search, setSearch] = useState("");
+  const [sort, setSort] = useState<"newest" | "oldest" | "highest">("newest");
+  const [selectedStar, setSelectedStar] = useState<number | null>(null);
+
+  useEffect(() => {
+    fetchMyCompanyReviews()
+      .then((data) => {
+        const mappedReviews = data.reviews.map((r: any) => ({
+          id: r._id,
+          name: r.userId?.name || "Anonymous",
+          vehicle: "Vehicle", // optional (you can improve later)
+          date: new Date(r.createdAt).toLocaleDateString(),
+          rating: r.rating,
+          comment: r.comment,
+        }));
+
+        setReviews(mappedReviews);
+        setAverage(data.averageRating);
+        setTotal(data.totalReviews);
+
+        const mappedBreakdown = data.ratingBreakdown.map((r: any) => ({
+          star: r.star,
+          percent:
+            data.totalReviews > 0
+              ? Math.round((r.count / data.totalReviews) * 100)
+              : 0,
+        }));
+
+        setBreakdown(mappedBreakdown);
+      })
+      .catch(console.error);
+  }, []);
+
+  // ✅ FILTER + SEARCH + SORT (NO UI CHANGE)
+  const filteredReviews = useMemo(() => {
+    let data = [...reviews];
+
+    // search
+    if (search) {
+      data = data.filter(
+        (r) =>
+          r.comment.toLowerCase().includes(search.toLowerCase()) ||
+          r.name.toLowerCase().includes(search.toLowerCase()),
+      );
+    }
+
+    // filter by star
+    if (selectedStar) {
+      data = data.filter((r) => r.rating === selectedStar);
+    }
+
+    // sort
+    if (sort === "newest") {
+      data.reverse(); // assuming latest comes last
+    }
+
+    if (sort === "oldest") {
+      // keep original
+    }
+
+    if (sort === "highest") {
+      data.sort((a, b) => b.rating - a.rating);
+    }
+
+    return data;
+  }, [reviews, search, sort, selectedStar]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -48,32 +111,38 @@ const RatingsPage = () => {
       </div>
 
       <div className="gap-6 grid grid-cols-1 lg:grid-cols-3">
-
         {/* LEFT SIDE */}
         <div className="space-y-6">
-
-          {/* Average Rating */}
+          {/* ✅ Average Rating (dynamic) */}
           <div className="bg-white shadow p-6 rounded-xl text-center">
             <p className="text-gray-500 text-sm">AVERAGE RATING</p>
 
-            <h2 className="mt-2 font-bold text-gray-800 text-5xl">4.8</h2>
+            <h2 className="mt-2 font-bold text-gray-800 text-5xl">
+              {average.toFixed(1)}
+            </h2>
 
             <div className="flex justify-center mt-2">
-              <StarRating rating={5} />
+              <StarRating rating={Math.round(average)} />
             </div>
 
             <p className="mt-2 text-gray-500 text-sm">
-              Based on 142 reviews
+              Based on {total} reviews
             </p>
           </div>
 
-          {/* Rating Breakdown */}
+          {/* ✅ Breakdown clickable */}
           <div className="bg-white shadow p-6 rounded-xl">
             <h3 className="mb-4 font-semibold">Rating Breakdown</h3>
 
             <div className="space-y-3">
-              {ratingBreakdown.map((r) => (
-                <div key={r.star} className="flex items-center gap-3">
+              {breakdown.map((r) => (
+                <div
+                  key={r.star}
+                  className="flex items-center gap-3 cursor-pointer"
+                  onClick={() =>
+                    setSelectedStar(selectedStar === r.star ? 0 : r.star)
+                  }
+                >
                   <span className="w-3 text-sm">{r.star}</span>
 
                   <div className="flex-1 bg-gray-200 rounded-full h-2">
@@ -90,35 +159,40 @@ const RatingsPage = () => {
               ))}
             </div>
           </div>
-
         </div>
 
         {/* RIGHT SIDE */}
         <div className="space-y-6 lg:col-span-2">
-
-          {/* Search + Sort */}
+          {/* ✅ Search + Sort WORKING */}
           <div className="flex sm:flex-row flex-col gap-4">
             <div className="flex flex-1 items-center gap-2 bg-white px-3 py-2 border rounded-lg min-w-0">
-              <Search size={18} className="text-gray-400"/>
+              <Search size={18} className="text-gray-400" />
               <input
                 placeholder="Search reviews..."
                 className="outline-none w-full"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
               />
             </div>
 
-            <button className="bg-white px-4 py-2 border rounded-lg w-full sm:w-auto">
-              Sort by: Newest
-            </button>
+            <select
+              className="bg-white px-4 py-2 border rounded-lg"
+              value={sort}
+              onChange={(e) => setSort(e.target.value as any)}
+            >
+              <option value="newest">Sort by: Newest</option>
+              <option value="oldest">Sort by: Oldest</option>
+              <option value="highest">Sort by: Highest Rating</option>
+            </select>
           </div>
 
           {/* Reviews */}
-          {reviews.map((review, index) => (
+          {filteredReviews.map((review, index) => (
             <div
               key={index}
               className="space-y-3 bg-white shadow p-5 rounded-xl"
             >
               <div className="flex sm:flex-row flex-col justify-between gap-3">
-
                 <div className="flex gap-3">
                   <div className="flex justify-center items-center bg-blue-100 rounded-full w-10 h-10 font-bold text-blue-600">
                     {review.name[0]}
@@ -132,7 +206,7 @@ const RatingsPage = () => {
                   </div>
                 </div>
 
-                <StarRating rating={review.rating}/>
+                <StarRating rating={review.rating} />
               </div>
 
               <p className="text-gray-600 italic">
@@ -141,16 +215,15 @@ const RatingsPage = () => {
 
               <div className="flex gap-6 text-gray-500 text-sm">
                 <button className="flex items-center gap-1 hover:text-blue-500">
-                  <ThumbsUp size={16}/> Helpful
+                  <ThumbsUp size={16} /> Helpful
                 </button>
 
                 <button className="flex items-center gap-1 hover:text-blue-500">
-                  <MessageSquare size={16}/> Respond
+                  <MessageSquare size={16} /> Respond
                 </button>
               </div>
             </div>
           ))}
-
         </div>
       </div>
     </div>

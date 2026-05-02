@@ -216,4 +216,22 @@ export const companyController = {
       },
     });
   }),
+  getMyCompanyReviews: asyncHandler(async (req: Request, res: Response) => {
+  const user = requireRequestUser(req);
+
+  const company = await companyService.getByAuthUserId(user.id);
+
+  if (!company) {
+    throw ApiError.notFound("You don't have a registered company account");
+  }
+
+  const reviews = await companyService.getCompanyReviews(
+    company._id.toString()
+  );
+
+  res.json({
+    success: true,
+    data: reviews,
+  });
+}),
 };

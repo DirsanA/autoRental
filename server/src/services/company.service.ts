@@ -8,6 +8,7 @@ import type {
   CreateCompanyInput,
   UpdateCompanyInput,
 } from "../validators/company.validator.js";
+import { Review } from "../models/Review.js";
 
 type CompanyRegistrationAvailabilityInput = {
   authUserId?: string;
@@ -315,6 +316,51 @@ export class CompanyService {
     };
   }
 
+ 
+
+async getCompanyReviews(companyId: string) {
+  const vehicles = await Vehicle.find({
+    ownerType: "Company",
+    ownerId: companyId,
+  }).select("_id");
+
+  const vehicleIds = vehicles.map(v => v._id);
+
+  if (vehicleIds.length === 0) {
+    return {
+      averageRating: 0,
+      totalReviews: 0,
+      ratingBreakdown: [],
+      reviews: [],
+    };
+  }
+
+  const reviews = await Review.find({
+    vehicleId: { $in: vehicleIds },
+  })
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const totalReviews = reviews.length;
+
+  const totalRating = reviews.reduce((sum, r) => sum + r.rating, 0);
+
+  const averageRating = totalReviews
+    ? totalRating / totalReviews
+    : 0;
+
+  const breakdown = [1, 2, 3, 4, 5].map((star) => ({
+    star,
+    count: reviews.filter((r) => r.rating === star).length,
+  }));
+
+  return {
+    averageRating,
+    totalReviews,
+    ratingBreakdown: breakdown.reverse(),
+    reviews,
+  };
+};
   /**
    * Updates company profile data for the owning account only.
    */

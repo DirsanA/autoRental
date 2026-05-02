@@ -1,6 +1,22 @@
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
+export type CompanyReview = {
+  _id: string;
+  rating: number;
+  comment: string;
+  createdAt: string;
+  userId?: {
+    name?: string;
+    email?: string;
+  };
+};
 
+export type CompanyReviewsResponse = {
+  averageRating: number;
+  totalReviews: number;
+  ratingBreakdown: { star: number; count: number }[];
+  reviews: CompanyReview[];
+};
 const API_BASE_URL = resolveApiBaseUrl();
 
 function dataUrlToBlob(dataUrl: string) {
@@ -102,4 +118,22 @@ export const fetchCompanyDashboard = async (): Promise<CompanyDashboardData> => 
 
   const payload = await res.json();
   return payload.data.dashboard;
+};
+
+
+export const fetchMyCompanyReviews = async (): Promise<CompanyReviewsResponse> => {
+  const res = await fetch(`${API_BASE_URL}/companies/me/reviews`, {
+    credentials: "include",
+    headers: {
+      ...buildAuthHeader(),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.error?.message || "Failed to load reviews");
+  }
+
+  const payload = await res.json();
+  return payload.data;
 };

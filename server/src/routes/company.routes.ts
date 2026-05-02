@@ -33,7 +33,7 @@ export function createCompanyRoutes(auth: Auth): Router {
     authorize("manage", "all"),
     companyController.suspend,
   );
-
+router.get("/me/reviews", authenticate, companyController.getMyCompanyReviews);
   // Public routes
   router.get("/:id", companyController.getById);
   router.post(
@@ -42,6 +42,7 @@ export function createCompanyRoutes(auth: Auth): Router {
     upload.single("licenseDocument"),
     companyController.create,
   );
+
 
   return router;
 }
