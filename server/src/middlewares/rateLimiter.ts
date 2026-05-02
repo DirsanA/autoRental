@@ -6,7 +6,7 @@ import rateLimit from "express-rate-limit";
 // Applies a broad default throttle to reduce abuse across normal API traffic.
 export const generalLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100,
+  max: 1000, // Increased from 100 to support high-frequency dashboard updates
   standardHeaders: true,
   legacyHeaders: false,
   message: {
@@ -19,12 +19,12 @@ export const generalLimiter = rateLimit({
 });
 
 /**
- * Strict rate limiter for auth endpoints: 10 requests per 15 minutes.
+ * Strict rate limiter for auth endpoints: 500 requests per 15 minutes.
  */
 // Uses a tighter limit on auth routes to slow brute-force and credential stuffing attempts.
 export const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 100, //10
+  max: 500, // Increased from 100 to avoid blocking legitimate session checks
   standardHeaders: true,
   legacyHeaders: false,
   message: {
