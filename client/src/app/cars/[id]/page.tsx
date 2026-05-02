@@ -11,6 +11,7 @@ import {
   Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { CarLoadingState } from "@/components/shared/car-loading-state";
 
 import carMain from "@/assets/image.jpg";
 import car2 from "@/assets/car-1.jpg";
@@ -29,7 +30,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
-  fetchPeerHostVehicleById,
+  fetchMarketplaceVehicleById,
   fetchVehicleAvailability,
   fetchVehicleReviews,
 } from "@/components/peer-host/vehicles/api";
@@ -69,7 +70,7 @@ const Index = () => {
       setError(null);
 
       try {
-        const data = await fetchPeerHostVehicleById(vehicleId);
+        const data = await fetchMarketplaceVehicleById(vehicleId);
         if (cancelled) return;
 
         if (!data) {
@@ -162,10 +163,10 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+      <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-50">
         <Navbar />
-        <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20">
-          <p className="text-lg font-medium">Loading vehicle details...</p>
+        <main className="flex min-h-[80vh] items-center justify-center pt-20">
+          <CarLoadingState message="Fetching vehicle details..." />
         </main>
       </div>
     );

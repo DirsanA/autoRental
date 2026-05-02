@@ -114,6 +114,36 @@ export async function fetchPeerHostVehicles(filter?: VehicleFilterStatus) {
   });
 }
 
+export async function fetchMarketplaceVehicleById(id: string) {
+  return coalesceRequest(`marketplace-vehicle-${id}`, async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/marketplace/${id}`, {
+        cache: "no-store",
+      });
+    } catch {
+      throw new Error("Could not reach backend API");
+    }
+
+    if (response.status === 404) return null;
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as any;
+      throw new Error(payload?.error?.message || "Failed to load vehicle");
+    }
+
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicle?: ApiVehicle };
+    };
+
+    const vehicle = payload.data?.vehicle;
+    if (!vehicle) return null;
+
+    return mapApiVehicleToCard(vehicle);
+  });
+}
+
 export async function fetchPeerHostVehicleById(id: string) {
   return coalesceRequest(`vehicle-${id}`, async () => {
     let response: Response;

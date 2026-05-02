@@ -22,6 +22,8 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
+import { CarLoadingState } from "@/components/shared/car-loading-state";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 const API_BASE_URL = resolveApiBaseUrl();
 const SEARCH_SUGGESTIONS = ["Toyota", "Addis", "under 3000"];
@@ -35,10 +37,10 @@ type ApiVehicle = {
   price?: number;
   delivery?: string;
   availability?: string;
-  ownerType?: "User" | "Company";
-  photos?: {
-    front?: string;
-    gallery?: string[];
+  owner?: {
+    name: string;
+    image?: string;
+    type: "peerhost" | "company";
   };
 };
 
@@ -51,6 +53,11 @@ type VehicleListingCard = {
   year: number | null;
   image: string | StaticImageData;
   isCompany: boolean;
+  owner?: {
+    name: string;
+    image?: string;
+    type: "peerhost" | "company";
+  };
   aliases: string[];
   searchText: string;
 };
@@ -187,6 +194,7 @@ function toListingCard(vehicle: ApiVehicle, index: number): VehicleListingCard {
     year: typeof vehicle.year === "number" ? vehicle.year : null,
     image: buildVehicleImage(vehicle),
     isCompany,
+    owner: vehicle.owner,
     ...profile,
   };
 }
@@ -299,7 +307,7 @@ function VehicleCard({ vehicle }: { vehicle: VehicleListingCard }) {
         <div className="flex min-w-0 flex-col justify-between gap-5 px-2 py-4 lg:px-5">
           <div className="space-y-3">
             <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <h2 className="truncate text-xl font-bold leading-tight text-foreground dark:text-gray-100">
                   {vehicle.name}
                 </h2>
@@ -319,6 +327,24 @@ function VehicleCard({ vehicle }: { vehicle: VehicleListingCard }) {
               <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
                 <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
                 4.9
+              </div>
+            </div>
+
+            {/* Owner Summary Section */}
+            <div className="flex items-center gap-2.5 rounded-xl border border-slate-50 bg-slate-50/50 p-2 dark:border-slate-800/50 dark:bg-slate-800/30">
+              <Avatar className="h-8 w-8 border border-white shadow-sm dark:border-slate-700">
+                <AvatarImage src={vehicle.owner?.image} alt={vehicle.owner?.name} />
+                <AvatarFallback className="bg-blue-100 text-[10px] font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  {vehicle.owner?.name?.substring(0, 2).toUpperCase() || "PH"}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-xs font-bold text-slate-700 dark:text-slate-200">
+                  {vehicle.owner?.name}
+                </p>
+                <p className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  {vehicle.owner?.type === "company" ? "Rental Company" : "Peer Host"}
+                </p>
               </div>
             </div>
           </div>
@@ -364,7 +390,7 @@ function CarsListingContent() {
       setError(null);
 
       try {
-        const response = await fetch(`${API_BASE_URL}/vehicles`, {
+        const response = await fetch(`${API_BASE_URL}/vehicles/marketplace`, {
           cache: "no-store",
           credentials: "include",
         });
@@ -506,14 +532,7 @@ function CarsListingContent() {
         ) : null}
 
         {loading ? (
-          <div className="grid gap-5">
-            {Array.from({ length: 5 }).map((_, index) => (
-              <div
-                key={index}
-                className="h-[230px] animate-pulse rounded-2xl bg-white shadow-sm dark:bg-gray-800"
-              />
-            ))}
-          </div>
+          <CarLoadingState message="Fetching the best rides for you..." className="py-20" />
         ) : null}
 
         {!loading && error ? (
@@ -571,8 +590,8 @@ export default function CarsListingPage() {
   return (
     <Suspense
       fallback={
-        <div className="flex min-h-screen items-center justify-center bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
-          <Loader2 className="h-6 w-6 animate-spin" />
+        <div className="flex min-h-screen items-center justify-center bg-white dark:bg-gray-900">
+          <CarLoadingState message="Preparing marketplace..." />
         </div>
       }
     >

@@ -29,9 +29,22 @@ function getRequestedOwnerType(query: Request["query"]) {
 export const vehicleController = {
   /**
    * Lists vehicles with an optional status shortcut filter.
+   * Standard endpoint - no owner enrichment.
    */
   list: asyncHandler(async (req: Request, res: Response) => {
     const vehicles = await vehicleService.list(getVehicleFilter(req.query));
+
+    res.json({
+      success: true,
+      data: { vehicles },
+    });
+  }),
+
+  /**
+   * Lists vehicles for the public marketplace with enriched owner data.
+   */
+  listMarketplace: asyncHandler(async (req: Request, res: Response) => {
+    const vehicles = await vehicleService.listPublic(getVehicleFilter(req.query));
 
     res.json({
       success: true,
@@ -61,9 +74,26 @@ export const vehicleController = {
 
   /**
    * Returns a single vehicle by id.
+   * Standard endpoint - no owner enrichment.
    */
   getById: asyncHandler(async (req: Request, res: Response) => {
     const vehicle = await vehicleService.getById(req.params.id as string);
+
+    if (!vehicle) {
+      throw ApiError.notFound("Vehicle not found");
+    }
+
+    res.json({
+      success: true,
+      data: { vehicle },
+    });
+  }),
+
+  /**
+   * Returns a single vehicle for marketplace with enriched owner data.
+   */
+  getMarketplaceById: asyncHandler(async (req: Request, res: Response) => {
+    const vehicle = await vehicleService.getPublicById(req.params.id as string);
 
     if (!vehicle) {
       throw ApiError.notFound("Vehicle not found");
