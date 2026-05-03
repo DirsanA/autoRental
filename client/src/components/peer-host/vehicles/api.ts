@@ -17,6 +17,11 @@ type ApiVehicle = {
     image?: string;
     type?: "peerhost" | "company";
   };
+  pickupAddress?: string;
+  returnAddress?: string;
+  pickupGeo?: { lat?: number; lng?: number; precision?: "exact" | "approx" };
+  returnGeo?: { lat?: number; lng?: number; precision?: "exact" | "approx" };
+  companyLocation?: { lat?: number; lng?: number; address?: string | null };
   make?: string;
   model?: string;
   year?: number;
@@ -96,6 +101,35 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     galleryImages,
     ratingAvg: 0,
     ratingCount: 0,
+    pickupAddress: vehicle.pickupAddress,
+    returnAddress: vehicle.returnAddress,
+    pickupGeo:
+      typeof vehicle.pickupGeo?.lat === "number" &&
+      typeof vehicle.pickupGeo?.lng === "number"
+        ? {
+            lat: vehicle.pickupGeo.lat,
+            lng: vehicle.pickupGeo.lng,
+            precision: vehicle.pickupGeo.precision,
+          }
+        : undefined,
+    returnGeo:
+      typeof vehicle.returnGeo?.lat === "number" &&
+      typeof vehicle.returnGeo?.lng === "number"
+        ? {
+            lat: vehicle.returnGeo.lat,
+            lng: vehicle.returnGeo.lng,
+            precision: vehicle.returnGeo.precision,
+          }
+        : undefined,
+    companyLocation:
+      typeof vehicle.companyLocation?.lat === "number" &&
+      typeof vehicle.companyLocation?.lng === "number"
+        ? {
+            lat: vehicle.companyLocation.lat,
+            lng: vehicle.companyLocation.lng,
+            address: vehicle.companyLocation.address ?? null,
+          }
+        : undefined,
   };
 }
 

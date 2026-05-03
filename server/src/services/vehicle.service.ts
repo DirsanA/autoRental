@@ -17,6 +17,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { companyService } from "./company.service.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
+import { geocodingService } from "./geocoding.service.js";
 
 const VEHICLE_FILTER_STATUS: Record<
   "available" | "rented" | "maintenance",
@@ -168,11 +169,15 @@ export class VehicleService {
 
     // Fetch Company owners
     const companyOwnersMap = new Map<string, any>();
+    const companyLocationsMap = new Map<
+      string,
+      { lat: number; lng: number; address?: string | null }
+    >();
     if (companyOwnerIds.size > 0) {
       const companies = await Company.find({
         _id: { $in: Array.from(companyOwnerIds) },
       })
-        .select("name logoUrl")
+        .select("name logoUrl contactInfo.address location")
         .lean();
 
       for (const c of companies) {
@@ -182,6 +187,30 @@ export class VehicleService {
           image: c.logoUrl,
           type: "company",
         });
+
+        const coords = Array.isArray(c.location?.coordinates)
+          ? c.location.coordinates
+          : null;
+        const lng =
+          typeof coords?.[0] === "number" ? (coords?.[0] as number) : null;
+        const lat =
+          typeof coords?.[1] === "number" ? (coords?.[1] as number) : null;
+
+        if (typeof lat === "number" && typeof lng === "number") {
+          companyLocationsMap.set(c._id.toString(), {
+            lat,
+            lng,
+            address: c.contactInfo?.address ?? null,
+          });
+        } else if (c.contactInfo?.address) {
+          const derived = await geocodingService.geocode(c.contactInfo.address);
+          if (derived) {
+            companyLocationsMap.set(c._id.toString(), {
+              ...derived,
+              address: c.contactInfo.address,
+            });
+          }
+        }
       }
     }
 
@@ -203,6 +232,10 @@ export class VehicleService {
         ...v,
         id: v._id?.toString() || v.id,
         owner: ownerSummary,
+        companyLocation:
+          v.ownerType === "Company"
+            ? companyLocationsMap.get(ownerIdStr) || undefined
+            : undefined,
       };
     });
   }
@@ -255,6 +288,37 @@ export class VehicleService {
     const updateData: UpdateVehicleInput = { ...data };
     if (Array.isArray(updateData.features)) {
       updateData.features = normalizeFeatures(updateData.features);
+    }
+
+    // If peerhost updates pickup/return addresses, attempt to refresh geocodes.
+    if (typeof updateData.pickupAddress === "string" || typeof updateData.returnAddress === "string") {
+      const current = await Vehicle.findById(id).select("ownerType pickupAddress returnAddress").lean();
+      if (current?.ownerType === "User") {
+        const pickupAddress =
+          typeof updateData.pickupAddress === "string"
+            ? updateData.pickupAddress
+            : current.pickupAddress;
+        const returnAddress =
+          typeof updateData.returnAddress === "string"
+            ? updateData.returnAddress
+            : current.returnAddress;
+
+        if (pickupAddress?.trim()) {
+          const coords = await geocodingService.geocode(pickupAddress);
+          if (coords) {
+            (updateData as any).pickupGeo = { ...coords, precision: "exact" as const };
+            (updateData as any).geoUpdatedAt = new Date();
+          }
+        }
+
+        if (returnAddress?.trim()) {
+          const coords = await geocodingService.geocode(returnAddress);
+          if (coords) {
+            (updateData as any).returnGeo = { ...coords, precision: "exact" as const };
+            (updateData as any).geoUpdatedAt = new Date();
+          }
+        }
+      }
     }
 
     const vehicle = await Vehicle.findByIdAndUpdate(id, updateData, {
@@ -333,8 +397,8 @@ export class VehicleService {
         gallery: [front, back, side, interior],
       },
       documents: {
-        ownership,
-        insurance,
+        ...(ownership ? { ownership } : {}),
+        ...(insurance ? { insurance } : {}),
       },
     };
   }
@@ -420,6 +484,18 @@ export class VehicleService {
           : "AVAILABLE"
         : "PENDING_APPROVAL";
 
+    const pickupAddress = data.pickupAddress?.trim();
+    const returnAddress = data.returnAddress?.trim();
+    const geoUpdatedAt = new Date();
+    const pickupGeo =
+      ownerType === "User" && pickupAddress
+        ? await geocodingService.geocode(pickupAddress)
+        : null;
+    const returnGeo =
+      ownerType === "User" && returnAddress
+        ? await geocodingService.geocode(returnAddress)
+        : null;
+
     return Vehicle.create({
       ownerId,
       ownerType,
@@ -439,6 +515,12 @@ export class VehicleService {
       monthlyDiscount: data.monthlyDiscount,
       availability: data.availability,
       delivery: data.delivery,
+      pickupAddress: pickupAddress || undefined,
+      returnAddress: returnAddress || undefined,
+      pickupGeo: pickupGeo ? { ...pickupGeo, precision: "exact" } : undefined,
+      returnGeo: returnGeo ? { ...returnGeo, precision: "exact" } : undefined,
+      geoUpdatedAt:
+        pickupGeo || returnGeo ? geoUpdatedAt : undefined,
       photos: assets.photos,
       documents: assets.documents,
       status: initialStatus,

@@ -49,8 +49,21 @@ const Index = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const params = useParams<{ id: string }>();
-  const [reviews, setReviews] = useState<null[]>([]);
-  const [ratingStats, setRatingStats] = useState<null>(null);
+  const [reviews, setReviews] = useState<
+    Array<{
+      id?: string;
+      name?: string;
+      image?: string | null;
+      rating: number;
+      comment?: string;
+      createdAt: string;
+    }>
+  >([]);
+  const [ratingStats, setRatingStats] = useState<{
+    avg: number;
+    count: number;
+    breakdown: Record<string, number>;
+  } | null>(null);
   const router = useRouter();
 
   useEffect(() => {
@@ -150,6 +163,7 @@ const Index = () => {
       host: {
         name: vehicle?.owner?.name || "Vehicle Owner",
         image: vehicle?.owner?.image,
+        allStar: false,
         typeLabel:
           vehicle?.owner?.type === "company"
             ? "Rental Company"
@@ -397,7 +411,7 @@ const Index = () => {
                     <div key={i} className="flex gap-4">
                       {/* Avatar */}
                       <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-bold">
-                        {review.name?.charAt(0) ?? "U"}
+                        {review?.name?.charAt(0) ?? "U"}
                       </div>
 
                       <div className="flex-1">
@@ -418,16 +432,16 @@ const Index = () => {
                         {/* Name + Date */}
                         <div className="flex items-center gap-2">
                           <h4 className="text-gray-900 dark:text-gray-300">
-                            {review.name}
+                            {review?.name}
                           </h4>
                           <span className="text-sm text-gray-500">
-                            {new Date(review.createdAt).toLocaleDateString()}
+                            {new Date(review?.createdAt).toLocaleDateString()}
                           </span>
                         </div>
 
                         {/* Comment */}
                         <p className="mt-2 text-gray-700 dark:text-gray-300 text-sm">
-                          {review.comment}
+                          {review?.comment}
                         </p>
                       </div>
                     </div>
@@ -453,7 +467,33 @@ const Index = () => {
 
         {/* Map Section */}
         <div className="mt-10 border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 pt-10">
-          <MapSection location={car.location} />
+          <MapSection
+            locationText={
+              vehicle?.ownerType === "Company"
+                ? vehicle.companyLocation?.address ||
+                  vehicle.location ||
+                  "Pickup & return at company location"
+                : vehicle?.pickupAddress ||
+                  vehicle?.returnAddress ||
+                  vehicle?.location ||
+                  "Pickup & return location"
+            }
+            coords={(() => {
+              const raw =
+                vehicle?.ownerType === "Company"
+                  ? vehicle.companyLocation
+                  : vehicle?.pickupGeo || vehicle?.returnGeo;
+
+              if (!raw) return undefined;
+              const lat = typeof raw.lat === "number" ? raw.lat : undefined;
+              const lng = typeof raw.lng === "number" ? raw.lng : undefined;
+              if (typeof lat !== "number" || typeof lng !== "number") return undefined;
+
+              // Approximate display for public listing: ~2 decimals ≈ 1km.
+              const round = (v: number) => Math.round(v * 100) / 100;
+              return { lat: round(lat), lng: round(lng) };
+            })()}
+          />
         </div>
 
         {/* Similar Cars */}
