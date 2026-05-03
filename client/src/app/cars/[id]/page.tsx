@@ -2,12 +2,11 @@
 import { useEffect, useMemo, useState } from "react";
 import {
   Star,
-  Users,
   Grid,
   Heart,
   Fuel,
   Settings2,
-  Gauge,
+  CarFront,
   Award,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -19,9 +18,7 @@ import car3 from "@/assets/car-2.jpg";
 import car4 from "@/assets/car-3.jpg";
 import car5 from "@/assets/car-4.jpg";
 
-import ImageGallery from "@/components/ImageGallery";
 import BookingCard from "@/components/BookingCard";
-import HostSection from "@/components/HostSection";
 import CarFeatures from "@/components/CarFeatures";
 import MapSection from "@/components/MapSection";
 import PhotoModal from "@/components/PhototModal";
@@ -29,8 +26,9 @@ import Navbar from "@/components/navbar";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
-  fetchMarketplaceVehicleById,
+  fetchMarketplaceVehicleByIdWithOwner,
   fetchVehicleAvailability,
   fetchVehicleReviews,
 } from "@/components/peer-host/vehicles/api";
@@ -70,7 +68,7 @@ const Index = () => {
       setError(null);
 
       try {
-        const data = await fetchMarketplaceVehicleById(vehicleId);
+        const data = await fetchMarketplaceVehicleByIdWithOwner(vehicleId);
         if (cancelled) return;
 
         if (!data) {
@@ -138,9 +136,8 @@ const Index = () => {
       rating:
         vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
       trips: vehicle?.ratingCount ?? 0,
-      seats: vehicle?.seats ?? 5,
+      model: vehicle?.model ?? "N/A",
       fuel: vehicle?.fuel ?? "Petrol",
-      mpg: 32,
       transmission: vehicle?.transmission ?? "Automatic",
       location: vehicle?.location ?? "Addis Ababa",
       pricePerMonth: dailyRate * 30,
@@ -151,12 +148,18 @@ const Index = () => {
         vehicle?.description ||
         "A clean, comfortable rental car suitable for city rides, airport pickups, and long drives.",
       host: {
-        name: "Verified Host",
-        rating: 4.9,
-        trips: 120,
-        joined: "Dec 2024",
-        allStar: true,
-        image: car2.src,
+        name: vehicle?.owner?.name || "Vehicle Owner",
+        image: vehicle?.owner?.image,
+        typeLabel:
+          vehicle?.owner?.type === "company"
+            ? "Rental Company"
+            : vehicle?.owner?.type === "peerhost"
+              ? "Peer Host"
+              : vehicle?.ownerType === "Company"
+                ? "Rental Company"
+                : vehicle?.ownerType === "User"
+                  ? "Peer Host"
+                  : undefined,
       },
     };
   }, [vehicle]);
@@ -285,13 +288,10 @@ const Index = () => {
             {/* Feature Badges */}
             <div className="flex flex-wrap gap-3 mt-6 mb-6">
               <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-blue-50 text-blue-600 font-semibold shadow-sm">
-                <Users className="w-4 h-4" /> {car.seats} seats
+                <CarFront className="w-4 h-4" /> {car.model}
               </span>
               <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-green-50 text-green-600 font-semibold shadow-sm">
                 <Fuel className="w-4 h-4" /> {car.fuel}
-              </span>
-              <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-indigo-50 text-indigo-600 font-semibold shadow-sm">
-                <Gauge className="w-4 h-4" /> {car.mpg} MPG
               </span>
               <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-yellow-50 text-yellow-600 font-semibold shadow-sm">
                 <Settings2 className="w-4 h-4" /> {car.transmission}
@@ -299,7 +299,28 @@ const Index = () => {
             </div>
 
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
-            <HostSection host={car.host} />
+            <div className="py-2">
+              <h2 className="text-xl font-bold font-heading mb-4">Hosted by</h2>
+              <div className="flex items-center gap-2.5 rounded-xl border border-slate-50 bg-slate-50/50 p-3 dark:border-slate-800/50 dark:bg-slate-800/30">
+                <Avatar className="h-12 w-12 border border-white shadow-sm dark:border-slate-700">
+                  <AvatarImage src={car.host.image} alt={car.host.name} />
+                  <AvatarFallback className="bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                    {car.host.name?.substring(0, 2).toUpperCase() || "PH"}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {car.host.name}
+                  </p>
+                  <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                    {car.host.typeLabel ||
+                      (vehicle?.owner?.type === "company"
+                        ? "Rental Company"
+                        : "Peer Host")}
+                  </p>
+                </div>
+              </div>
+            </div>
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
             <CarFeatures features={vehicle?.features} />
             <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />

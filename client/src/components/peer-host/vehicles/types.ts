@@ -24,9 +24,17 @@ export type VehicleAvailabilityBlock = {
 
 export type VehicleFilterStatus = "available" | "rented" | "maintenance";
 
+export type VehicleOwnerSummary = {
+  id?: string;
+  name: string;
+  image?: string;
+  type?: "peerhost" | "company";
+};
+
 export type Vehicle = {
   id: string;
   ownerType?: "User" | "Company";
+  owner?: VehicleOwnerSummary;
   make: string;
   model: string;
   year: number;

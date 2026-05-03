@@ -11,6 +11,12 @@ import { coalesceRequest } from "@/lib/api-coalesce";
 type ApiVehicle = {
   id: string;
   ownerType?: "User" | "Company";
+  owner?: {
+    id?: string;
+    name?: string;
+    image?: string;
+    type?: "peerhost" | "company";
+  };
   make?: string;
   model?: string;
   year?: number;
@@ -65,6 +71,14 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
   return {
     id: vehicle.id,
     ownerType: vehicle.ownerType,
+    owner: vehicle.owner?.name
+      ? {
+          id: vehicle.owner.id,
+          name: vehicle.owner.name,
+          image: vehicle.owner.image,
+          type: vehicle.owner.type,
+        }
+      : undefined,
     make: vehicle.make || "Unknown",
     model: vehicle.model || "Vehicle",
     year: vehicle.year || new Date().getFullYear(),
@@ -83,6 +97,25 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     ratingAvg: 0,
     ratingCount: 0,
   };
+}
+
+function mapApiVehicleToMarketplaceDetail(vehicle: ApiVehicle): Vehicle {
+  const mapped = mapApiVehicleToCard(vehicle);
+
+  // Marketplace endpoints can return `owner` summary. Preserve it whenever present.
+  if (vehicle.owner) {
+    const name = vehicle.owner.name?.trim();
+    mapped.owner = name
+      ? {
+          id: vehicle.owner.id,
+          name,
+          image: vehicle.owner.image,
+          type: vehicle.owner.type,
+        }
+      : mapped.owner;
+  }
+
+  return mapped;
 }
 
 const API_BASE_URL = resolveApiBaseUrl();
@@ -128,7 +161,9 @@ export async function fetchMarketplaceVehicleById(id: string) {
     if (response.status === 404) return null;
 
     if (!response.ok) {
-      const payload = (await response.json().catch(() => null)) as any;
+      const payload = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
       throw new Error(payload?.error?.message || "Failed to load vehicle");
     }
 
@@ -141,6 +176,73 @@ export async function fetchMarketplaceVehicleById(id: string) {
     if (!vehicle) return null;
 
     return mapApiVehicleToCard(vehicle);
+  });
+}
+
+export async function fetchMarketplaceVehicleByIdWithOwner(id: string) {
+  return coalesceRequest(`marketplace-vehicle-with-owner-${id}`, async () => {
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE_URL}/vehicles/marketplace/${id}`, {
+        cache: "no-store",
+      });
+    } catch {
+      throw new Error("Could not reach backend API");
+    }
+
+    if (response.status === 404) return null;
+
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        error?: { message?: string };
+      } | null;
+      throw new Error(payload?.error?.message || "Failed to load vehicle");
+    }
+
+    const payload = (await response.json()) as {
+      success?: boolean;
+      data?: { vehicle?: ApiVehicle };
+    };
+
+    const vehicle = payload.data?.vehicle;
+    if (!vehicle) return null;
+
+    const mapped = mapApiVehicleToMarketplaceDetail(vehicle);
+
+    // Safety net: if detail endpoint ever returns a placeholder owner but the listing
+    // endpoint has the real owner summary, hydrate owner from the listing payload.
+    const looksLikePlaceholderOwner =
+      mapped.owner?.name &&
+      (mapped.owner.name === "Peer Host" || mapped.owner.name === "Rental Company") &&
+      !mapped.owner.image;
+
+    if (looksLikePlaceholderOwner) {
+      try {
+        const listResponse = await fetch(`${API_BASE_URL}/vehicles/marketplace`, {
+          cache: "no-store",
+        });
+        if (listResponse.ok) {
+          const listPayload = (await listResponse.json()) as {
+            data?: { vehicles?: ApiVehicle[] };
+          };
+          const match = listPayload.data?.vehicles?.find(
+            (item) => item?.id === vehicle.id,
+          );
+          if (match?.owner?.name) {
+            mapped.owner = {
+              id: match.owner.id,
+              name: match.owner.name,
+              image: match.owner.image,
+              type: match.owner.type,
+            };
+          }
+        }
+      } catch {
+        // Ignore secondary owner hydration failures.
+      }
+    }
+
+    return mapped;
   });
 }
 
