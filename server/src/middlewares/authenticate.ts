@@ -4,7 +4,10 @@ import type { Auth } from "../config/auth.js";
 import mongoose from "mongoose";
 import { ObjectId } from "mongodb";
 import { getMongoClient } from "../config/database.js";
+import { Role } from "../models/Role.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
+import { AccountType } from "../models/User.js";
+import { SYSTEM_ROLES } from "../config/constants.js";
 import {
   getBearerToken,
   setRequestAuth,
@@ -50,6 +53,42 @@ async function findSessionByToken(token: string): Promise<TokenSession | null> {
   }) as Promise<TokenSession | null>;
 }
 
+async function ensureDefaultUserRole(authUserId: string) {
+  const user = await userPersistenceService.findByAuthIdWithRoles(authUserId);
+  if (!user) {
+    return null;
+  }
+
+  if (user.accountType !== AccountType.USER) {
+    return user;
+  }
+
+  const roles = Array.isArray(user.roles) ? user.roles : [];
+  const hasPortalRole = roles.some((role) => {
+    const name = String((role as { name?: string } | undefined)?.name || "").toLowerCase();
+    return (
+      name === SYSTEM_ROLES.RENTER ||
+      name === SYSTEM_ROLES.PEERHOST ||
+      name === SYSTEM_ROLES.ADMIN
+    );
+  });
+
+  if (hasPortalRole) {
+    return user;
+  }
+
+  const renterRole = await Role.findOne({ name: SYSTEM_ROLES.RENTER })
+    .select("_id")
+    .lean();
+
+  if (!renterRole?._id) {
+    return user;
+  }
+
+  await userPersistenceService.addRole(authUserId, renterRole._id);
+  return userPersistenceService.findByAuthIdWithRoles(authUserId);
+}
+
 /**
  * Creates an authentication middleware that resolves better-auth sessions.
  */
@@ -61,7 +100,7 @@ export function createAuthMiddleware(auth: Auth) {
       });
 
       if (session) {
-        const user = await userPersistenceService.findByAuthId(session.user.id);
+        const user = await ensureDefaultUserRole(session.user.id);
         if (user) {
           setRequestAuth(
             req,

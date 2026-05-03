@@ -59,7 +59,16 @@ export function authorize(action: AppActions, subject: AppSubjects) {
       // and check if they are allowed to perform this exact action on this subject.
       const ability = await authPermissionService.getAbilityForUser(user.authUserId || user.id);
 
-      if (!ability.can(action, subject)) {
+      const hasDirectSubjectAccess = ability.can(action, subject);
+      const hasConditionalSubjectAccess = ability
+        .rulesFor(action, subject)
+        .some((rule) => !rule.inverted);
+
+      // Route-level checks only know the subject type, not the specific record.
+      // Conditional ownership rules such as { renterId: currentUser } should still
+      // allow the request to reach the service layer, where the actual record/query
+      // scoping is enforced.
+      if (!hasDirectSubjectAccess && !hasConditionalSubjectAccess) {
         next(ApiError.forbidden(`Insufficient permissions to ${action} ${subject}`));
         return;
       }
