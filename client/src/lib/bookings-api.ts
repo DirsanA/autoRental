@@ -104,6 +104,7 @@ export type RenterBookingPaymentState = "pending" | "paid" | "failed";
 export type RenterBookingListItem = {
   id: string;
   bookingId: string;
+  renterId?: string;
   status: RenterBookingStatus;
   paymentState: RenterBookingPaymentState;
   startTime: string | null;
@@ -133,6 +134,12 @@ export type RenterBookingListItem = {
     paidAt: string | null;
     lastVerifiedAt: string | null;
   };
+  renter?: {
+    id: string;
+    name: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
   vehicle: {
     id: string;
     make: string | null;
@@ -162,6 +169,20 @@ export type RenterBookingListFilters = {
 
 export type RenterBookingListResult = {
   bookings: RenterBookingListItem[];
+  pagination: RenterBookingsPagination;
+};
+
+export type PeerHostBookingListItem = RenterBookingListItem & {
+  renter: {
+    id: string;
+    name: string;
+    phone: string | null;
+    email: string | null;
+  } | null;
+};
+
+export type PeerHostBookingListResult = {
+  bookings: PeerHostBookingListItem[];
   pagination: RenterBookingsPagination;
 };
 
@@ -229,6 +250,50 @@ export async function fetchRenterBookings(
     const payload = (await response.json()) as {
       data?: {
         bookings?: RenterBookingListItem[];
+        pagination?: Partial<RenterBookingsPagination>;
+      };
+    };
+
+    return {
+      bookings: payload.data?.bookings || [],
+      pagination: {
+        page: payload.data?.pagination?.page || filters.page || 1,
+        limit: payload.data?.pagination?.limit || filters.limit || 10,
+        total: payload.data?.pagination?.total || 0,
+        totalPages: payload.data?.pagination?.totalPages || 1,
+      },
+    };
+  });
+}
+
+export async function fetchPeerHostBookings(
+  filters: RenterBookingListFilters = {},
+  options?: { cacheKey?: string },
+): Promise<PeerHostBookingListResult> {
+  const cacheKey =
+    options?.cacheKey || `peerhost-bookings-${JSON.stringify(filters)}`;
+
+  return coalesceRequest(cacheKey, async () => {
+    const query = new URLSearchParams();
+
+    if (filters.search?.trim()) query.set("search", filters.search.trim());
+    if (filters.status) query.set("status", filters.status);
+    if (filters.paymentState) query.set("paymentState", filters.paymentState);
+    if (filters.page) query.set("page", String(filters.page));
+    if (filters.limit) query.set("limit", String(filters.limit));
+
+    const response = await fetch(
+      `${API_BASE_URL}/bookings/peerhost${query.toString() ? `?${query.toString()}` : ""}`,
+      buildRequestInit(),
+    );
+
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
+
+    const payload = (await response.json()) as {
+      data?: {
+        bookings?: PeerHostBookingListItem[];
         pagination?: Partial<RenterBookingsPagination>;
       };
     };

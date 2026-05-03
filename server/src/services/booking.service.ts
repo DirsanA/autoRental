@@ -2,6 +2,7 @@ import { Booking, type BookingDocument } from "../models/Booking.js";
 import { Transaction } from "../models/Transaction.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Review } from "../models/Review.js";
+import { User } from "../models/User.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { chapaService } from "./chapa.service.js";
 import { walletService } from "./wallet.service.js";
@@ -155,7 +156,7 @@ function mapPaymentStateToStatus(value?: "pending" | "paid" | "failed") {
   }
 }
 
-function mapRenterBookingListItem(booking: Record<string, any>) {
+function mapBookingListItem(booking: Record<string, any>) {
   const payment = booking.payment || {};
 
   const vehicle =
@@ -740,7 +741,129 @@ export class BookingService {
 
     return {
       bookings: bookings.map((booking) =>
-        mapRenterBookingListItem(booking as Record<string, any>),
+        mapBookingListItem(booking as Record<string, any>),
+      ),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  async listPeerHostBookings(
+    caller: RequestUser,
+    query: RenterBookingListQueryInput,
+  ) {
+    const host = await userPersistenceService.findByAuthId(
+      caller.authUserId || caller.id,
+    );
+
+    if (!host) {
+      throw ApiError.notFound("Authenticated user account was not found");
+    }
+
+    const ownedVehicles = await Vehicle.find({
+      ownerId: host._id,
+      ownerType: "User",
+    })
+      .select("_id")
+      .lean();
+
+    const ownedVehicleIds = ownedVehicles.map((vehicle) => vehicle._id);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    if (ownedVehicleIds.length === 0) {
+      return {
+        bookings: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 1,
+        },
+      };
+    }
+
+    const filter: Record<string, unknown> = {
+      vehicleId: { $in: ownedVehicleIds },
+    };
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const paymentStatus = mapPaymentStateToStatus(query.paymentState);
+    if (paymentStatus) {
+      filter["payment.status"] = paymentStatus;
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), "i");
+      const [matchingVehicles, matchingRenters] = await Promise.all([
+        Vehicle.find({
+          ownerId: host._id,
+          ownerType: "User",
+          $or: [{ make: regex }, { model: regex }, { plate: regex }],
+        })
+          .select("_id")
+          .lean(),
+        User.find({
+          $or: [
+            { name: regex },
+            { firstName: regex },
+            { lastName: regex },
+            { email: regex },
+            { phoneNumber: regex },
+          ],
+        })
+          .select("_id")
+          .lean(),
+      ]);
+
+      const matchingVehicleIds = matchingVehicles.map((vehicle) => vehicle._id);
+      const matchingRenterIds = matchingRenters.map((renter) => renter._id);
+      const orFilters: Array<Record<string, unknown>> = [
+        { bookingId: regex },
+        { pickupAddress: regex },
+        { returnAddress: regex },
+      ];
+
+      if (matchingVehicleIds.length > 0) {
+        orFilters.push({ vehicleId: { $in: matchingVehicleIds } });
+      }
+
+      if (matchingRenterIds.length > 0) {
+        orFilters.push({ renterId: { $in: matchingRenterIds } });
+      }
+
+      filter.$or = orFilters;
+    }
+
+    const skip = (page - 1) * limit;
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter as any)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "vehicleId",
+          select: "make model year plate availability delivery photos",
+        })
+        .populate({
+          path: "renterId",
+          select: "name firstName lastName email phoneNumber profilePicture",
+        })
+        .lean(),
+      Booking.countDocuments(filter as any),
+    ]);
+
+    return {
+      bookings: bookings.map((booking) =>
+        mapBookingListItem(booking as Record<string, any>),
       ),
       pagination: {
         page,
@@ -890,7 +1013,7 @@ export class BookingService {
       throw ApiError.notFound("Booking not found");
     }
 
-    return mapRenterBookingListItem(booking as Record<string, any>);
+    return mapBookingListItem(booking as Record<string, any>);
   }
 
   async createReview(

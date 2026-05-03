@@ -30,6 +30,15 @@ export function createBookingRoutes(auth: Auth): Router {
     bookingController.listRenterBookings,
   );
 
+  router.get(
+    "/peerhost",
+    authenticate,
+    requireAccountType(AccountType.USER),
+    authorize("read", "Booking"),
+    validate({ query: renterBookingListQuerySchema }),
+    bookingController.listPeerHostBookings,
+  );
+
   router.post(
     "/checkout/chapa",
     authenticate,

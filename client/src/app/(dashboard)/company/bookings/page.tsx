@@ -1,28 +1,24 @@
 "use client";
+
 import {
-  Search,
-  Filter,
-  Check,
-  X,
-  Clock,
   Calendar,
-  User,
   Car,
+  Clock,
+  Download,
   MapPin,
-  MessageSquareText,
-  MoreHorizontal,
-  Star,
+  RefreshCcw,
+  Search,
+  User,
   Wallet,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import {
+  type CompanyBooking,
   fetchCompanyBookings,
-  approveBooking,
-  rejectBooking,
-  CompanyBooking,
-  normalizeStatus,
 } from "@/lib/booking.api";
-
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -30,14 +26,169 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { BookingHistoryPageSkeleton } from "@/components/shared/bookings/booking-history-skeleton";
 
-const formatSubmittedDate = (isoDate: string) =>
-  new Date(isoDate).toLocaleDateString("en-US", {
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+
+  return new Date(value).toLocaleDateString("en-US", {
     year: "numeric",
     month: "short",
     day: "numeric",
-    timeZone: "UTC",
   });
+}
+
+function formatDateRange(start?: string | null, end?: string | null) {
+  if (!start || !end) return "-";
+  return `${formatDate(start)} - ${formatDate(end)}`;
+}
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "ETB",
+    maximumFractionDigits: 2,
+  }).format(value);
+}
+
+function formatRelativeTimestamp(value?: string | null) {
+  if (!value) return "Not available";
+
+  return new Date(value).toLocaleString("en-US", {
+    dateStyle: "medium",
+    timeStyle: "short",
+  });
+}
+
+function getStatusStyle(status: CompanyBooking["status"]) {
+  switch (status) {
+    case "approved":
+      return "border-emerald-500/20 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400";
+    case "pending":
+      return "border-amber-500/20 bg-amber-500/10 text-amber-600 dark:text-amber-400";
+    case "rejected":
+      return "border-rose-500/20 bg-rose-500/10 text-rose-600 dark:text-rose-400";
+    case "completed":
+      return "border-sky-500/20 bg-sky-500/10 text-sky-600 dark:text-sky-400";
+    default:
+      return "border-border bg-muted/50 text-muted-foreground";
+  }
+}
+
+function SummaryCard({
+  title,
+  value,
+  note,
+  icon: Icon,
+  accent,
+}: {
+  title: string;
+  value: string;
+  note: string;
+  icon: React.ElementType;
+  accent: string;
+}) {
+  return (
+    <div className="bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl">
+      <div className="flex justify-between items-start gap-4">
+        <div>
+          <p className="text-muted-foreground text-sm">{title}</p>
+          <p className="mt-2 font-bold text-foreground text-2xl sm:text-3xl">
+            {value}
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs">{note}</p>
+        </div>
+        <div className={cn("shadow-sm p-3 rounded-2xl text-white", accent)}>
+          <Icon className="w-5 h-5" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function BookingMetaRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-1 py-3 border-border/70 border-b last:border-b-0">
+      <p className="text-muted-foreground text-xs">{label}</p>
+      <p className="font-semibold text-foreground text-sm">{value}</p>
+    </div>
+  );
+}
+
+function MobileBookingCard({
+  booking,
+  onOpen,
+}: {
+  booking: CompanyBooking;
+  onOpen: (booking: CompanyBooking) => void;
+}) {
+  return (
+    <div className="bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl">
+      <div className="flex justify-between items-start gap-3">
+        <div className="min-w-0">
+          <p className="font-semibold text-foreground text-sm truncate">
+            {booking.customerName}
+          </p>
+          <p className="mt-1 text-muted-foreground text-xs truncate">
+            {booking.vehicleName}
+          </p>
+        </div>
+        <Badge
+          variant="outline"
+          className={cn(
+            "rounded-full font-semibold capitalize shrink-0",
+            getStatusStyle(booking.status),
+          )}
+        >
+          {booking.status}
+        </Badge>
+      </div>
+
+      <div className="gap-3 grid mt-4 text-sm">
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <Calendar className="w-4 h-4" />
+          <span>{formatDateRange(booking.startDate, booking.endDate)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-muted-foreground">
+          <MapPin className="w-4 h-4" />
+          <span className="truncate">{booking.pickupLocation}</span>
+        </div>
+        <div className="flex justify-between items-center gap-3">
+          <span className="text-muted-foreground text-xs">
+            ID: {booking.bookingId}
+          </span>
+          <span className="font-semibold text-foreground">
+            {formatCurrency(booking.totalAmount)}
+          </span>
+        </div>
+      </div>
+
+      <Button
+        onClick={() => onOpen(booking)}
+        className="bg-foreground hover:bg-foreground/90 mt-4 rounded-xl w-full h-10 text-background"
+        size="sm"
+      >
+        Detail
+      </Button>
+    </div>
+  );
+}
 
 export default function BookingManagement() {
   const [bookings, setBookings] = useState<CompanyBooking[]>([]);
@@ -47,432 +198,406 @@ export default function BookingManagement() {
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const formatDate = (date: string) =>
-    new Date(date).toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
-      day: "numeric",
-    });
-  useEffect(() => {
-    const loadBookings = async () => {
-      try {
-        const data = await fetchCompanyBookings();
-        setBookings(data);
-      } catch (error) {
-        console.error("Failed to fetch bookings:", error);
-      }
-    };
+  const [reloadKey, setReloadKey] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const [lastCompletedRequestKey, setLastCompletedRequestKey] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
+  const trimmedSearch = deferredSearchQuery.trim().toLowerCase();
+  const requestKey = JSON.stringify({ reloadKey });
+  const loading = requestKey !== lastCompletedRequestKey;
+  const isFetching = loading && bookings.length === 0;
 
-    loadBookings();
-  }, []);
-  const getStatusStyle = (status: CompanyBooking["status"]) => {
-    switch (status) {
-      case "approved":
-        return "bg-emerald-100 text-emerald-700";
-      case "pending":
-        return "bg-amber-100 text-amber-700";
-      case "rejected":
-        return "bg-rose-100 text-rose-700";
-      case "completed":
-        return "bg-blue-100 text-blue-700";
-      default:
-        return "bg-slate-100 text-slate-700";
-    }
-  };
+  useEffect(() => {
+    let cancelled = false;
+
+    fetchCompanyBookings({
+      cacheKey: `company-bookings-${reloadKey}`,
+    })
+      .then((data) => {
+        if (cancelled) return;
+        setBookings(data);
+        setError(null);
+        setLastCompletedRequestKey(requestKey);
+      })
+      .catch((cause: unknown) => {
+        if (cancelled) return;
+        setError(
+          cause instanceof Error
+            ? cause.message
+            : "Failed to fetch company bookings",
+        );
+        setLastCompletedRequestKey(requestKey);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [reloadKey, requestKey]);
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((booking) => {
+      const matchesSearch =
+        !trimmedSearch ||
+        booking.customerName.toLowerCase().includes(trimmedSearch) ||
+        booking.vehicleName.toLowerCase().includes(trimmedSearch) ||
+        booking.bookingId.toLowerCase().includes(trimmedSearch);
+
+      const matchesStatus =
+        statusFilter === "all" || booking.status === statusFilter;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [bookings, statusFilter, trimmedSearch]);
+
+  const summary = useMemo(() => {
+    const pending = filteredBookings.filter(
+      (booking) => booking.status === "pending",
+    ).length;
+    const approved = filteredBookings.filter(
+      (booking) => booking.status === "approved",
+    ).length;
+    const completed = filteredBookings.filter(
+      (booking) => booking.status === "completed",
+    ).length;
+    const revenue = filteredBookings.reduce(
+      (sum, booking) => sum + booking.totalAmount,
+      0,
+    );
+
+    return {
+      total: filteredBookings.length,
+      pending,
+      approved,
+      completed,
+      revenue,
+    };
+  }, [filteredBookings]);
 
   const openBookingDetail = (booking: CompanyBooking) => {
     setSelectedBooking(booking);
     setIsDetailOpen(true);
   };
-  const filteredBookings = bookings.filter((b) => {
-  const matchesSearch =
-    b.customerName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.vehicleName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    b.bookingId.toLowerCase().includes(searchQuery.toLowerCase());
 
-  const matchesStatus =
-    statusFilter === "all" || b.status === statusFilter;
+  const refreshBookings = () => setReloadKey((value) => value + 1);
 
-  return matchesSearch && matchesStatus;
-});
-const exportToCSV = () => {
-  const headers = [
-    "Booking ID",
-    "Customer",
-    "Vehicle",
-    "Start Date",
-    "End Date",
-    "Amount",
-    "Status",
-  ];
+  const exportToCSV = () => {
+    const headers = [
+      "Booking ID",
+      "Customer",
+      "Vehicle",
+      "Start Date",
+      "End Date",
+      "Amount",
+      "Status",
+    ];
 
-  const rows = filteredBookings.map((b) => [
-    b.bookingId,
-    b.customerName,
-    b.vehicleName,
-    formatDate(b.startDate),
-    formatDate(b.endDate),
-    b.totalAmount,
-    b.status,
-  ]);
+    const rows = filteredBookings.map((booking) => [
+      booking.bookingId,
+      booking.customerName,
+      booking.vehicleName,
+      formatDate(booking.startDate),
+      formatDate(booking.endDate),
+      booking.totalAmount,
+      booking.status,
+    ]);
 
-  const csvContent =
-    [headers, ...rows]
+    const csvContent = [headers, ...rows]
       .map((row) => row.map(String).join(","))
       .join("\n");
 
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
 
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement("a");
-
-  link.href = url;
-  link.setAttribute("download", "bookings.csv");
-
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-};
+    link.href = url;
+    link.setAttribute("download", "company-bookings.csv");
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="font-bold text-slate-900 text-2xl">
-            Booking Management
-          </h2>
-          <p className="text-slate-500">
-            Review and manage vehicle reservation requests.
-          </p>
-        </div>
-      </div>
-
-      <div className="bg-white shadow-sm border border-slate-100 rounded-2xl overflow-hidden">
-        <div className="flex sm:flex-row flex-col justify-between items-center gap-4 p-4 border-slate-100 border-b">
-          <div className="relative w-full sm:w-64">
-            <Search
-              className="top-1/2 left-3 absolute text-slate-400 -translate-y-1/2"
-              size={18}
-            />
-            <input
-              type="text"
-              placeholder="Search bookings..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="py-2 pr-4 pl-10 border border-slate-200 focus:border-emerald-500 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 w-full text-sm transition-all"
-            />
+      <div className="bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.14),_transparent_30%),linear-gradient(135deg,color-mix(in_oklab,var(--background)_92%,white)_0%,color-mix(in_oklab,var(--background)_96%,var(--muted))_100%)] dark:bg-[radial-gradient(circle_at_top_left,_rgba(16,185,129,0.12),_transparent_30%),linear-gradient(135deg,rgba(15,23,42,0.98)_0%,rgba(17,24,39,0.94)_100%)] shadow-sm p-4 sm:p-6 border border-border/70 rounded-[28px] overflow-hidden">
+        <div className="flex lg:flex-row flex-col lg:justify-between lg:items-end gap-5">
+          <div className="max-w-2xl">
+            <Badge className="bg-foreground hover:bg-foreground px-3 py-1 rounded-full text-background">
+              Company dashboard
+            </Badge>
+            <h2 className="mt-4 font-bold text-foreground text-2xl sm:text-3xl tracking-tight">
+              Booking Management
+            </h2>
+            <p className="mt-2 text-muted-foreground text-sm sm:text-base">
+              Keep reservation activity in view with faster loading, clearer filters,
+              and quick access to every booking detail.
+            </p>
           </div>
-          <div className="flex sm:flex-row flex-col gap-2 w-full sm:w-auto">
-            <button className="flex flex-1 sm:flex-none justify-center items-center gap-2 hover:bg-slate-50 px-4 py-2 border border-slate-200 rounded-xl font-medium text-slate-600 text-sm transition-colors">
-              <select
-                value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 border border-slate-200 rounded-xl text-sm"
-              >
-                <option value="all">All</option>
-                <option value="pending">Pending</option>
-                <option value="approved">Approved</option>
-                <option value="rejected">Rejected</option>
-                <option value="completed">Completed</option>
-              </select>
-            </button>
-            <button onClick={exportToCSV} className="flex flex-1 sm:flex-none justify-center items-center gap-2 bg-slate-900 hover:bg-slate-800 px-4 py-2 rounded-xl font-medium text-white text-sm transition-colors">
-              <span>Export CSV</span>
-            </button>
-          </div>
-        </div>
 
-        <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
-            <thead>
-              <tr className="bg-slate-50 border-slate-100 border-b">
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                  Customer
-                </th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                  Vehicle
-                </th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                  Dates
-                </th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                  Amount
-                </th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-4 font-bold text-slate-500 text-xs text-right uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredBookings.map((booking) => (
-                <tr
-                  key={booking.id}
-                  className="group hover:bg-slate-50/50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <div className="flex justify-center items-center bg-slate-100 rounded-full w-10 h-10 font-bold text-slate-600">
-                        {booking.customerName.charAt(0)}
-                      </div>
-                      <div>
-                        <p className="font-bold text-slate-900 text-sm">
-                          {booking.name || booking.customerName}
-                        </p>
-                        <p className="text-slate-500 text-xs">
-                          ID: {booking.bookingId}
-                        </p>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="flex items-center gap-2">
-                      <Car size={16} className="text-slate-400" />
-                      <span className="font-medium text-slate-700 text-sm">
-                        {booking.vehicleName}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2 text-slate-600 text-xs">
-                        <Calendar size={14} />
-                        <span>
-                          {formatDate(booking.startDate)} →{" "}
-                          {formatDate(booking.endDate)}
-                        </span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[10px] text-slate-400">
-                        <Clock size={12} />
-                        <span>Booked on {formatDate(booking.createdAt)}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span className="font-bold text-slate-900 text-sm">
-                      ${booking.totalAmount}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <span
-                      className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${getStatusStyle(booking.status)}`}
-                    >
-                      {booking.status}
-                    </span>
-                  </td>
-                  <td className="px-6 py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                      {booking.status === "pending" && (
-                        <>
-                          <button
-                            className="bg-emerald-50 hover:bg-emerald-100 p-2 rounded-lg text-emerald-600 transition-colors"
-                            title="Approve"
-                          >
-                            <Check size={18} />
-                          </button>
-                          <button
-                            className="bg-rose-50 hover:bg-rose-100 p-2 rounded-lg text-rose-600 transition-colors"
-                            title="Reject"
-                          >
-                            <X size={18} />
-                          </button>
-                        </>
-                      )}
-                      <button className="hover:bg-slate-100 p-2 rounded-lg text-slate-400 transition-colors">
-                        <MoreHorizontal size={18} />
-                      </button>
-                      <button
-                        onClick={() => openBookingDetail(booking)}
-                        className="bg-slate-900 hover:bg-slate-800 px-3 py-2 rounded-lg font-semibold text-white text-xs transition-colors"
-                      >
-                        Detail
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex justify-between items-center bg-slate-50 p-4 border-slate-100 border-t">
-          <p className="font-medium text-slate-500 text-xs">
-            Showing 2 of 2 bookings
-          </p>
-          <div className="flex gap-2">
-            <button className="px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-400 text-xs cursor-not-allowed">
-              Previous
-            </button>
-            <button className="hover:bg-white px-3 py-1 border border-slate-200 rounded-lg font-bold text-slate-600 text-xs transition-all">
-              Next
-            </button>
+          <div className="flex flex-wrap items-center gap-3">
+            <Button
+              variant="outline"
+              onClick={refreshBookings}
+              disabled={loading}
+              className="bg-background/70 border-border/70 rounded-2xl"
+            >
+              <RefreshCcw className="mr-2 w-4 h-4" />
+              Refresh
+            </Button>
+            <Button
+              onClick={exportToCSV}
+              className="bg-foreground hover:bg-foreground/90 rounded-2xl text-background"
+            >
+              <Download className="mr-2 w-4 h-4" />
+              Export CSV
+            </Button>
           </div>
         </div>
       </div>
+
+      {isFetching ? (
+        <BookingHistoryPageSkeleton columns={6} rows={5} statCards={4} />
+      ) : error ? (
+        <div className="bg-red-500/10 p-6 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-center">
+          <p>{error}</p>
+          <Button variant="outline" onClick={refreshBookings} className="mt-4">
+            Try again
+          </Button>
+        </div>
+      ) : (
+        <>
+          <div className="bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl">
+            <div className="flex lg:flex-row flex-col lg:justify-between lg:items-center gap-4">
+              <div className="flex sm:flex-row flex-col flex-1 sm:items-center gap-4">
+                <div className="relative w-full sm:max-w-sm">
+                  <Search className="top-1/2 left-3 absolute w-4 h-4 text-muted-foreground -translate-y-1/2" />
+                  <Input
+                    value={searchQuery}
+                    onChange={(event) => setSearchQuery(event.target.value)}
+                    placeholder="Search by customer, vehicle, or booking ID..."
+                    className="bg-background/70 pl-10 border-border/70 rounded-2xl h-10"
+                  />
+                </div>
+
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="bg-background/70 border-border/70 rounded-2xl w-full sm:w-[180px] h-10">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <p className="text-muted-foreground text-sm">
+                {loading ? "Refreshing bookings..." : `${filteredBookings.length} matching bookings`}
+              </p>
+            </div>
+          </div>
+
+          <div className={cn("bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl transition-opacity", loading && "opacity-70")}>
+            <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 mb-4 text-muted-foreground text-sm">
+              <span>Company booking history</span>
+              <span>Updated from live booking records</span>
+            </div>
+
+            <div className="md:hidden gap-3 grid">
+              {filteredBookings.length === 0 ? (
+                <div className="bg-background/60 px-4 py-10 border border-border/70 rounded-2xl text-muted-foreground text-sm text-center">
+                  No company bookings matched the current filters.
+                </div>
+              ) : (
+                filteredBookings.map((booking) => (
+                  <MobileBookingCard
+                    key={booking.id}
+                    booking={booking}
+                    onOpen={openBookingDetail}
+                  />
+                ))
+              )}
+            </div>
+
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow className="bg-muted/40 hover:bg-muted/40 border-border/70">
+                    <TableHead className="py-4">Customer</TableHead>
+                    <TableHead className="py-4">Vehicle</TableHead>
+                    <TableHead className="py-4">Dates</TableHead>
+                    <TableHead className="py-4">Pickup</TableHead>
+                    <TableHead className="py-4">Amount</TableHead>
+                    <TableHead className="py-4">Status</TableHead>
+                    <TableHead className="py-4 text-right">Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+
+                <TableBody>
+                  {filteredBookings.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={7} className="py-16 text-muted-foreground text-center">
+                        No company bookings matched the current filters.
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    filteredBookings.map((booking) => (
+                      <TableRow key={booking.id} className="border-border/60">
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex justify-center items-center bg-muted rounded-2xl w-10 h-10 font-semibold text-foreground">
+                              {booking.customerName.charAt(0)}
+                            </div>
+                            <div>
+                              <p className="font-semibold text-foreground">
+                                {booking.customerName}
+                              </p>
+                              <p className="text-muted-foreground text-xs">
+                                ID: {booking.bookingId}
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-4">
+                          <div className="flex items-center gap-2 text-foreground">
+                            <Car className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{booking.vehicleName}</span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-4 text-muted-foreground text-sm">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="w-4 h-4 text-muted-foreground" />
+                            <span>{formatDateRange(booking.startDate, booking.endDate)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
+                            <Clock className="w-3 h-3" />
+                            <span>Booked {formatDate(booking.createdAt)}</span>
+                          </div>
+                        </TableCell>
+
+                        <TableCell className="py-4 text-muted-foreground text-sm">
+                          {booking.pickupLocation}
+                        </TableCell>
+
+                        <TableCell className="py-4 font-semibold text-foreground">
+                          {formatCurrency(booking.totalAmount)}
+                        </TableCell>
+
+                        <TableCell className="py-4">
+                          <Badge
+                            variant="outline"
+                            className={cn("rounded-full font-semibold capitalize", getStatusStyle(booking.status))}
+                          >
+                            {booking.status}
+                          </Badge>
+                        </TableCell>
+
+                        <TableCell className="py-4 text-right">
+                          <div className="flex justify-end">
+                            <Button
+                              onClick={() => openBookingDetail(booking)}
+                              className="bg-foreground hover:bg-foreground/90 rounded-xl text-background"
+                              size="sm"
+                            >
+                              Detail
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          </div>
+        </>
+      )}
 
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
-        {selectedBooking && (
-          <DialogContent className="w-[calc(100vw-1rem)] sm:w-full sm:max-w-3xl max-h-[90vh] p-0 overflow-hidden border-slate-200">
-            <DialogHeader className="bg-gradient-to-r from-slate-900 to-slate-700 px-6 py-6 text-left">
+        {selectedBooking ? (
+          <DialogContent className="bg-background p-0 border-border/70 w-[calc(100vw-1rem)] sm:w-full sm:max-w-3xl overflow-hidden">
+            <DialogHeader className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 px-5 sm:px-6 py-5 sm:py-6 text-left">
               <DialogTitle className="text-white text-xl">
                 {selectedBooking.vehicleName}
               </DialogTitle>
               <DialogDescription className="text-slate-300">
-                Booking detail and customer review for {selectedBooking.id}
+                Booking {selectedBooking.bookingId} for {selectedBooking.customerName}
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-6 p-6 max-h-[calc(90vh-110px)] overflow-y-auto">
-              <div className="gap-4 grid md:grid-cols-2 xl:grid-cols-4">
-                <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <User size={14} />
+            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 max-h-[calc(90vh-110px)] overflow-y-auto">
+              <div className="gap-3 grid sm:grid-cols-2 xl:grid-cols-4">
+                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <User className="w-4 h-4" />
                     Customer
                   </div>
-                  <p className="mt-2 font-semibold text-slate-900 text-sm">
+                  <p className="mt-2 font-semibold text-foreground text-sm">
                     {selectedBooking.customerName}
                   </p>
                 </div>
-                <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <Car size={14} />
+                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Car className="w-4 h-4" />
                     Vehicle
                   </div>
-                  <p className="mt-2 font-semibold text-slate-900 text-sm">
+                  <p className="mt-2 font-semibold text-foreground text-sm">
                     {selectedBooking.vehicleName}
                   </p>
                 </div>
-                <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <Calendar size={14} />
+                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Calendar className="w-4 h-4" />
                     Trip dates
                   </div>
-                  <p className="mt-2 font-semibold text-slate-900 text-sm">
-                    {formatDate(selectedBooking.startDate)} →{" "}
-                    {formatDate(selectedBooking.endDate)}
+                  <p className="mt-2 font-semibold text-foreground text-sm">
+                    {formatDateRange(
+                      selectedBooking.startDate,
+                      selectedBooking.endDate,
+                    )}
                   </p>
                 </div>
-                <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <Wallet size={14} />
+                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                    <Wallet className="w-4 h-4" />
                     Amount
                   </div>
-                  <p className="mt-2 font-semibold text-slate-900 text-sm">
-                    ${selectedBooking.totalAmount}
+                  <p className="mt-2 font-semibold text-foreground text-sm">
+                    {formatCurrency(selectedBooking.totalAmount)}
                   </p>
                 </div>
               </div>
 
-              <div className="border border-slate-100 rounded-xl overflow-hidden">
-                <div className="bg-slate-50 px-4 py-3 border-slate-100 border-b">
-                  <p className="font-semibold text-slate-900 text-sm">
-                    Booking Summary
-                  </p>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {[
-                    ["Booking ID", selectedBooking.bookingId],
-                    ["Status", selectedBooking.status],
-                    ["Pickup location", selectedBooking.pickupLocation],
-                    ["Booked on", formatDate(selectedBooking.createdAt)],
-                  ].map(([label, value]) => (
-                    <div
-                      key={label}
-                      className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 px-4 py-3"
-                    >
-                      <p className="text-slate-500 text-xs">{label}</p>
-                      <p className="font-semibold text-slate-900 text-sm">
-                        {value}
-                      </p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="border border-slate-100 rounded-2xl overflow-hidden">
-                <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-3 bg-slate-50 px-4 py-4 border-slate-100 border-b">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <MessageSquareText size={16} className="text-blue-600" />
-                      <p className="font-semibold text-slate-900 text-sm">
-                        Customer Rating & Review
-                      </p>
-                    </div>
-                    <p className="mt-1 text-slate-500 text-xs">
-                      Review stays visible here for completed bookings.
-                    </p>
-                  </div>
-
-                  {selectedBooking.review?.submittedAt && (
-                    <span className="bg-emerald-500 px-3 py-1 rounded-full font-semibold text-white text-xs">
-                      Reviewed on{" "}
-                      {formatSubmittedDate(selectedBooking.review.submittedAt)}
-                    </span>
-                  )}
-                </div>
-
-                <div className="space-y-4 p-5">
-                  {selectedBooking.review ? (
-                    <>
-                      <div className="flex flex-wrap items-center gap-2">
-                        {Array.from({ length: 5 }, (_, index) => index + 1).map(
-                          (star) => (
-                            <div
-                              key={star}
-                              className={`flex h-11 w-11 items-center justify-center rounded-xl ${
-                                star <= selectedBooking.review!.rating
-                                  ? "bg-amber-100 text-amber-500"
-                                  : "bg-slate-100 text-slate-300"
-                              }`}
-                            >
-                              <Star
-                                size={18}
-                                className={
-                                  star <= (selectedBooking.review?.rating || 0)
-                                    ? "fill-current"
-                                    : ""
-                                }
-                              />
-                            </div>
-                          ),
-                        )}
-                        <span className="px-3 py-1 border border-slate-200 rounded-full font-semibold text-slate-700 text-xs">
-                          {selectedBooking.review?.rating || 0}/5 rating
-                        </span>
-                      </div>
-
-                      <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                        <p className="font-medium text-slate-500 text-xs">
-                          Customer comment
-                        </p>
-                        <p className="mt-2 text-slate-800 text-sm leading-6">
-                          {selectedBooking.review?.comment || "No comment"}
-                        </p>
-                      </div>
-                    </>
-                  ) : (
-                    <div className="bg-slate-50 p-4 border border-slate-100 rounded-xl">
-                      <p className="font-semibold text-slate-900 text-sm">
-                        No review yet
-                      </p>
-                      <p className="mt-1 text-slate-500 text-xs leading-5">
-                        This booking does not have a rating or review from the
-                        customer yet.
-                      </p>
-                    </div>
-                  )}
-
-                  <div className="flex items-center gap-2 text-slate-500 text-xs">
-                    <MapPin size={14} />
-                    Review is linked to booking {selectedBooking.bookingId}
-                  </div>
-                </div>
+              <div className="px-4 border border-border/70 rounded-2xl">
+                <BookingMetaRow label="Booking ID" value={selectedBooking.bookingId} />
+                <BookingMetaRow
+                  label="Status"
+                  value={selectedBooking.status}
+                />
+                <BookingMetaRow
+                  label="Pickup location"
+                  value={selectedBooking.pickupLocation}
+                />
+                <BookingMetaRow
+                  label="Booked on"
+                  value={formatRelativeTimestamp(selectedBooking.createdAt)}
+                />
+                <BookingMetaRow
+                  label="Customer email"
+                  value={selectedBooking.customerEmail || "Not provided"}
+                />
+                <BookingMetaRow
+                  label="Customer phone"
+                  value={selectedBooking.customerPhone || "Not provided"}
+                />
               </div>
             </div>
           </DialogContent>
-        )}
+        ) : null}
       </Dialog>
     </div>
   );
