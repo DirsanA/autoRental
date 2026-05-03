@@ -27,6 +27,32 @@ export function createUserController(userService: UserService) {
     }),
 
     /**
+     * GET /api/users/me/peerhost-dashboard
+     * Returns peer host dashboard statistics.
+     */
+    getPeerHostDashboard: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.getPeerHostDashboard(requireRequestUser(req));
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
+     * GET /api/users/me/peerhost-reviews
+     * Returns reviews for the peer host (reviews where the host is the target).
+     */
+    getPeerHostReviews: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.getPeerHostReviews(requireRequestUser(req));
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    /**
      * PATCH /api/users/me
      * Updates the authenticated user's profile fields.
      */

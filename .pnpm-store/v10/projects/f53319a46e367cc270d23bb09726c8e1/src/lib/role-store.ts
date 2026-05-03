@@ -1,0 +1,234 @@
+export type ActiveRole = "peerhost" | "renter" | "company" | "admin";
+
+export type Roles = {
+  peerhost: boolean;
+  renter: boolean;
+  company: boolean;
+  admin: boolean;
+};
+
+export type UserRoleState = {
+  roles: Roles;
+  activeRole: ActiveRole;
+  companyStatus: string | null;
+};
+
+export type RoleStateSourceUser = {
+  accountType?: string | null;
+  roles?: unknown;
+  verificationLevel?: string | null;
+};
+
+type RoleStateSource =
+  | (RoleStateSourceUser & {
+      company?: { status?: string | null } | null;
+      user?: undefined;
+    })
+  | {
+      user?: RoleStateSourceUser | null;
+      company?: { status?: string | null } | null;
+    };
+
+const STORAGE_KEY = "autorent.userRoleState";
+const ROLE_CHANGE_EVENT = "autorent:role-changed";
+
+const DEFAULT_STATE: UserRoleState = {
+  roles: { peerhost: false, renter: true, company: false, admin: false },
+  activeRole: "renter",
+  companyStatus: null,
+};
+
+function extractUser(source: RoleStateSource | null | undefined): RoleStateSourceUser | null {
+  if (!source) return null;
+  if ("user" in source) return (source.user as RoleStateSourceUser) || null;
+  return source as RoleStateSourceUser;
+}
+
+function extractCompanyStatus(source: RoleStateSource | null | undefined) {
+  if (!source || !("company" in source)) return null;
+  return typeof source.company?.status === "string" ? source.company.status : null;
+}
+
+function hasPeerHostAccess(source: RoleStateSource | null | undefined) {
+  const user = extractUser(source);
+  if (!user) {
+    return false;
+  }
+
+  // Some session payloads send `roles` as strings, others as objects like `{ name: "PEER_HOST" }`.
+  // Also, accountType casing can vary (e.g. "user" vs "USER").
+  const accountType =
+    typeof user.accountType === "string" ? user.accountType.toUpperCase() : null;
+  if (accountType && accountType !== "USER") return false;
+
+  const roleNames = Array.isArray(user.roles)
+    ? (user.roles as unknown[])
+        .map((role: unknown) => {
+          if (!role) return null;
+          if (typeof role === "string") return role;
+          if (typeof role === "object" && "name" in role) {
+            const name = (role as { name?: unknown }).name;
+            return typeof name === "string" ? name : null;
+          }
+          return null;
+        })
+        .filter((r: string | null): r is string => typeof r === "string")
+    : [];
+
+  const normalizedRoles = roleNames.map((r: string) =>
+    r.trim().toLowerCase().replaceAll("_", "").replaceAll("-", ""),
+  );
+
+  return (
+    user.verificationLevel === "PEER_HOST" ||
+    normalizedRoles.some((role: string) => role === "peerhost")
+  );
+}
+
+function hasCompanyAccess(source: RoleStateSource | null | undefined) {
+  return extractCompanyStatus(source) === "ACTIVE";
+}
+
+function hasAdminAccess(source: RoleStateSource | null | undefined) {
+  const user = extractUser(source);
+  if (!user || !("accountType" in user)) return false;
+  const accountType =
+    typeof user.accountType === "string" ? user.accountType.toUpperCase() : null;
+  return accountType === "ADMIN";
+}
+
+let cachedRaw: string | null | undefined = undefined;
+let cachedState: UserRoleState = DEFAULT_STATE;
+
+function safeParse(json: string | null): unknown {
+  if (!json) return null;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return null;
+  }
+}
+
+function isUserRoleState(value: unknown): value is UserRoleState {
+  if (!value || typeof value !== "object") return false;
+  const v = value as Partial<UserRoleState>;
+  if (
+    v.activeRole !== "peerhost" &&
+    v.activeRole !== "renter" &&
+    v.activeRole !== "company" &&
+    v.activeRole !== "admin"
+  ) {
+    return false;
+  }
+  if (!v.roles || typeof v.roles !== "object") return false;
+  const r = v.roles as Partial<Roles>;
+  if (typeof r.peerhost !== "boolean") return false;
+  if (typeof r.renter !== "boolean") return false;
+  if (typeof r.company !== "boolean") return false;
+  // Tolerate missing admin flag from older localStorage entries
+  if (r.admin !== undefined && typeof r.admin !== "boolean") return false;
+  if (v.companyStatus !== null && typeof v.companyStatus !== "string") return false;
+  return true;
+}
+
+export function readUserRoleState(): UserRoleState {
+  if (typeof window === "undefined") return DEFAULT_STATE;
+
+  const raw = window.localStorage.getItem(STORAGE_KEY);
+  if (cachedRaw !== undefined && raw === cachedRaw) return cachedState;
+
+  const parsed = safeParse(raw);
+  const next = isUserRoleState(parsed) ? parsed : DEFAULT_STATE;
+  cachedRaw = raw;
+  cachedState = next;
+  return next;
+}
+
+export function writeUserRoleState(next: UserRoleState) {
+  if (typeof window === "undefined") return;
+  const raw = JSON.stringify(next);
+  cachedRaw = raw;
+  cachedState = next;
+  window.localStorage.setItem(STORAGE_KEY, raw);
+  window.dispatchEvent(new Event(ROLE_CHANGE_EVENT));
+}
+
+export function buildUserRoleState(
+  source: RoleStateSource | null | undefined,
+  current: UserRoleState = DEFAULT_STATE,
+): UserRoleState {
+  const admin = hasAdminAccess(source);
+  const peerhost = hasPeerHostAccess(source);
+  const company = hasCompanyAccess(source);
+  const companyStatus = extractCompanyStatus(source);
+
+  // Admin and company are exclusive roles — they don't get renter access
+  const renter = !admin && !company;
+
+  const activeRole: ActiveRole = admin
+    ? "admin"
+    : company
+      ? "company"
+      : current.activeRole === "peerhost" && peerhost
+        ? "peerhost"
+        : "renter";
+
+  return {
+    roles: {
+      renter,
+      peerhost: admin || company ? false : peerhost,
+      company,
+      admin,
+    },
+    activeRole,
+    companyStatus,
+  };
+}
+
+export function resetUserRoleState() {
+  writeUserRoleState(DEFAULT_STATE);
+}
+
+export function toggleActiveRole(state: UserRoleState): UserRoleState {
+  // Admin is exclusive — no toggling
+  if (state.roles.admin) return state;
+
+  if (state.activeRole === "peerhost") {
+    return {
+      ...state,
+      activeRole: state.roles.company ? "company" : "renter",
+    };
+  }
+
+  if (state.activeRole === "company") {
+    return {
+      ...state,
+      activeRole: "renter",
+    };
+  }
+
+  return {
+    ...state,
+    activeRole: state.roles.peerhost
+      ? "peerhost"
+      : state.roles.company
+        ? "company"
+        : "renter",
+  };
+}
+
+export function subscribeToRoleStateChanges(callback: () => void) {
+  if (typeof window === "undefined") return () => {};
+
+  const handler = (e: Event) => {
+    if (e.type === ROLE_CHANGE_EVENT) callback();
+    if (e.type === "storage") callback();
+  };
+
+  window.addEventListener(ROLE_CHANGE_EVENT, handler);
+  window.addEventListener("storage", handler);
+  return () => {
+    window.removeEventListener(ROLE_CHANGE_EVENT, handler);
+    window.removeEventListener("storage", handler);
+  };
+}

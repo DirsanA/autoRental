@@ -166,6 +166,7 @@ export class AuthService {
       result.user.id,
       AccountType.USER,
     );
+    await this.assignRoleToUser(result.user.id, SYSTEM_ROLES.RENTER);
 
     return {
       cookieSource: result,
