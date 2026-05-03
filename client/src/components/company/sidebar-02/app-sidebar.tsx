@@ -104,12 +104,6 @@ const dashboardRoutes: Route[] = [
     //   },
     // ],
   },
-  {
-    id: "Earnings",
-    title: "Earnings",
-    icon: <Handshake className="size-4" />,
-    link: "/company/earnings",  
-  },
   // {
   //   id: "customers",
   //   title: "Customers",
