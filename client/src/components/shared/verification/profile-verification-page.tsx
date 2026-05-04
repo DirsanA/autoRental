@@ -22,10 +22,17 @@ import {
   UserRound,
   AlertCircle,
   RefreshCw,
+  KeyRound,
+  Lock,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
+import { coalesceRequest } from "@/lib/api-coalesce";
+import { updateProfile, fetchCurrentSession, changePassword } from "@/lib/auth-api";
+import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 
 type Status = "not_submitted" | "pending" | "approved" | "rejected";
 type VerificationAudience = "renter" | "peerhost";
@@ -330,6 +337,26 @@ export function ProfileVerificationPage({
   const [isReplacingId, setIsReplacingId] = useState(false);
   const [isReplacingLicense, setIsReplacingLicense] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [isUpdatingAvatar, setIsUpdatingAvatar] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isChangingPassword, setIsChangingPassword] = useState(false);
+  const [showPasswords, setShowPasswords] = useState({
+    current: false,
+    new: false,
+    confirm: false,
+  });
+  const [passwordErrors, setPasswordErrors] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [passwordServerError, setPasswordServerError] = useState<string | null>(null);
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [requestVersion, setRequestVersion] = useState(0);
@@ -382,26 +409,31 @@ export function ProfileVerificationPage({
   useEffect(() => {
     let cancelled = false;
 
+
+
     async function loadVerificationState() {
       try {
-        const response = await fetch(`${apiBaseUrl}/verifications/me`, {
-          method: "GET",
-          credentials: "include",
-          headers: {
-            ...buildAuthHeader(),
-          },
-          cache: "no-store",
+        const payload = await coalesceRequest("verifications-me", async () => {
+          const response = await fetch(`${apiBaseUrl}/verifications/me`, {
+            method: "GET",
+            credentials: "include",
+            headers: {
+              ...buildAuthHeader(),
+            },
+            cache: "no-store",
+          });
+
+          const result = (await response.json().catch(() => null)) as
+            | VerificationApiResponse
+            | null;
+
+          if (!response.ok) {
+            throw new Error(
+              result?.error?.message || "Failed to load saved verification details",
+            );
+          }
+          return result;
         });
-
-        const payload = (await response.json().catch(() => null)) as
-          | VerificationApiResponse
-          | null;
-
-        if (!response.ok) {
-          throw new Error(
-            payload?.error?.message || "Failed to load saved verification details",
-          );
-        }
 
         if (cancelled) {
           return;
@@ -424,6 +456,11 @@ export function ProfileVerificationPage({
         setIsReplacingLicense(false);
         setSubmitError(null);
         setLoadError(null);
+
+        const session = await fetchCurrentSession().catch(() => null);
+        if (session?.user?.image && !cancelled) {
+          setAvatarPreview(session.user.image);
+        }
       } catch (error) {
         if (cancelled) {
           return;
@@ -598,6 +635,99 @@ export function ProfileVerificationPage({
       );
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleAvatarUpload(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const preview = await readFileAsDataUrl(file);
+      setAvatarPreview(preview);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to read image file",
+        variant: "destructive",
+      });
+    }
+  }
+
+  async function saveAvatar() {
+    if (!avatarPreview || !avatarPreview.startsWith("data:")) return;
+
+    setIsUpdatingAvatar(true);
+    try {
+      await updateProfile({ image: avatarPreview });
+      await fetchCurrentSession(); // Refresh session to get the new Cloudinary URL
+      toast({
+        title: "Avatar updated",
+        description: "Your profile picture has been saved successfully.",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to update avatar",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingAvatar(false);
+    }
+  }
+
+  async function handlePasswordChange() {
+    const errors = {
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    };
+    let hasError = false;
+
+    if (!passwordForm.currentPassword) {
+      errors.currentPassword = "Current password is required";
+      hasError = true;
+    }
+
+    if (passwordForm.newPassword.length < 8) {
+      errors.newPassword = "Password must be at least 8 characters";
+      hasError = true;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      errors.confirmPassword = "Passwords do not match";
+      hasError = true;
+    }
+
+    setPasswordErrors(errors);
+    if (hasError) return;
+
+    setIsChangingPassword(true);
+    setPasswordServerError(null);
+    setPasswordSuccessMessage(null);
+    try {
+      const data = await changePassword({
+        currentPassword: passwordForm.currentPassword,
+        newPassword: passwordForm.newPassword,
+      });
+      setPasswordSuccessMessage(data?.message || "Password changed successfully.");
+      setPasswordForm({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordErrors({
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+      setPasswordServerError(null);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to change password";
+      setPasswordServerError(message);
+      setPasswordSuccessMessage(null);
+    } finally {
+      setIsChangingPassword(false);
     }
   }
 
@@ -799,6 +929,231 @@ export function ProfileVerificationPage({
             {loadError}
           </div>
         ) : null}
+
+        <Card className="mb-8 border-0 bg-white/85 shadow-xl backdrop-blur dark:border dark:border-slate-800 dark:bg-slate-900/80">
+          <CardContent className="p-6">
+            <div className="flex flex-col items-center gap-6 md:flex-row md:items-start">
+              <div className="relative group">
+                <Avatar className="h-32 w-32 border-4 border-white shadow-2xl dark:border-slate-800">
+                  <AvatarImage src={avatarPreview || ""} className="object-cover" />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-3xl font-bold text-white">
+                    <UserRound className="h-12 w-12" />
+                  </AvatarFallback>
+                </Avatar>
+                <div className="absolute inset-0 flex items-center justify-center rounded-full bg-black/40 opacity-0 transition-opacity group-hover:opacity-100">
+                  <Label htmlFor="avatar-upload" className="cursor-pointer">
+                    <Upload className="h-8 w-8 text-white" />
+                  </Label>
+                </div>
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={(e) => void handleAvatarUpload(e)}
+                />
+              </div>
+
+              <div className="flex-1 space-y-2 text-center md:text-left">
+                <h3 className="text-xl font-bold dark:text-slate-100">Profile Picture</h3>
+                <p className="text-sm text-muted-foreground dark:text-slate-400">
+                  Upload a clear photo of yourself. This will be visible to hosts and help in the verification process.
+                </p>
+                <div className="flex flex-wrap justify-center gap-3 pt-2 md:justify-start">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="relative"
+                    asChild
+                  >
+                    <Label htmlFor="avatar-upload" className="cursor-pointer">
+                      Choose Photo
+                    </Label>
+                  </Button>
+                  {avatarPreview?.startsWith("data:") && (
+                    <Button
+                      size="sm"
+                      onClick={() => void saveAvatar()}
+                      disabled={isUpdatingAvatar}
+                      className="bg-blue-600 text-white hover:bg-blue-700"
+                    >
+                      {isUpdatingAvatar ? (
+                        <>
+                          <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        "Save Profile Picture"
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground dark:text-slate-500">
+                  Accepted formats: JPG, PNG. Max size: 5MB.
+                </p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="mb-8 border-0 bg-white/85 shadow-xl backdrop-blur dark:border dark:border-slate-800 dark:bg-slate-900/80">
+          <CardHeader className="pb-2">
+            <div className="flex items-center gap-2">
+              <KeyRound className="h-5 w-5 text-blue-600" />
+              <CardTitle className="text-xl">Account Security</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent className="p-6">
+            {passwordServerError && (
+              <div className="mb-6 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-sm text-rose-700 dark:border-rose-900/50 dark:bg-rose-950/30 dark:text-rose-400">
+                <AlertCircle className="h-4 w-4 shrink-0" />
+                {passwordServerError}
+              </div>
+            )}
+            {passwordSuccessMessage && (
+              <div className="mb-6 flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-700 dark:border-emerald-900/50 dark:bg-emerald-950/30 dark:text-emerald-400">
+                <CheckCircle2 className="h-4 w-4 shrink-0" />
+                {passwordSuccessMessage}
+              </div>
+            )}
+            <div className="grid gap-6 md:grid-cols-3">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="currentPassword"
+                    type={showPasswords.current ? "text" : "password"}
+                    placeholder="••••••••"
+                    className={cn(
+                      "pl-9 pr-10",
+                      passwordErrors.currentPassword && "border-rose-500 focus-visible:ring-rose-500"
+                    )}
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => {
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        currentPassword: e.target.value,
+                      }));
+                      if (passwordErrors.currentPassword) {
+                        setPasswordErrors((prev) => ({ ...prev, currentPassword: "" }));
+                      }
+                      if (passwordServerError) setPasswordServerError(null);
+                      if (passwordSuccessMessage) setPasswordSuccessMessage(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(p => ({ ...p, current: !p.current }))}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPasswords.current ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordErrors.currentPassword && (
+                  <p className="text-[11px] font-medium text-rose-500">{passwordErrors.currentPassword}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="newPassword"
+                    type={showPasswords.new ? "text" : "password"}
+                    placeholder="••••••••"
+                    className={cn(
+                      "pl-9 pr-10",
+                      passwordErrors.newPassword && "border-rose-500 focus-visible:ring-rose-500"
+                    )}
+                    value={passwordForm.newPassword}
+                    onChange={(e) => {
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        newPassword: e.target.value,
+                      }));
+                      if (passwordErrors.newPassword) {
+                        setPasswordErrors((prev) => ({ ...prev, newPassword: "" }));
+                      }
+                      if (passwordServerError) setPasswordServerError(null);
+                      if (passwordSuccessMessage) setPasswordSuccessMessage(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(p => ({ ...p, new: !p.new }))}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPasswords.new ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordErrors.newPassword && (
+                  <p className="text-[11px] font-medium text-rose-500">{passwordErrors.newPassword}</p>
+                )}
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <div className="relative">
+                  <Lock className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="confirmPassword"
+                    type={showPasswords.confirm ? "text" : "password"}
+                    placeholder="••••••••"
+                    className={cn(
+                      "pl-9 pr-10",
+                      passwordErrors.confirmPassword && "border-rose-500 focus-visible:ring-rose-500"
+                    )}
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => {
+                      setPasswordForm((prev) => ({
+                        ...prev,
+                        confirmPassword: e.target.value,
+                      }));
+                      if (passwordErrors.confirmPassword) {
+                        setPasswordErrors((prev) => ({ ...prev, confirmPassword: "" }));
+                      }
+                      if (passwordServerError) setPasswordServerError(null);
+                      if (passwordSuccessMessage) setPasswordSuccessMessage(null);
+                    }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPasswords(p => ({ ...p, confirm: !p.confirm }))}
+                    className="absolute right-3 top-2.5 text-muted-foreground hover:text-foreground"
+                  >
+                    {showPasswords.confirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                </div>
+                {passwordErrors.confirmPassword && (
+                  <p className="text-[11px] font-medium text-rose-500">{passwordErrors.confirmPassword}</p>
+                )}
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end">
+              <Button
+                onClick={() => void handlePasswordChange()}
+                disabled={
+                  isChangingPassword ||
+                  !passwordForm.currentPassword ||
+                  !passwordForm.newPassword ||
+                  !passwordForm.confirmPassword
+                }
+                className="bg-slate-900 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700"
+              >
+                {isChangingPassword ? (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    Updating Password...
+                  </>
+                ) : (
+                  "Change Password"
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <div className="mb-6">{renderStatusMessage()}</div>
 

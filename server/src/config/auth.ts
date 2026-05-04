@@ -4,6 +4,7 @@ import { getMongoClient } from "./database.js";
 import { ENV } from "./env.js";
 import { emailService } from "../services/email.service.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
+import { bearer } from "better-auth/plugins";
 
 /**
  * better-auth instance configured for MongoDB via Mongoose's underlying client.
@@ -22,6 +23,11 @@ export function createAuth() {
     baseURL: ENV.BETTER_AUTH_URL,
 
     database: mongodbAdapter(db),
+    session: {
+      expiresIn: 60 * 60 * 24 * 30, // 30 days: Balance between convenience and security
+      updateAge: 60 * 60 * 24, // 1 day: Frequency at which session expiration is updated
+    },
+
 
     emailAndPassword: {
       enabled: true,
@@ -32,10 +38,14 @@ export function createAuth() {
       sendResetPassword: async ({ user, url }: { user: any; url: string }) => {
         await emailService.sendPasswordResetEmail(user.email, url);
       },
+      passwordReset: {
+        expiresIn: 60 * 60 * 2, // 2 hours: Security best practice for sensitive reset tokens
+      },
     },
 
     emailVerification: {
       autoSignInAfterVerification: true,
+      expiresIn: 60 * 60 * 24, // 24 hours
       sendVerificationEmail: async ({
         user,
         url,
@@ -123,6 +133,7 @@ export function createAuth() {
     },
 
     trustedOrigins: [ENV.FRONTEND_URL],
+    plugins: [bearer()],
   });
 
   return auth;

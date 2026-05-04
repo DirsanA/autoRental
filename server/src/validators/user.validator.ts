@@ -6,6 +6,7 @@ export const updateProfileSchema = z
     firstName: z.string().min(2).max(50).optional(),
     lastName: z.string().min(2).max(50).optional(),
     phoneNumber: z.string().max(15).optional(),
+    image: z.string().optional(),
   })
   .strict();
 

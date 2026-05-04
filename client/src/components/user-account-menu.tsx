@@ -1,8 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { Loader2, LogOut, UserCircle2 } from "lucide-react";
+import {
+  Loader2,
+  LogOut,
+  UserCircle2,
+  LayoutDashboard,
+  Car,
+  Building2,
+} from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +22,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/hooks/use_auth";
+import { useUserRoleState } from "@/hooks/use-user-role-state";
 import type {
   AuthSessionCompany,
   AuthSessionRole,
@@ -47,7 +54,9 @@ function normalizeRoleNames(roles: AuthSessionUser["roles"]): string[] {
   return roles
     .map((role) => {
       if (typeof role === "string") return role.trim().toLowerCase();
-      return typeof role?.name === "string" ? role.name.trim().toLowerCase() : "";
+      return typeof role?.name === "string"
+        ? role.name.trim().toLowerCase()
+        : "";
     })
     .filter(Boolean);
 }
@@ -65,7 +74,7 @@ function resolveUserRole(
       label: "System Admin",
       badgeClassName:
         "border-transparent bg-rose-100 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300",
-      profileHref: "/sysadmin/dashboard",
+      profileHref: "/sysadmin/profile",
     };
   }
 
@@ -173,15 +182,31 @@ export function UserAccountMenuContent({
   className,
   auth,
 }: UserAccountMenuContentProps) {
-  const router = useRouter();
   const { user, company, loading } = auth;
+  const { roles } = useUserRoleState();
+
+  const isAdmin =
+    user?.accountType === "ADMIN" || hasRole(user?.roles, "admin");
+  const isCompany =
+    company?.status === "ACTIVE" || user?.accountType === "COMPANY";
+  const isPeerHost = roles?.peerhost;
+  const isVerified =
+    user?.verificationLevel === "ID_VERIFIED" ||
+    user?.verificationLevel === "LICENSE_VERIFIED";
+
+  const shouldShowBecomePeerHost = isVerified && !isPeerHost && !isCompany && !isAdmin;
+  const shouldShowRegisterCompany =
+    user?.accountType === "USER" &&
+    !roles.company &&
+    !roles.peerhost &&
+    !isAdmin &&
+    isVerified;
 
   const handleLogout = async () => {
     try {
       await logout();
     } finally {
-      router.push("/");
-      router.refresh();
+      window.location.assign("/");
     }
   };
 
@@ -200,6 +225,8 @@ export function UserAccountMenuContent({
   if (!user) return null;
 
   const role = resolveUserRole(user, company);
+  const dashboardHref =
+    isAdmin ? "/sysadmin/dashboard" : isCompany ? "/company/dashboard" : "/renter/dashboard";
   const displayName = buildDisplayName(user);
   const initials = buildInitials(user);
   const shouldShowBadge = Boolean(role.label);
@@ -221,7 +248,12 @@ export function UserAccountMenuContent({
             </AvatarFallback>
           </Avatar>
           {shouldShowBadge ? (
-            <Badge className={cn("rounded-full px-2 py-0 text-[11px]", role.badgeClassName)}>
+            <Badge
+              className={cn(
+                "rounded-full px-2 py-0 text-[11px]",
+                role.badgeClassName,
+              )}
+            >
               {role.label}
             </Badge>
           ) : null}
@@ -265,9 +297,51 @@ export function UserAccountMenuContent({
         <DropdownMenuItem asChild>
           <Link href={role.profileHref}>
             <UserCircle2 className="mr-2 h-4 w-4" />
-            Profile
+            My Profile
           </Link>
         </DropdownMenuItem>
+        {/* Dashboard links (role-aware) */}
+        {isPeerHost ? (
+          <>
+            <DropdownMenuItem asChild>
+              <Link href="/renter/dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                My Renter Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/peerhost/dashboard">
+                <LayoutDashboard className="mr-2 h-4 w-4" />
+                My Peer Host Dashboard
+              </Link>
+            </DropdownMenuItem>
+          </>
+        ) : (
+          <DropdownMenuItem asChild>
+            <Link href={dashboardHref}>
+              <LayoutDashboard className="mr-2 h-4 w-4" />
+              My Dashboard
+            </Link>
+          </DropdownMenuItem>
+        )}
+
+        {shouldShowBecomePeerHost && (
+          <DropdownMenuItem asChild>
+            <Link href="/peerhost/become">
+              <Car className="mr-2 h-4 w-4" />
+              Become a Peer Host
+            </Link>
+          </DropdownMenuItem>
+        )}
+
+        {shouldShowRegisterCompany && (
+          <DropdownMenuItem asChild>
+            <Link href="/company/register">
+              <Building2 className="mr-2 h-4 w-4" />
+              Register Company
+            </Link>
+          </DropdownMenuItem>
+        )}
 
         <DropdownMenuItem onClick={handleLogout}>
           <LogOut className="mr-2 h-4 w-4" />

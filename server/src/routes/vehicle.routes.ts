@@ -17,6 +17,12 @@ export function createVehicleRoutes(auth: Auth): Router {
   const authenticate = createAuthMiddleware(auth);
 
   router.get("/", vehicleController.list);
+  router.get("/marketplace", vehicleController.listMarketplace);
+  router.get(
+    "/marketplace/:id",
+    validate({ params: vehicleIdParamsSchema }),
+    vehicleController.getMarketplaceById,
+  );
   router.get(
     "/mine",
     authenticate,

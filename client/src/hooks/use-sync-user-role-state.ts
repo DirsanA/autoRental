@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchCurrentSession } from "@/lib/auth-api";
+import { fetchCurrentSession, isUnauthorizedError } from "@/lib/auth-api";
 import {
   buildUserRoleState,
   readUserRoleState,
@@ -25,9 +25,11 @@ export function useSyncUserRoleState() {
           buildUserRoleState(session, readUserRoleState()),
         );
       })
-      .catch(() => {
+      .catch((error) => {
         if (cancelled) return;
-        resetUserRoleState();
+        if (isUnauthorizedError(error)) {
+          resetUserRoleState();
+        }
       })
       .finally(() => {
         if (cancelled) return;

@@ -1,21 +1,50 @@
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
-import { buildAuthHeader, writeAuthToken } from "@/lib/auth-token";
+import { coalesceRequest } from "@/lib/api-coalesce";
+import {
+  buildAuthHeader,
+  readAuthToken,
+  writeAuthToken,
+} from "@/lib/auth-token";
 import { resetUserRoleState } from "@/lib/role-store";
 
 const API_BASE_URL = resolveApiBaseUrl();
 const AUTH_SESSION_STORAGE_KEY = "autorent.authSession";
 
-async function parseError(response: Response) {
-  const payload = await response.json().catch(() => null);
-  if (payload) {
-    return JSON.stringify(payload);
+export class AuthApiError extends Error {
+  constructor(
+    message: string,
+    public readonly status: number,
+  ) {
+    super(message);
+    this.name = "AuthApiError";
   }
+}
 
-  return JSON.stringify({
-    error: {
-      message: `Request failed (HTTP ${response.status})`,
-    },
-  });
+export function isUnauthorizedError(error: unknown): boolean {
+  return error instanceof AuthApiError && error.status === 401;
+}
+
+async function parseError(response: Response) {
+  try {
+    const payload = await response.json();
+    return (
+      payload?.error?.message ||
+      payload?.message ||
+      `Request failed (HTTP ${response.status})`
+    );
+  } catch {
+    return response.statusText || `Request failed (HTTP ${response.status})`;
+  }
+}
+
+async function throwAuthApiError(response: Response): Promise<never> {
+  throw new AuthApiError(await parseError(response), response.status);
+}
+
+function clearStoredAuthState() {
+  writeAuthToken(null);
+  writeCachedAuthSession(null);
+  resetUserRoleState();
 }
 
 export type AuthSessionUser = {
@@ -31,9 +60,11 @@ export type AuthSessionUser = {
   status?: string;
 } & Record<string, unknown>;
 
-export type AuthSessionRole = {
-  name?: string;
-} & Record<string, unknown>;
+export type AuthSessionRole =
+  | string
+  | ({
+      name?: string;
+    } & Record<string, unknown>);
 
 export type AuthSessionCompany = {
   status?: string | null;
@@ -42,7 +73,7 @@ export type AuthSessionCompany = {
 export type AuthSessionSnapshot = {
   user?: AuthSessionUser | null;
   session?: Record<string, unknown>;
-  company?: Record<string, unknown> | null;
+  company?: AuthSessionCompany | null;
 };
 
 export type AuthSessionData = AuthSessionSnapshot;
@@ -88,7 +119,7 @@ export async function loginWithEmail(input: {
     body: JSON.stringify(input),
   });
 
-  if (!response.ok) throw new Error(await parseError(response));
+  if (!response.ok) await throwAuthApiError(response);
 
   type AuthUser = Record<string, unknown>;
 
@@ -120,7 +151,7 @@ export async function registerUser(input: {
     body: JSON.stringify(input),
   });
 
-  if (!response.ok) throw new Error(await parseError(response));
+  if (!response.ok) await throwAuthApiError(response);
 
   type AuthUser = Record<string, unknown>;
 
@@ -132,22 +163,10 @@ export async function registerUser(input: {
   return payload.data;
 }
 
-let _clientSessionPromise: Promise<AuthSessionData | null> | null = null;
-let _clientSessionPromiseTime = 0;
-
 export async function fetchCurrentSession() {
-  const isClient = typeof window !== "undefined";
-  const now = Date.now();
+  const tokenCacheKey = readAuthToken() || "cookie";
 
-  if (
-    isClient &&
-    _clientSessionPromise &&
-    now - _clientSessionPromiseTime < 5000
-  ) {
-    return _clientSessionPromise;
-  }
-
-  const doFetch = async () => {
+  return coalesceRequest(`auth-session:${tokenCacheKey}`, async () => {
     const response = await fetch(`${API_BASE_URL}/auth/session`, {
       method: "GET",
       credentials: "include",
@@ -157,7 +176,12 @@ export async function fetchCurrentSession() {
       cache: "no-store",
     });
 
-    if (!response.ok) throw new Error(await parseError(response));
+    if (!response.ok) {
+      if (response.status === 401) {
+        clearStoredAuthState();
+      }
+      await throwAuthApiError(response);
+    }
 
     const payload = (await response.json()) as {
       success?: boolean;
@@ -167,34 +191,92 @@ export async function fetchCurrentSession() {
     const data = payload.data || null;
     writeCachedAuthSession(data);
     return data;
-  };
-
-  if (isClient) {
-    _clientSessionPromise = doFetch();
-    _clientSessionPromiseTime = now;
-  }
-
-  return doFetch();
+  });
 }
 
 export async function logout() {
-  const response = await fetch(`${API_BASE_URL}/auth/logout`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      ...buildAuthHeader(),
-    },
-  });
+  let response: Response;
 
-  writeAuthToken(null);
-  writeCachedAuthSession(null);
-  resetUserRoleState();
+  try {
+    response = await fetch(`${API_BASE_URL}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        ...buildAuthHeader(),
+      },
+    });
+  } catch {
+    clearStoredAuthState();
+    return null;
+  }
 
-  if (!response.ok) throw new Error(await parseError(response));
+  clearStoredAuthState();
+
+  if (!response.ok) await throwAuthApiError(response);
 
   const payload = (await response.json().catch(() => null)) as {
     data?: { message?: string };
   } | null;
 
   return payload?.data || null;
+}
+
+export async function updateProfile(input: {
+  firstName?: string;
+  lastName?: string;
+  phoneNumber?: string;
+  image?: string;
+}) {
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    method: "PATCH",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredAuthState();
+    }
+    await throwAuthApiError(response);
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { user: AuthSessionUser };
+  };
+
+  return payload.data;
+}
+
+export async function changePassword(input: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const response = await fetch(`${API_BASE_URL}/auth/change-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(),
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredAuthState();
+    }
+    await throwAuthApiError(response);
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { message: string };
+  };
+
+  return payload.data;
 }

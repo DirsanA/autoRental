@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -30,13 +31,40 @@ function formatDate(value?: string | null) {
   return value ? new Date(value).toLocaleString() : "—";
 }
 
+function WalletAmountSkeleton() {
+  return <Skeleton className="mt-2 h-8 w-36 bg-black/15 dark:bg-white/15" />;
+}
+
+function PayoutListSkeleton() {
+  return (
+    <div className="space-y-2">
+      {Array.from({ length: 3 }).map((_, index) => (
+        <div
+          key={index}
+          className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 p-3 border rounded-lg"
+        >
+          <div className="min-w-0 space-y-2">
+            <div className="flex items-center gap-2">
+              <Skeleton className="h-5 w-28 bg-black/15 dark:bg-white/15" />
+              <Skeleton className="h-5 w-20 rounded-full bg-black/15 dark:bg-white/15" />
+            </div>
+            <Skeleton className="h-3 w-56 max-w-full bg-black/15 dark:bg-white/15" />
+          </div>
+          <Skeleton className="h-3 w-32 bg-black/15 dark:bg-white/15" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 const payoutStatusStyles: Record<string, string> = {
-  PENDING: "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
-  PROCESSING:
-    "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
+  PENDING:
+    "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300",
+  PROCESSING: "bg-sky-100 text-sky-800 dark:bg-sky-900/30 dark:text-sky-300",
   PAID: "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-300",
   FAILED: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300",
-  CANCELLED: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
+  CANCELLED:
+    "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
 };
 
 export function WalletPage({
@@ -55,7 +83,7 @@ export function WalletPage({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
@@ -92,11 +120,12 @@ export function WalletPage({
     } finally {
       setIsLoading(false);
     }
-  }
+  }, [ownerType, setIsLoading, setError, setWallet, setPayouts]);
 
   useEffect(() => {
     refresh();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [refresh]);
 
   const currency = wallet?.currency || "ETB";
   const available = wallet?.availableBalance || 0;
@@ -123,7 +152,7 @@ export function WalletPage({
         payoutMethod: "CHAPA",
         ownerType,
       });
-      
+
       if (result.checkoutUrl) {
         window.location.href = result.checkoutUrl;
       } else {
@@ -139,6 +168,7 @@ export function WalletPage({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
+      <Header />
       <Main className="gap-6 p-6 md:p-8">
         <div className="flex sm:flex-row flex-col sm:justify-between sm:items-start gap-2">
           <div>
@@ -171,9 +201,11 @@ export function WalletPage({
                   Escrow (Pending)
                 </div>
                 <div className="mt-2 font-bold tabular-nums text-2xl">
-                  {isLoading || !wallet
-                    ? "—"
-                    : formatMoney(pending, currency)}
+                  {isLoading || !wallet ? (
+                    <WalletAmountSkeleton />
+                  ) : (
+                    formatMoney(pending, currency)
+                  )}
                 </div>
                 <p className="mt-1 text-muted-foreground text-xs">
                   Funds locked until completion or admin release.
@@ -185,9 +217,11 @@ export function WalletPage({
                   Available
                 </div>
                 <div className="mt-2 font-bold tabular-nums text-2xl">
-                  {isLoading || !wallet
-                    ? "—"
-                    : formatMoney(available, currency)}
+                  {isLoading || !wallet ? (
+                    <WalletAmountSkeleton />
+                  ) : (
+                    formatMoney(available, currency)
+                  )}
                 </div>
                 <p className="mt-1 text-muted-foreground text-xs">
                   Withdrawable balance.
@@ -226,7 +260,8 @@ export function WalletPage({
               </Button>
 
               <p className="text-muted-foreground text-xs">
-                You will be redirected to Chapa to process the withdrawal request.
+                You will be redirected to Chapa to process the withdrawal
+                request.
               </p>
             </CardContent>
           </Card>
@@ -238,7 +273,7 @@ export function WalletPage({
           </CardHeader>
           <CardContent>
             {isLoading ? (
-              <div className="text-muted-foreground text-sm">Loading...</div>
+              <PayoutListSkeleton />
             ) : payouts.length === 0 ? (
               <div className="text-muted-foreground text-sm">
                 No payout requests yet.
@@ -256,18 +291,26 @@ export function WalletPage({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="font-medium tabular-nums">
-                            {formatMoney(payout.amount, payout.currency || currency)}
+                            {formatMoney(
+                              payout.amount,
+                              payout.currency || currency,
+                            )}
                           </div>
                           <Badge
                             variant="outline"
-                            className={cn("border-0", payoutStatusStyles[status] || "")}
+                            className={cn(
+                              "border-0",
+                              payoutStatusStyles[status] || "",
+                            )}
                           >
                             {status}
                           </Badge>
                         </div>
                         <div className="mt-1 text-muted-foreground text-xs">
                           Requested: {formatDate(payout.createdAt)}{" "}
-                          {payout.payoutMethod ? `• ${payout.payoutMethod}` : ""}
+                          {payout.payoutMethod
+                            ? `• ${payout.payoutMethod}`
+                            : ""}
                         </div>
                       </div>
                       <div className="text-muted-foreground text-xs">
