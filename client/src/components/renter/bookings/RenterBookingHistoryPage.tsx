@@ -34,6 +34,8 @@ import {
 } from "@/lib/bookings-api";
 import { cn } from "@/lib/utils";
 import { RenterBookingFilters } from "./RenterBookingFilters";
+import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
+import { AlertTriangle } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -454,17 +456,29 @@ export function RenterBookingHistoryPage() {
                           </TableCell>
 
                           <TableCell className="text-right">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() =>
-                                router.push(
-                                  `/renter/booking-history/${booking.id}`,
-                                )
-                              }
-                            >
-                              View details
-                            </Button>
+                            <div className="flex justify-end gap-2">
+                              <ReportIssueModal 
+                                subjectId={booking.id}
+                                subjectModel="Booking"
+                                trigger={
+                                  <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-muted-foreground hover:text-rose-500">
+                                    <AlertTriangle className="h-4 w-4" />
+                                    <span className="sr-only">Report Booking</span>
+                                  </Button>
+                                }
+                              />
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  router.push(
+                                    `/renter/booking-history/${booking.id}`,
+                                  )
+                                }
+                              >
+                                View details
+                              </Button>
+                            </div>
                           </TableCell>
                         </TableRow>
                       ))

@@ -26,6 +26,7 @@ import {
   Shield,
   ClipboardCheck,
   ArrowLeftRight,
+  AlertCircle,
 } from "lucide-react";
 import { Logo } from "@/components/peer-host/sidebar-02/logo";
 import type { Route } from "./nav-main";
@@ -35,6 +36,7 @@ import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { toggleActiveRole, writeUserRoleState } from "@/lib/role-store";
 import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
+import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 
 const sampleNotifications = [
   {
@@ -199,6 +201,20 @@ export function PeerToPeerSidebar({ isLoading = false }: { isLoading?: boolean }
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
+
+        <div className="mt-2 pb-4">
+          <ReportIssueModal 
+            trigger={
+              <SidebarMenuButton 
+                tooltip="Report a Problem"
+                className="w-full justify-start gap-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
+              >
+                <AlertCircle className="size-4" />
+                {!isCollapsed && <span>Report a Problem</span>}
+              </SidebarMenuButton>
+            }
+          />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );

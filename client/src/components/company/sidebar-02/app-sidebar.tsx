@@ -5,6 +5,7 @@ import {
   SidebarContent,
   SidebarFooter,
   SidebarHeader,
+  SidebarMenuButton,
   SidebarTrigger,
   useSidebar,
 } from "@/components/ui/sidebar";
@@ -18,6 +19,7 @@ import {
   LayoutDashboard,
   MessageCircleCheckIcon,
   UserCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
@@ -27,6 +29,7 @@ import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { writeUserRoleState } from "@/lib/role-store";
 import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
+import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 
 const sampleNotifications = [
   {
@@ -188,11 +191,18 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
       <SidebarContent className="gap-4 px-2 py-4">
         <DashboardNavigation routes={dashboardRoutes} />
       </SidebarContent>
-      <SidebarFooter className="px-2">
-        <div className="space-y-2">
-
-
-        </div>
+      <SidebarFooter className="px-2 pb-4">
+        <ReportIssueModal 
+          trigger={
+            <SidebarMenuButton 
+              tooltip="Report a Problem"
+              className="w-full justify-start gap-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
+            >
+              <AlertCircle className="size-4" />
+              {!isCollapsed && <span>Report a Problem</span>}
+            </SidebarMenuButton>
+          }
+        />
       </SidebarFooter>
     </Sidebar>
   );

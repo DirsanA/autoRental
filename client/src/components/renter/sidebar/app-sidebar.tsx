@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Home, User } from "lucide-react";
+import { BookOpen, Home, User, AlertCircle } from "lucide-react";
 
 import {
   Sidebar,
@@ -15,6 +15,8 @@ import {
 } from "@/components/ui/sidebar";
 import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 import { cn } from "@/lib/utils";
+import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
+import { SidebarFooter } from "@/components/ui/sidebar";
 
 export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state: sidebarState } = useSidebar();
@@ -113,6 +115,20 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarContent>
+
+      <SidebarFooter className="p-4">
+        <ReportIssueModal 
+          trigger={
+            <SidebarMenuButton 
+              tooltip="Report a Problem"
+              className="w-full justify-start gap-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
+            >
+              <AlertCircle className="size-4" />
+              {!isCollapsed && <span>Report a Problem</span>}
+            </SidebarMenuButton>
+          }
+        />
+      </SidebarFooter>
     </Sidebar>
   );
 }
