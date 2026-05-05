@@ -90,6 +90,7 @@ export default function CompanyManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingCompanyId, setPendingCompanyId] = useState<string | null>(null);
+  const [approveTarget, setApproveTarget] = useState<Company | null>(null);
   const [suspendTarget, setSuspendTarget] = useState<Company | null>(null);
   const [suspendReason, setSuspendReason] = useState("");
 
@@ -143,28 +144,27 @@ export default function CompanyManagementPage() {
   const handleView = (company: Company) =>
     router.push(`/sysadmin/companies/${company.id}`);
 
-  const handleApprove = async (company: Company) => {
-    const actionLabel =
-      company.statusValue === "SUSPENDED" ? "reactivate" : "approve";
+  const handleApprove = (company: Company) => {
+    setApproveTarget(company);
+  };
 
-    if (!window.confirm(`Do you want to ${actionLabel} ${company.name}?`)) {
-      return;
-    }
-
-    setPendingCompanyId(company.id);
+  const confirmApprove = async () => {
+    if (!approveTarget) return;
+    setPendingCompanyId(approveTarget.id);
 
     try {
-      const updated = await approveAdminCompany(company.id);
+      const updated = await approveAdminCompany(approveTarget.id);
       setCompanies((current) =>
         current.map((entry) => (entry.id === updated.id ? updated : entry)),
       );
       toast({
         title:
-          company.statusValue === "SUSPENDED"
+          approveTarget.statusValue === "SUSPENDED"
             ? "Company reactivated"
             : "Company approved",
         description: `${updated.name} is now active.`,
       });
+      setApproveTarget(null);
     } catch (cause: unknown) {
       toast({
         title: "Company update failed",
@@ -409,6 +409,46 @@ export default function CompanyManagementPage() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
               Suspend company
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!approveTarget}
+        onOpenChange={(open) => {
+          if (!open) setApproveTarget(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {approveTarget?.statusValue === "SUSPENDED"
+                ? "Reactivate company"
+                : "Approve company"}
+            </DialogTitle>
+            <DialogDescription>
+              {approveTarget?.statusValue === "SUSPENDED"
+                ? `This will restore access for ${approveTarget?.name}.`
+                : `This will approve ${approveTarget?.name} and activate their company account.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveTarget(null)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={confirmApprove}
+              disabled={pendingCompanyId === approveTarget?.id}
+              className="gap-2"
+            >
+              {pendingCompanyId === approveTarget?.id ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              {approveTarget?.statusValue === "SUSPENDED"
+                ? "Reactivate"
+                : "Approve"}
             </Button>
           </DialogFooter>
         </DialogContent>

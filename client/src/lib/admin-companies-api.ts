@@ -43,6 +43,21 @@ export type AdminCompanyDetail = AdminCompanySummary & {
   walletBalance: number | null;
   rejectionReason: string | null;
   address: string | null;
+  authDocuments: {
+    verifications: Array<{
+      id: string;
+      documentType:
+        | "NATIONAL_ID"
+        | "PASSPORT"
+        | "DRIVER_LICENSE"
+        | "BUSINESS_LICENSE";
+      documentFrontUrl: string;
+      documentBackUrl: string | null;
+      status: "PENDING" | "APPROVED" | "REJECTED";
+      createdAt: string | null;
+      updatedAt: string | null;
+    }>;
+  } | null;
   socialLinks: {
     linkedin: string | null;
     facebook: string | null;
@@ -89,6 +104,7 @@ type ApiCompany = {
   rejectionReason?: string | null;
   createdAt?: string | null;
   updatedAt?: string | null;
+  authDocuments?: AdminCompanyDetail["authDocuments"];
   contactInfo?: {
     email?: string | null;
     phoneNumber?: string | null;
@@ -110,6 +126,8 @@ type ApiCompany = {
     email?: string | null;
     status?: string | null;
     accountType?: string | null;
+    image?: string | null;
+    idImageUrl?: string | null;
   } | null;
 };
 
@@ -212,6 +230,7 @@ function mapApiCompanyToDetail(company: ApiCompany): AdminCompanyDetail {
       typeof company.walletBalance === "number" ? company.walletBalance : null,
     rejectionReason: company.rejectionReason || null,
     address: company.contactInfo?.address || null,
+    authDocuments: company.authDocuments || null,
     socialLinks: company.socialLinks
       ? {
           linkedin: company.socialLinks.linkedin || null,
@@ -273,7 +292,7 @@ export async function fetchAdminCompanyDetail(
   companyId: string,
 ): Promise<AdminCompanyDetail> {
   const response = await fetch(
-    `${API_BASE_URL}/companies/${encodeURIComponent(companyId)}`,
+    `${API_BASE_URL}/companies/${encodeURIComponent(companyId)}/admin`,
     buildRequestInit(),
   );
 

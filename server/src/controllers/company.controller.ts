@@ -5,6 +5,8 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { requireRequestUser } from "../utils/requestContext.js";
+import { User } from "../models/User.js";
+import { Verification } from "../models/Verification.js";
 
 /**
  * Parses company list query params into service options.
@@ -145,6 +147,67 @@ export const companyController = {
     res.json({
       success: true,
       data: { company },
+    });
+  }),
+
+  /**
+   * GET /api/companies/:id/admin
+   * Returns a single company by id including linked auth account + uploaded docs.
+   */
+  getByIdAdmin: asyncHandler(async (req: Request, res: Response) => {
+    const company = await companyService.getById(req.params.id as string);
+
+    const authAccount = company.authUserId
+      ? await User.findById(company.authUserId)
+          .select("name email image idImageUrl accountType status")
+          .lean()
+      : null;
+
+    const authUserObjectId = authAccount?._id ?? null;
+    const verificationDocs = authUserObjectId
+      ? await Verification.find({
+          $or: [
+            { userId: authUserObjectId },
+            ...(company?._id ? [{ companyId: company._id }] : []),
+          ],
+          documentType: { $in: ["NATIONAL_ID", "DRIVER_LICENSE", "PASSPORT"] },
+        })
+          .select(
+            "documentType documentFrontUrl documentBackUrl status createdAt updatedAt",
+          )
+          .sort({ createdAt: -1 })
+          .lean()
+      : [];
+
+    res.json({
+      success: true,
+      data: {
+        company: {
+          ...(company.toJSON ? company.toJSON() : company),
+          authAccount: authAccount
+            ? {
+                id: authAccount._id?.toString?.() ?? String(authAccount._id),
+                name: authAccount.name ?? null,
+                email: authAccount.email ?? null,
+                image: authAccount.image ?? null,
+                status: authAccount.status ?? null,
+                accountType: authAccount.accountType ?? null,
+                idImageUrl: authAccount.idImageUrl ?? null,
+              }
+            : null,
+          authDocuments: {
+            verifications: verificationDocs.map((doc: any) => ({
+              id: doc._id?.toString?.() ?? String(doc._id),
+              documentType: doc.documentType,
+              documentFrontUrl: doc.documentFrontUrl,
+              documentBackUrl: doc.documentBackUrl ?? null,
+              status: doc.status,
+              createdAt: doc.createdAt ?? null,
+              updatedAt: doc.updatedAt ?? null,
+            })),
+          },
+        },
+      },
     });
   }),
 

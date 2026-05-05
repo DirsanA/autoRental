@@ -20,6 +20,13 @@ export function createCompanyRoutes(auth: Auth): Router {
   // Admin moderation routes
   router.get("/", authenticate, authorize("manage", "all"), companyController.list);
 
+  router.get(
+    "/:id/admin",
+    authenticate,
+    authorize("manage", "all"),
+    companyController.getByIdAdmin,
+  );
+
   router.patch(
     "/:id/approve",
     authenticate,
