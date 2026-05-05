@@ -53,14 +53,16 @@ export class ReportService {
     status?: ReportStatus;
     type?: ReportType;
     priority?: ReportPriority;
+    subjectId?: string;
     page?: number;
     limit?: number;
   }) {
-    const { status, type, priority, page = 1, limit = 20 } = query;
+    const { status, type, priority, subjectId, page = 1, limit = 20 } = query;
     const filter: any = {};
     if (status) filter.status = status;
     if (type) filter.type = type;
     if (priority) filter.priority = priority;
+    if (subjectId) filter.subjectId = subjectId;
 
     const skip = (page - 1) * limit;
     

@@ -100,8 +100,11 @@ export class VehicleService {
    * Lists vehicles with an optional API shorthand filter.
    * Standard lean query, no owner enrichment.
    */
-  async list(filter?: "available" | "rented" | "maintenance") {
-    const query = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
+  async list(filter?: "available" | "rented" | "maintenance", ownerId?: string) {
+    const query: any = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
+    if (ownerId) {
+      query.ownerId = ownerId;
+    }
     return Vehicle.find(query).sort({ createdAt: -1 });
   }
 

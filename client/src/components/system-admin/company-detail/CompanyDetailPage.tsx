@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -28,6 +29,8 @@ import {
   MapPin,
   Phone,
   ShieldCheck,
+  FileText,
+  Image as ImageIcon,
 } from "lucide-react";
 import {
   approveAdminCompany,
@@ -35,6 +38,8 @@ import {
   type AdminCompanyDetail,
   suspendAdminCompany,
 } from "@/lib/admin-companies-api";
+import { CompanyFleetTab } from "./CompanyFleetTab";
+import { CompanyReportsTab } from "./CompanyReportsTab";
 
 function formatDateTime(value: string | null) {
   return value ? new Date(value).toLocaleString() : "Not available";
@@ -225,180 +230,244 @@ export default function CompanyDetailPage({
             </div>
 
             {loading ? (
-              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-                Loading company...
+              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading company...
               </div>
             ) : error ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
                 {error}
               </div>
             ) : company ? (
-              <>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Company Status
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {formatLabel(company.statusValue)}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Verification
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center gap-2 text-lg font-semibold">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                      {company.isVerified ? "Verified" : "Not verified"}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Wallet Balance
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {formatMoney(company.walletBalance)}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Auth Account
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {company.authAccount?.name || "Not linked"}
-                    </CardContent>
-                  </Card>
-                </div>
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList className="bg-muted/50 p-1">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="documents">Documents</TabsTrigger>
+                  <TabsTrigger value="fleet">Fleet</TabsTrigger>
+                  <TabsTrigger value="reports">Reports</TabsTrigger>
+                </TabsList>
 
-                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Company Profile</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Name</div>
-                        <div className="font-medium">{company.name}</div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">TIN number</div>
-                        <div className="font-medium">
-                          {company.tinNumber || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Contact email</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {company.contactEmail || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Contact phone</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          {company.contactPhone || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Website</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                          {company.website || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Address</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          {company.address || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <div className="text-sm text-muted-foreground">Bio</div>
-                        <div className="font-medium">
-                          {company.bio || "No company bio on file."}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* OVERVIEW TAB */}
+                <TabsContent value="overview" className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Company Status
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {formatLabel(company.statusValue)}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Verification
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex items-center gap-2 text-lg font-semibold">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        {company.isVerified ? "Verified" : "Not verified"}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Wallet Balance
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {formatMoney(company.walletBalance)}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Auth Account
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {company.authAccount?.name || "Not linked"}
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Lifecycle And Compliance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Created at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.createdAt)}
+                  <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Company Profile</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Name</div>
+                          <div className="font-medium">{company.name}</div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Updated at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.updatedAt)}
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">TIN number</div>
+                          <div className="font-medium">
+                            {company.tinNumber || "Not provided"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Verified at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.verifiedAt)}
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Contact email</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            {company.contactEmail || "Not provided"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          Moderation markers
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Contact phone</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            {company.contactPhone || "Not provided"}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="font-normal">
-                            {company.isVerified ? "Verified" : "Pending verification"}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {formatLabel(company.authAccount?.status)}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {formatLabel(company.authAccount?.accountType)}
-                          </Badge>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Website</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            {company.website || "Not provided"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">
-                          Suspension or rejection reason
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Address</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            {company.address || "Not provided"}
+                          </div>
                         </div>
-                        <div className="font-medium">
-                          {company.rejectionReason || "No reason recorded"}
+                        <div className="space-y-1 md:col-span-2">
+                          <div className="text-sm text-muted-foreground">Bio</div>
+                          <div className="font-medium">
+                            {company.bio || "No company bio on file."}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      </CardContent>
+                    </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Admin Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <div className="rounded-lg border bg-muted/10 p-4">
-                      This view is backed by current company records and live
-                      moderation actions.
-                    </div>
-                    <div className="rounded-lg border bg-muted/10 p-4">
-                      Related company analytics such as fleet metrics, bookings,
-                      and financial rollups should move into dedicated admin
-                      endpoints before they are shown here.
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Lifecycle And Compliance</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-4">
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Created at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.createdAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Updated at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.updatedAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Verified at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.verifiedAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">
+                            Moderation markers
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="font-normal">
+                              {company.isVerified ? "Verified" : "Pending verification"}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal">
+                              {formatLabel(company.authAccount?.status)}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal">
+                              {formatLabel(company.authAccount?.accountType)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">
+                            Suspension or rejection reason
+                          </div>
+                          <div className="font-medium text-red-600">
+                            {company.rejectionReason || "No reason recorded"}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* DOCUMENTS TAB */}
+                <TabsContent value="documents" className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          License Document
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {company.licenseDocumentUrl ? (
+                          <div className="rounded-xl overflow-hidden border">
+                            {company.licenseDocumentUrl.toLowerCase().endsWith('.pdf') ? (
+                              <embed 
+                                src={company.licenseDocumentUrl} 
+                                className="w-full h-[400px]" 
+                                type="application/pdf" 
+                              />
+                            ) : (
+                              <img 
+                                src={company.licenseDocumentUrl} 
+                                alt="Company License" 
+                                className="w-full h-auto object-contain"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+                            No license document uploaded
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <ImageIcon className="h-5 w-5 text-primary" />
+                          Company Logo
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        {company.logoUrl ? (
+                          <div className="rounded-xl overflow-hidden border bg-muted/20 flex items-center justify-center p-8">
+                            <img 
+                              src={company.logoUrl} 
+                              alt="Company Logo" 
+                              className="max-w-full max-h-[300px] object-contain"
+                            />
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+                            No logo uploaded
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* FLEET TAB */}
+                <TabsContent value="fleet">
+                  <CompanyFleetTab companyId={company.id} />
+                </TabsContent>
+
+                {/* REPORTS TAB */}
+                <TabsContent value="reports">
+                  <CompanyReportsTab companyId={company.id} />
+                </TabsContent>
+              </Tabs>
             ) : null}
           </div>
         </Main>

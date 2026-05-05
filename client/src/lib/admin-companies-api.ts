@@ -352,3 +352,37 @@ export async function suspendAdminCompany(
 
   return mapApiCompanyToSummary(payload.data.company);
 }
+
+export async function fetchCompanyVehicles(companyId: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/vehicles?ownerId=${companyId}`,
+    buildRequestInit(),
+  );
+  if (!response.ok) throw new Error(await parseError(response));
+  const payload = await response.json();
+  return payload.data?.vehicles || [];
+}
+
+export async function updateVehicleStatus(vehicleId: string, status: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/vehicles/${vehicleId}/status`,
+    buildRequestInit({
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status }),
+    }),
+  );
+  if (!response.ok) throw new Error(await parseError(response));
+  const payload = await response.json();
+  return payload.data?.vehicle;
+}
+
+export async function fetchCompanyReports(companyId: string) {
+  const response = await fetch(
+    `${API_BASE_URL}/reports/admin?subjectId=${companyId}`,
+    buildRequestInit(),
+  );
+  if (!response.ok) throw new Error(await parseError(response));
+  const payload = await response.json();
+  return payload.data || [];
+}

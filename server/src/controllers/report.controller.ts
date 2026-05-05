@@ -27,11 +27,12 @@ export const getMyReports = asyncHandler(async (req: Request, res: Response) => 
 });
 
 export const adminListReports = asyncHandler(async (req: Request, res: Response) => {
-  const { status, type, priority, page, limit } = req.query;
+  const { status, type, priority, subjectId, page, limit } = req.query;
   const result = await reportService.listAllReports({
     status: status as any,
     type: type as any,
     priority: priority as any,
+    subjectId: subjectId as string | undefined,
     page: page ? parseInt(page as string) : undefined,
     limit: limit ? parseInt(limit as string) : undefined,
   });

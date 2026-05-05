@@ -32,7 +32,8 @@ export const vehicleController = {
    * Standard endpoint - no owner enrichment.
    */
   list: asyncHandler(async (req: Request, res: Response) => {
-    const vehicles = await vehicleService.list(getVehicleFilter(req.query));
+    const ownerId = req.query.ownerId as string | undefined;
+    const vehicles = await vehicleService.list(getVehicleFilter(req.query), ownerId);
 
     res.json({
       success: true,
