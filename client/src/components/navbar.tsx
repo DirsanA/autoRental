@@ -1,60 +1,24 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import {
-  Building2,
-  Car,
-  Loader2,
-  LayoutDashboard,
-  LogOut,
-  User,
-  UserCircle2,
-} from "lucide-react";
+import { Loader2 } from "lucide-react";
 
-import { Button } from "@/components/ui/button";
 import { Logo } from "@/components/logo";
-import { ModeToggle } from "./mode-toggle";
-import { useAuth } from "@/hooks/use_auth";
 import { UserAccountMenuContent } from "@/components/user-account-menu";
+import { useAuth } from "@/hooks/use_auth";
+import { Button } from "@/components/ui/button";
+
+import { ModeToggle } from "./mode-toggle";
 
 const Navbar = () => {
   const { user, company, loading } = useAuth();
-
-  const handleRegisterCompany = () => {
-    router.push("/auth/becomehost");
-  };
-
-  const handleBecomePeerHost = () => {
-    router.push("/peerhost/become-host");
-  };
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push("/");
-      router.refresh();
-    } catch (err) {
-      console.error(err);
-    }
-  };
-
-
-  const companyStatus = company?.status;
-  const companyMenuLabel =
-    companyStatus === "ACTIVE"
-      ? "Company Dashboard"
-      : companyStatus === "PENDING_APPROVAL"
-        ? "Company Application Pending"
-        : "Register Company";
-
   return (
     <nav className="h-16 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
         <Logo />
 
         <div className="flex items-center gap-3">
-          {loading && (
+          {loading ? (
             <Button
               variant="outline"
               size="icon"
@@ -64,9 +28,9 @@ const Navbar = () => {
             >
               <Loader2 className="h-4 w-4 animate-spin" />
             </Button>
-          )}
+          ) : null}
 
-          {!loading && !user && (
+          {!loading && !user ? (
             <>
               <Button asChild variant="ghost">
                 <Link href="/auth/signin">Login</Link>
@@ -75,14 +39,14 @@ const Navbar = () => {
                 <Link href="/auth/signup">Sign up</Link>
               </Button>
             </>
-          )}
+          ) : null}
 
-          {!loading && user && (
+          {!loading && user ? (
             <UserAccountMenuContent
               triggerVariant="outline"
               auth={{ user, company, loading }}
             />
-          )}
+          ) : null}
 
           <ModeToggle />
         </div>
