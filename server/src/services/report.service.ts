@@ -68,6 +68,7 @@ export class ReportService {
     
     const [rawReports, total] = await Promise.all([
       Report.find(filter)
+        .select("type description status priority subjectId subjectModel reportedBy createdAt updatedAt")
         .populate("reportedBy", "name email")
         .sort({ createdAt: -1 })
         .skip(skip)

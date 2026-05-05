@@ -105,7 +105,9 @@ export class VehicleService {
     if (ownerId) {
       query.ownerId = ownerId;
     }
-    return Vehicle.find(query).sort({ createdAt: -1 });
+    return Vehicle.find(query)
+      .select("make model year plate price status ownerId ownerType createdAt")
+      .sort({ createdAt: -1 });
   }
 
   /**

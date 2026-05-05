@@ -146,7 +146,8 @@ const companySchema = new Schema<ICompany>(
 /**
  * 3. Performance Indexing
  */
-companySchema.index({ status: 1 });
+companySchema.index({ status: 1, createdAt: -1 });
+companySchema.index({ createdAt: -1 });
 companySchema.index({ name: "text" }); // Full-text search on company name
 companySchema.index({ location: "2dsphere" }); // Geospatial queries (find nearby companies)
 

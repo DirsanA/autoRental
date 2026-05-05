@@ -116,7 +116,10 @@ function toAdminUserSummary(user: UserViewSource) {
 /**
  * Builds candidate auth identifiers that may link a user to a company record.
  */
-function buildAuthUserIdentifiers(userId: string, user: UserViewSource): string[] {
+function buildAuthUserIdentifiers(
+  userId: string,
+  user: UserViewSource,
+): string[] {
   return Array.from(
     new Set(
       [userId, String(user.id ?? ""), String(user._id ?? "")]
@@ -210,7 +213,8 @@ export class UserService {
 
     if (data.firstName !== undefined) updateData.firstName = data.firstName;
     if (data.lastName !== undefined) updateData.lastName = data.lastName;
-    if (data.phoneNumber !== undefined) updateData.phoneNumber = data.phoneNumber;
+    if (data.phoneNumber !== undefined)
+      updateData.phoneNumber = data.phoneNumber;
 
     if (data.firstName !== undefined || data.lastName !== undefined) {
       updateData.name = `${data.firstName ?? user.firstName} ${data.lastName ?? user.lastName}`;
@@ -245,6 +249,9 @@ export class UserService {
 
     const [users, total] = await Promise.all([
       User.find(filter)
+        .select(
+          "_id name firstName lastName email image accountType status emailVerified createdAt verificationLevel roles",
+        )
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)
@@ -314,18 +321,28 @@ export class UserService {
     ];
 
     if (company?._id) {
-      reviewTargetFilters.push({ targetId: company._id, targetType: "Company" });
+      reviewTargetFilters.push({
+        targetId: company._id,
+        targetType: "Company",
+      });
     }
 
-    const renterBookingsFilter = { renterId: mongoUserId } as Record<string, unknown>;
+    const renterBookingsFilter = { renterId: mongoUserId } as Record<
+      string,
+      unknown
+    >;
     const activeRenterBookingsFilter = {
       renterId: mongoUserId,
       status: { $in: ["PENDING", "CONFIRMED", "ACTIVE"] },
     } as Record<string, unknown>;
-    const ownedVehicleBookingsFilter = vehicleIds.length > 0
-      ? ({ vehicleId: { $in: vehicleIds } } as Record<string, unknown>)
-      : null;
-    const bookingsFeedFilter = { $or: bookingOrFilters } as Record<string, unknown>;
+    const ownedVehicleBookingsFilter =
+      vehicleIds.length > 0
+        ? ({ vehicleId: { $in: vehicleIds } } as Record<string, unknown>)
+        : null;
+    const bookingsFeedFilter = { $or: bookingOrFilters } as Record<
+      string,
+      unknown
+    >;
     const authoredOrReceivedReviewsFilter = {
       $or: [{ reviewerId: mongoUserId }, ...reviewTargetFilters],
     } as Record<string, unknown>;
@@ -356,94 +373,95 @@ export class UserService {
       recentDisputes,
       transactionMetrics,
       recentTransactions,
-    ] =
-      await Promise.all([
-        Verification.countDocuments({ userId: mongoUserId }),
-        Verification.find({ userId: mongoUserId })
-          .sort({ createdAt: -1 })
-          .select(
-            "documentType status adminComment verifiedAt documentFrontUrl documentBackUrl createdAt extractedData",
-          )
-          .lean(),
-        Vehicle.find({ ownerId: mongoUserId, ownerType: "User" })
-          .sort({ createdAt: -1 })
-          .select(
-            "make model year vin plate mileage fuel transmission seats features condition price availability delivery status photos documents createdAt verifiedAt",
-          )
-          .lean(),
-        Promise.all([
-          Booking.countDocuments(renterBookingsFilter as any),
-          Booking.countDocuments(activeRenterBookingsFilter as any),
-          ownedVehicleBookingsFilter
-            ? Booking.countDocuments(ownedVehicleBookingsFilter as any)
-            : Promise.resolve(0),
-        ]),
-        Booking.find(bookingsFeedFilter as any)
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .select("bookingId renterId vehicleId status startTime endTime createdAt")
-          .lean(),
-        Promise.all([
-          Review.countDocuments({ reviewerId: mongoUserId } as any),
-          Review.countDocuments({ $or: reviewTargetFilters } as any),
-        ]),
-        Review.find(authoredOrReceivedReviewsFilter as any)
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .select("reviewerId targetId targetType rating comment createdAt")
-          .lean(),
-        Promise.all([
-          Dispute.countDocuments({ raisedBy: mongoUserId } as any),
-          Dispute.countDocuments({ respondentId: mongoUserId } as any),
-        ]),
-        Dispute.find(raisedOrReceivedDisputesFilter as any)
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .select("raisedBy subjectModel issueCategory status createdAt")
-          .lean(),
-        Promise.all([
-          Transaction.aggregate<{ total: number }>([
-            {
-              $match: {
-                payerId: mongoUserId,
-                status: "COMPLETED",
-              },
+    ] = await Promise.all([
+      Verification.countDocuments({ userId: mongoUserId }),
+      Verification.find({ userId: mongoUserId })
+        .sort({ createdAt: -1 })
+        .select(
+          "documentType status adminComment verifiedAt documentFrontUrl documentBackUrl createdAt extractedData",
+        )
+        .lean(),
+      Vehicle.find({ ownerId: mongoUserId, ownerType: "User" })
+        .sort({ createdAt: -1 })
+        .select(
+          "make model year vin plate mileage fuel transmission seats features condition price availability delivery status photos documents createdAt verifiedAt",
+        )
+        .lean(),
+      Promise.all([
+        Booking.countDocuments(renterBookingsFilter as any),
+        Booking.countDocuments(activeRenterBookingsFilter as any),
+        ownedVehicleBookingsFilter
+          ? Booking.countDocuments(ownedVehicleBookingsFilter as any)
+          : Promise.resolve(0),
+      ]),
+      Booking.find(bookingsFeedFilter as any)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select(
+          "bookingId renterId vehicleId status startTime endTime createdAt",
+        )
+        .lean(),
+      Promise.all([
+        Review.countDocuments({ reviewerId: mongoUserId } as any),
+        Review.countDocuments({ $or: reviewTargetFilters } as any),
+      ]),
+      Review.find(authoredOrReceivedReviewsFilter as any)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("reviewerId targetId targetType rating comment createdAt")
+        .lean(),
+      Promise.all([
+        Dispute.countDocuments({ raisedBy: mongoUserId } as any),
+        Dispute.countDocuments({ respondentId: mongoUserId } as any),
+      ]),
+      Dispute.find(raisedOrReceivedDisputesFilter as any)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("raisedBy subjectModel issueCategory status createdAt")
+        .lean(),
+      Promise.all([
+        Transaction.aggregate<{ total: number }>([
+          {
+            $match: {
+              payerId: mongoUserId,
+              status: "COMPLETED",
             },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: "$amount" },
-              },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$amount" },
             },
-          ]),
-          Transaction.aggregate<{ total: number }>([
-            {
-              $match: company?._id
-                ? {
-                    receiverId: company._id,
-                    receiverModel: "Company",
-                    status: "COMPLETED",
-                  }
-                : {
-                    receiverId: mongoUserId,
-                    receiverModel: "User",
-                    status: "COMPLETED",
-                  },
-            },
-            {
-              $group: {
-                _id: null,
-                total: { $sum: "$amount" },
-              },
-            },
-          ]),
+          },
         ]),
-        Transaction.find(transactionFeedFilter as any)
-          .sort({ createdAt: -1 })
-          .limit(5)
-          .select("payerId type status amount currency receiverModel createdAt")
-          .lean(),
-      ]);
+        Transaction.aggregate<{ total: number }>([
+          {
+            $match: company?._id
+              ? {
+                  receiverId: company._id,
+                  receiverModel: "Company",
+                  status: "COMPLETED",
+                }
+              : {
+                  receiverId: mongoUserId,
+                  receiverModel: "User",
+                  status: "COMPLETED",
+                },
+          },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$amount" },
+            },
+          },
+        ]),
+      ]),
+      Transaction.find(transactionFeedFilter as any)
+        .sort({ createdAt: -1 })
+        .limit(5)
+        .select("payerId type status amount currency receiverModel createdAt")
+        .lean(),
+    ]);
 
     return {
       user: {
@@ -496,17 +514,26 @@ export class UserService {
         documentType: verification.documentType,
         status: verification.status,
         reviewTargetLevel:
-          (verification.extractedData as { targetVerificationLevel?: string } | undefined)
-            ?.targetVerificationLevel ?? null,
+          (
+            verification.extractedData as
+              | { targetVerificationLevel?: string }
+              | undefined
+          )?.targetVerificationLevel ?? null,
         documentNumber:
-          (verification.extractedData as { documentNumber?: string } | undefined)
-            ?.documentNumber ?? null,
+          (
+            verification.extractedData as
+              | { documentNumber?: string }
+              | undefined
+          )?.documentNumber ?? null,
         dateOfBirth:
           (verification.extractedData as { dateOfBirth?: string } | undefined)
             ?.dateOfBirth ?? null,
         documentExpiry:
-          (verification.extractedData as { documentExpiry?: string } | undefined)
-            ?.documentExpiry ?? null,
+          (
+            verification.extractedData as
+              | { documentExpiry?: string }
+              | undefined
+          )?.documentExpiry ?? null,
         submittedAddress:
           (verification.extractedData as { address?: string } | undefined)
             ?.address ?? null,
@@ -564,7 +591,9 @@ export class UserService {
         id: review._id?.toString?.() ?? String(review._id),
         targetType: review.targetType,
         relation:
-          String(review.reviewerId) === String(mongoUserId) ? "AUTHORED" : "RECEIVED",
+          String(review.reviewerId) === String(mongoUserId)
+            ? "AUTHORED"
+            : "RECEIVED",
         rating: review.rating,
         comment: review.comment ?? null,
         createdAt: review.createdAt ?? null,
@@ -575,7 +604,8 @@ export class UserService {
         issueCategory: dispute.issueCategory,
         status: dispute.status,
         relation:
-          String((dispute as { raisedBy?: unknown }).raisedBy) === String(mongoUserId)
+          String((dispute as { raisedBy?: unknown }).raisedBy) ===
+          String(mongoUserId)
             ? "RAISED"
             : "RESPONDENT",
         createdAt: dispute.createdAt ?? null,
@@ -587,7 +617,8 @@ export class UserService {
         amount: transaction.amount,
         currency: transaction.currency,
         direction:
-          String((transaction as { payerId?: unknown }).payerId) === String(mongoUserId)
+          String((transaction as { payerId?: unknown }).payerId) ===
+          String(mongoUserId)
             ? "OUTGOING"
             : "INCOMING",
         receiverModel: transaction.receiverModel ?? null,
@@ -638,15 +669,19 @@ export class UserService {
     const userId = this.requireUserId(id);
 
     if (userId === caller.id) {
-      throw ApiError.badRequest("You cannot change your own verification level");
+      throw ApiError.badRequest(
+        "You cannot change your own verification level",
+      );
     }
 
     if (data.verificationLevel !== VerificationLevel.PEER_HOST) {
       throw ApiError.badRequest("Unsupported verification level change");
     }
 
-    const user = await User.findById(userId)
-      .populate({ path: "roles", select: "name" });
+    const user = await User.findById(userId).populate({
+      path: "roles",
+      select: "name",
+    });
 
     if (!user) {
       throw ApiError.notFound("User not found");
@@ -701,14 +736,19 @@ export class UserService {
   /**
    * Deletes a user and their auth artifacts while preventing self-deletion.
    */
-  async deleteUser(caller: RequestUser, id: string): Promise<{ message: string }> {
+  async deleteUser(
+    caller: RequestUser,
+    id: string,
+  ): Promise<{ message: string }> {
     const userId = this.requireUserId(id);
 
     if (userId === caller.id) {
       throw ApiError.badRequest("You cannot delete your own account");
     }
 
-    const existing = await User.findById(userId).select("email").lean<{ email?: string }>();
+    const existing = await User.findById(userId)
+      .select("email")
+      .lean<{ email?: string }>();
     if (!existing) {
       throw ApiError.notFound("User not found");
     }

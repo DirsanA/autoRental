@@ -33,6 +33,7 @@ import {
   FileText,
   IdCard,
   CreditCard,
+  Download,
 } from "lucide-react";
 import {
   approveAdminCompany,
@@ -71,6 +72,25 @@ function normalizeExternalUrl(raw: string) {
   if (!trimmed) return null;
   if (/^https?:\/\//i.test(trimmed)) return trimmed;
   return `https://${trimmed}`;
+}
+
+async function downloadFile(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error("Download failed", error);
+    // Fallback: open in new tab
+    window.open(url, "_blank");
+  }
 }
 
 /**
@@ -400,18 +420,33 @@ export default function CompanyDetailPage({
                                     National ID (image)
                                   </div>
                                   {company.authAccount.idImageUrl ? (
-                                    <button
-                                      type="button"
-                                      onClick={() =>
-                                        setDocPreview({
-                                          title: "National ID",
-                                          url: company.authAccount!.idImageUrl!,
-                                        })
-                                      }
-                                      className="text-sm underline underline-offset-4 hover:text-primary"
-                                    >
-                                      View
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDocPreview({
+                                            title: "National ID",
+                                            url: company.authAccount!.idImageUrl!,
+                                          })
+                                        }
+                                        className="text-sm underline underline-offset-4 hover:text-primary"
+                                      >
+                                        View
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          downloadFile(
+                                            company.authAccount!.idImageUrl!,
+                                            `national_id_${company.name.replace(/\s+/g, "_")}`,
+                                          )
+                                        }
+                                        className="text-muted-foreground hover:text-primary"
+                                        title="Download"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">
                                       Not found
@@ -427,23 +462,43 @@ export default function CompanyDetailPage({
                                   {company.authDocuments?.verifications?.some(
                                     (doc) => doc.documentType === "DRIVER_LICENSE",
                                   ) ? (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        const url =
-                                          company.authDocuments!.verifications.find(
-                                            (doc) =>
-                                              doc.documentType === "DRIVER_LICENSE",
-                                          )!.documentFrontUrl;
-                                        setDocPreview({
-                                          title: "Driver license",
-                                          url,
-                                        });
-                                      }}
-                                      className="text-sm underline underline-offset-4 hover:text-primary"
-                                    >
-                                      View
-                                    </button>
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const url =
+                                            company.authDocuments!.verifications.find(
+                                              (doc) =>
+                                                doc.documentType === "DRIVER_LICENSE",
+                                            )!.documentFrontUrl;
+                                          setDocPreview({
+                                            title: "Driver license",
+                                            url,
+                                          });
+                                        }}
+                                        className="text-sm underline underline-offset-4 hover:text-primary"
+                                      >
+                                        View
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const url =
+                                            company.authDocuments!.verifications.find(
+                                              (doc) =>
+                                                doc.documentType === "DRIVER_LICENSE",
+                                            )!.documentFrontUrl;
+                                          downloadFile(
+                                            url,
+                                            `driver_license_${company.name.replace(/\s+/g, "_")}`,
+                                          );
+                                        }}
+                                        className="text-muted-foreground hover:text-primary"
+                                        title="Download"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </button>
+                                    </div>
                                   ) : (
                                     <span className="text-sm text-muted-foreground">
                                       Not found
@@ -522,6 +577,22 @@ export default function CompanyDetailPage({
                           <FileText className="h-5 w-5 text-primary" />
                           License Document
                         </CardTitle>
+                        {company.licenseDocumentUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-2"
+                            onClick={() =>
+                              downloadFile(
+                                company.licenseDocumentUrl!,
+                                `company_license_${company.name.replace(/\s+/g, "_")}`,
+                              )
+                            }
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                        )}
                       </CardHeader>
                       <CardContent>
                         {company.licenseDocumentUrl ? (
@@ -558,9 +629,27 @@ export default function CompanyDetailPage({
                       <CardContent>
                         <div className="space-y-6">
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                              <IdCard className="h-4 w-4 text-muted-foreground" />
-                              ID document
+                            <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <IdCard className="h-4 w-4 text-muted-foreground" />
+                                ID document
+                              </div>
+                              {company.authAccount?.idImageUrl && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 gap-1.5 text-xs"
+                                  onClick={() =>
+                                    downloadFile(
+                                      company.authAccount!.idImageUrl!,
+                                      `id_document_${company.name.replace(/\s+/g, "_")}`,
+                                    )
+                                  }
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </Button>
+                              )}
                             </div>
                             {company.authAccount?.idImageUrl ? (
                               <div className="rounded-xl overflow-hidden border">
@@ -588,9 +677,33 @@ export default function CompanyDetailPage({
                           </div>
 
                           <div className="space-y-2">
-                            <div className="flex items-center gap-2 text-sm font-medium">
-                              <CreditCard className="h-4 w-4 text-muted-foreground" />
-                              Driver license (verification)
+                            <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                Driver license (verification)
+                              </div>
+                              {company.authDocuments?.verifications?.find(
+                                (doc) => doc.documentType === "DRIVER_LICENSE",
+                              )?.documentFrontUrl && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 gap-1.5 text-xs"
+                                  onClick={() => {
+                                    const url =
+                                      company.authDocuments!.verifications.find(
+                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                      )!.documentFrontUrl;
+                                    downloadFile(
+                                      url,
+                                      `driver_license_${company.name.replace(/\s+/g, "_")}`,
+                                    );
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </Button>
+                              )}
                             </div>
                             {company.authDocuments?.verifications?.find(
                               (doc) => doc.documentType === "DRIVER_LICENSE",
@@ -716,7 +829,22 @@ export default function CompanyDetailPage({
             </div>
           )}
 
-          <DialogFooter>
+          <DialogFooter className="sm:justify-between">
+            {docPreview?.url && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() =>
+                  downloadFile(
+                    docPreview.url,
+                    `${docPreview.title.toLowerCase().replace(/\s+/g, "_")}_${company?.name.replace(/\s+/g, "_")}`,
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Download Original
+              </Button>
+            )}
             <Button variant="outline" onClick={() => setDocPreview(null)}>
               Close
             </Button>

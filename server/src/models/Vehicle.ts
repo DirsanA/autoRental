@@ -163,8 +163,9 @@ const vehicleSchema = new Schema<IVehicle>(
 /**
  * 3. Performance Indexing
  */
-vehicleSchema.index({ ownerId: 1, ownerType: 1 });
-vehicleSchema.index({ status: 1 });
+vehicleSchema.index({ ownerId: 1, ownerType: 1, createdAt: -1 });
+vehicleSchema.index({ ownerId: 1, createdAt: -1 });
+vehicleSchema.index({ status: 1, createdAt: -1 });
 vehicleSchema.index({ make: 1, model: 1, year: -1 });
 vehicleSchema.index({ price: 1 });
 

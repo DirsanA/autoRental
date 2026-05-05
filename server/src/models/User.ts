@@ -142,7 +142,8 @@ const userSchema = new Schema<IUser>(
  * 3. Performance Indexing
  * Optimized for high-frequency queries on account type and lifecycle state.
  */
-userSchema.index({ accountType: 1 });
-userSchema.index({ status: 1 });
+userSchema.index({ accountType: 1, createdAt: -1 });
+userSchema.index({ status: 1, createdAt: -1 });
+userSchema.index({ createdAt: -1 });
 
 export const User = model<IUser>("User", userSchema);
