@@ -38,7 +38,7 @@ export const payoutController = {
 
   listAdminPayouts: asyncHandler(async (req: Request, res: Response) => {
     const data = await payoutService.listAdminPayouts(
-      req.query as PayoutListQueryInput,
+      req.query as unknown as PayoutListQueryInput,
     );
     res.json({ success: true, data });
   }),

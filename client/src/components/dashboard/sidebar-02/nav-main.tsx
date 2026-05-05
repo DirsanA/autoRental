@@ -17,6 +17,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import type React from "react";
 import { useState } from "react";
 
@@ -35,6 +36,7 @@ export type Route = {
 export default function DashboardNavigation({ routes }: { routes: Route[] }) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
+  const pathname = usePathname();
   const [openCollapsible, setOpenCollapsible] = useState<string | null>(null);
 
   return (
@@ -107,11 +109,14 @@ export default function DashboardNavigation({ routes }: { routes: Route[] }) {
             ) : (
               <SidebarMenuButton tooltip={route.title} asChild>
                 <Link
-                  href={route.link}
+                  href={route.link.trim()}
                   prefetch={true}
                   className={cn(
-                    "flex items-center rounded-lg px-2 transition-colors text-muted-foreground hover:bg-sidebar-muted hover:text-foreground",
+                    "flex items-center rounded-lg px-2 transition-colors",
                     isCollapsed && "justify-center",
+                    pathname === route.link.trim()
+                      ? "bg-blue-500/10 text-blue-700 hover:bg-blue-500/20"
+                      : "text-muted-foreground hover:bg-sidebar-muted hover:text-foreground",
                   )}
                 >
                   {route.icon}

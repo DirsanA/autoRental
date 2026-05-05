@@ -113,6 +113,8 @@ export class CompanyService {
 
     bio: tempAddress || data.bio, 
 
+    logoUrl: data.logoUrl,
+
     licenseDocumentUrl: data.licenseFile || data.licenseDocumentUrl,
 
     contactInfo: data.contactInfo,
@@ -139,7 +141,7 @@ export class CompanyService {
    * Returns the company owned by a specific auth account.
    */
   async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
-    return Company.findOne({ authUserId }).select("-logoUrl -licenseDocumentUrl");
+    return Company.findOne({ authUserId });
   }
 
   async getDashboardForAuthUser(authUserId: string) {
@@ -259,6 +261,7 @@ export class CompanyService {
     const monthMap = new Map<number, { revenue: number; bookings: number }>();
 
     recentBookings.forEach((booking) => {
+      if (!booking.createdAt) return;
       const createdAt = new Date(booking.createdAt);
       const dateKey = createdAt.toISOString().slice(0, 10);
       const revenue = booking.priceSnapshot?.totalAmount ?? 0;
@@ -378,12 +381,64 @@ async getCompanyReviews(companyId: string) {
       throw ApiError.forbidden("You can only update your own company");
     }
 
+    const hasActiveProfile = company.status === "ACTIVE";
+    const pendingChanges = (company.pendingChanges as Record<string, unknown> | undefined) ?? {};
+    const updatedPendingChanges = { ...pendingChanges } as Record<string, unknown>;
+    let hasNewPendingUpdate = false;
+
+    const applyChange = (key: string, value: unknown) => {
+      updatedPendingChanges[key] = value;
+      hasNewPendingUpdate = true;
+    };
+
+    if (hasActiveProfile) {
+      if (data.name !== undefined) applyChange("name", data.name);
+      if (data.website !== undefined) applyChange("website", data.website ?? undefined);
+      if (data.bio !== undefined) applyChange("bio", data.bio ?? undefined);
+      if (data.logoUrl !== undefined) applyChange("logoUrl", data.logoUrl ?? undefined);
+      if (data.licenseDocumentUrl !== undefined) applyChange("licenseDocumentUrl", data.licenseDocumentUrl ?? undefined);
+      if (data.contactInfo) {
+        updatedPendingChanges.contactInfo = {
+          ...(pendingChanges.contactInfo as Record<string, unknown> | undefined),
+          ...data.contactInfo,
+        };
+        hasNewPendingUpdate = true;
+      }
+      if (data.location !== undefined) {
+        applyChange("location", data.location ?? undefined);
+      }
+      if (data.socialLinks) {
+        updatedPendingChanges.socialLinks = {
+          ...(pendingChanges.socialLinks as Record<string, unknown> | undefined),
+          ...(data.socialLinks as Record<string, unknown>),
+        };
+        hasNewPendingUpdate = true;
+      }
+
+      if (hasNewPendingUpdate) {
+        company.pendingChanges = updatedPendingChanges;
+        company.pendingChangesRequestedAt = new Date();
+        await company.save();
+      }
+
+      return company;
+    }
+
     if (data.name !== undefined) company.name = data.name;
     if (data.website !== undefined) company.website = data.website ?? undefined;
     if (data.bio !== undefined) company.bio = data.bio ?? undefined;
+    const isVerificationAssetUpdated =
+      data.logoUrl !== undefined || data.licenseDocumentUrl !== undefined;
+
     if (data.logoUrl !== undefined) company.logoUrl = data.logoUrl ?? undefined;
     if (data.licenseDocumentUrl !== undefined) {
       company.licenseDocumentUrl = data.licenseDocumentUrl ?? undefined;
+    }
+
+    if (isVerificationAssetUpdated && company.status !== "SUSPENDED") {
+      company.status = "PENDING_APPROVAL";
+      company.isVerified = false;
+      company.verifiedAt = undefined;
     }
 
     if (data.contactInfo) {
@@ -482,14 +537,68 @@ async getCompanyReviews(companyId: string) {
     }
 
     if (company.status === "ACTIVE") {
-      throw ApiError.unprocessable("Company is already approved");
+      if (!company.pendingChanges) {
+        throw ApiError.unprocessable("No pending company changes available for approval");
+      }
+
+      const pending = company.pendingChanges as Record<string, unknown>;
+      if (pending.name !== undefined) {
+        company.name = pending.name as string;
+      }
+      if (pending.website !== undefined) {
+        company.website = pending.website as string | undefined;
+      }
+      if (pending.bio !== undefined) {
+        company.bio = pending.bio as string | undefined;
+      }
+      if (pending.logoUrl !== undefined) {
+        company.logoUrl = pending.logoUrl as string | undefined;
+      }
+      if (pending.licenseDocumentUrl !== undefined) {
+        company.licenseDocumentUrl = pending.licenseDocumentUrl as string | undefined;
+      }
+      if (pending.contactInfo) {
+        company.contactInfo = {
+          ...company.contactInfo,
+          ...(pending.contactInfo as Record<string, unknown>),
+        } as any;
+      }
+      if (pending.location !== undefined) {
+        company.location = pending.location as any;
+      }
+      if (pending.socialLinks) {
+        company.socialLinks = {
+          ...company.socialLinks,
+          ...(pending.socialLinks as Record<string, unknown>),
+        };
+      }
+
+      company.pendingChanges = undefined;
+      company.pendingChangesRequestedAt = undefined;
+      await company.save();
+      return company;
     }
 
     company.status = "ACTIVE";
     company.isVerified = true;
     company.verifiedAt = new Date();
     company.rejectionReason = undefined;
+    await company.save();
+    return company;
+  }
 
+  async rejectPendingUpdate(companyId: string): Promise<CompanyDocument> {
+    const company = await Company.findById(companyId);
+    if (!company) {
+      throw ApiError.notFound("Company not found");
+    }
+
+    if (!company.pendingChanges) {
+      throw ApiError.unprocessable("No pending company changes to reject");
+    }
+
+    company.pendingChanges = undefined;
+    company.pendingChangesRequestedAt = undefined;
     await company.save();
     return company;
   }

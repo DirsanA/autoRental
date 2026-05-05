@@ -42,13 +42,18 @@ export const bookingController = {
         ? originHeader.trim()
         : undefined;
 
+    const baseUrls: any = {};
+    if (serverBaseUrl !== undefined) {
+      baseUrls.serverBaseUrl = serverBaseUrl;
+    }
+    if (frontendBaseUrl !== undefined) {
+      baseUrls.frontendBaseUrl = frontendBaseUrl;
+    }
+
     const data = await bookingService.initializeChapaCheckout(
       requireRequestUser(req, "Please sign in before booking a vehicle"),
       req.body,
-      {
-        serverBaseUrl,
-        frontendBaseUrl,
-      },
+      Object.keys(baseUrls).length > 0 ? baseUrls : undefined,
     );
 
     res.status(201).json({

@@ -40,7 +40,9 @@ function readString(
   return undefined;
 }
 
-function fileBufferToDataUrl(file: Express.Multer.File): string {
+type MulterFile = { buffer: Buffer; mimetype: string };
+
+function fileBufferToDataUrl(file: MulterFile): string {
   const base64 = file.buffer.toString("base64");
   return `data:${file.mimetype};base64,${base64}`;
 }
@@ -54,10 +56,12 @@ export const companyController = {
     const user = requireRequestUser(req);
     const body = req.body as Record<string, unknown>;
     const contactInfo = {
-      email: readString(body, "contactInfo[email]", "email", "contactEmail"),
-      phoneNumber: normalizePhoneNumber(
-        readString(body, "contactInfo[phoneNumber]", "phoneNumber", "phone") || "",
-      ),
+      email:
+        readString(body, "contactInfo[email]", "email", "contactEmail") || "",
+      phoneNumber:
+        normalizePhoneNumber(
+          readString(body, "contactInfo[phoneNumber]", "phoneNumber", "phone") || "",
+        ) || "",
       address: readString(body, "contactInfo[address]", "address", "companyAddress"),
     };
 
@@ -78,24 +82,41 @@ export const companyController = {
         .filter(Boolean)
         .join(", ");
 
-    const licenseFile = req.file
+    const licenseFile = (req as any).file
       ? await uploadToCloudinary(
-          fileBufferToDataUrl(req.file),
+          fileBufferToDataUrl((req as any).file as MulterFile),
           "auto-rental/company-documents",
         )
       : undefined;
 
-    const company = await companyService.create(user.id, {
+    const logoFile = (req as any).files?.logo?.[0]
+      ? await uploadToCloudinary(
+          fileBufferToDataUrl((req as any).files.logo[0] as MulterFile),
+          "auto-rental/company-logos",
+        )
+      : undefined;
+
+    const companyData: any = {
       ...body,
       name: readString(body, "name") || "",
       tinNumber: readString(body, "tinNumber") || "",
       website: readString(body, "website"),
       bio: readString(body, "bio"),
+      logoUrl: readString(body, "logoUrl"),
       licenseDocumentUrl: readString(body, "licenseDocumentUrl"),
       contactInfo,
       fullAddress,
-      licenseFile,
-    });
+    };
+
+    if (licenseFile !== undefined) {
+      companyData.licenseFile = licenseFile;
+    }
+
+    if (logoFile !== undefined) {
+      companyData.logoUrl = logoFile;
+    }
+
+    const company = await companyService.create(user.id, companyData);
 
     res.status(201).json({
       success: true,
@@ -154,10 +175,31 @@ export const companyController = {
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const user = requireRequestUser(req);
+    const body = req.body as Record<string, unknown>;
+    const files = (req as any).files as Record<string, MulterFile[]> | undefined;
+
+    const licenseFile = (files?.licenseDocument?.[0] as MulterFile | undefined)
+      ? await uploadToCloudinary(
+          fileBufferToDataUrl(files!.licenseDocument![0] as MulterFile),
+          "auto-rental/company-documents",
+        )
+      : undefined;
+
+    const logoFile = (files?.logo?.[0] as MulterFile | undefined)
+      ? await uploadToCloudinary(
+          fileBufferToDataUrl(files!.logo![0] as MulterFile),
+          "auto-rental/company-logos",
+        )
+      : undefined;
+
     const company = await companyService.update(
       req.params.id as string,
       user.id,
-      req.body,
+      {
+        ...body,
+        ...(licenseFile ? { licenseDocumentUrl: licenseFile } : {}),
+        ...(logoFile ? { logoUrl: logoFile } : {}),
+      },
     );
 
     res.json({
@@ -191,6 +233,18 @@ export const companyController = {
       data: {
         company,
         message: "Company approved successfully",
+      },
+    });
+  }),
+
+  reject: asyncHandler(async (req: Request, res: Response) => {
+    const company = await companyService.rejectPendingUpdate(req.params.id as string);
+
+    res.json({
+      success: true,
+      data: {
+        company,
+        message: "Pending company changes were rejected",
       },
     });
   }),

@@ -16,7 +16,7 @@ export function Header() {
       </div>
       <div className="flex justify-end space-x-4 ml-auto">
         <ModeToggle />
-        <ConfigDrawer />
+        {/* <ConfigDrawer /> */}
         <ProfileDropdown />
       </div>
     </header>

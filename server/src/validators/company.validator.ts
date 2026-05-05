@@ -15,6 +15,7 @@ export const createCompanySchema = z.object({
   tinNumber: z.string().min(4).max(30, "TIN number is required"),
   website: z.string().url("Invalid website URL").optional(),
   bio: z.string().max(500).optional(),
+  logoUrl: z.string().url("Invalid logo URL").optional(),
   licenseDocumentUrl: z.string().url("Invalid license document URL").optional(),
   contactInfo: z.object({
     email: z.string().email("Invalid contact email"),

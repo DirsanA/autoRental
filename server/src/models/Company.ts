@@ -14,6 +14,8 @@ export interface ICompany {
   logoUrl?: string | undefined;
   bio?: string | undefined;
   licenseDocumentUrl?: string | undefined;
+  pendingChanges?: Record<string, unknown> | undefined;
+  pendingChangesRequestedAt?: Date | undefined;
 
   contactInfo: {
     email: string;
@@ -72,6 +74,8 @@ const companySchema = new Schema<ICompany>(
     logoUrl: String,
     bio: { type: String, maxlength: 500 },
     licenseDocumentUrl: { type: String, trim: true },
+    pendingChanges: { type: Schema.Types.Mixed },
+    pendingChangesRequestedAt: { type: Date },
 
     contactInfo: {
       email: {

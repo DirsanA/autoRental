@@ -212,8 +212,8 @@ export const vehicleController = {
     data: {
       reviews: reviews.map((r) => ({
         id: r._id,
-        name: r.reviewerId?.name || "User",
-        image: r.reviewerId?.image || null,
+        name: (r.reviewerId as any)?.name || "User",
+        image: (r.reviewerId as any)?.image || null,
         rating: r.rating,
         comment: r.comment,
         createdAt: r.createdAt,

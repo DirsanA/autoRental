@@ -129,41 +129,48 @@ export function CompanyFleetManagementPage({
 
         <section className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-950 sm:p-5">
           <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
-            <div className="relative w-full xl:max-w-md">
-              <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by make, model, plate, or location"
-                className="h-12 rounded-2xl border-slate-200 bg-slate-50 pl-11 shadow-none dark:border-slate-800 dark:bg-slate-900"
-              />
-            </div>
+  <div className="relative w-full xl:max-w-md">
+    <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+    <Input
+      value={searchTerm}
+      onChange={(event) => setSearchTerm(event.target.value)}
+      placeholder="Search by make, model, plate, or location"
+      className="h-12 rounded-2xl border-slate-200 bg-slate-50 pl-11 shadow-none dark:border-slate-800 dark:bg-slate-900"
+    />
+  </div>
 
-            <div className="flex flex-wrap gap-2">
-              {(
-                ["all", "available", "booked", "maintenance", "pending_approval"] as FleetFilter[]
-              ).map(
-                (filter) => (
-                  <button
-                    key={filter}
-                    type="button"
-                    onClick={() => setActiveFilter(filter)}
-                    className={cn(
-                      "rounded-full px-4 py-2 text-sm font-medium transition",
-                      activeFilter === filter
-                        ? "bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950"
-                        : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
-                    )}
-                  >
-                    {filter === "all" ? "All vehicles" : formatStatus(filter)}
-                  </button>
-                ),
-              )}
-            </div>
-          </div>
+  <div className="flex items-center gap-1 flex-wrap">
+    {(
+      ["all", "available", "booked", "maintenance", "pending_approval"] as FleetFilter[]
+    ).map((filter) => (
+      <button
+        key={filter}
+        type="button"
+        onClick={() => setActiveFilter(filter)}
+        className={cn(
+          "rounded-full px-4 py-2 text-sm font-medium transition",
+          activeFilter === filter
+            ? "bg-slate-950 text-white shadow-sm dark:bg-white dark:text-slate-950"
+            : "bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800",
+        )}
+      >
+        {filter === "all" ? "All vehicles" : formatStatus(filter)}
+      </button>
+    ))}
+
+    {/* ✅ SINGLE ADD BUTTON */}
+    <Button
+      onClick={() => setIsAddDialogOpen(true)}
+      className="h-9 rounded-2xl"
+    >
+      <Plus className="mr-2 h-4 w-4" />
+      Add Car
+    </Button>
+  </div>
+</div>
         </section>
 
-        <section className="grid gap-6 xl:grid-cols-2 2xl:grid-cols-3">
+        <section className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
           {filteredVehicles.length === 0 && (
             <div className="col-span-full rounded-[28px] border border-dashed border-slate-300 bg-white px-6 py-16 text-center shadow-sm dark:border-slate-700 dark:bg-slate-950">
               <CarFront className="mx-auto mb-4 h-10 w-10 text-slate-400 dark:text-slate-500" />
@@ -187,9 +194,9 @@ export function CompanyFleetManagementPage({
           {filteredVehicles.map((vehicle) => (
             <Card
               key={vehicle.id}
-              className="group overflow-hidden rounded-[30px] border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-slate-800 dark:bg-slate-950"
+             className="group w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm transition duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-slate-800 dark:bg-slate-950"
             >
-              <div className="relative aspect-[16/10] overflow-hidden bg-slate-100 dark:bg-slate-900">
+              <div className="relative aspect-[16/9] overflow-hidden bg-slate-100 dark:bg-slate-900">
                 <img
                   src={vehicle.image}
                   alt={`${vehicle.make} ${vehicle.model}`}
@@ -212,7 +219,7 @@ export function CompanyFleetManagementPage({
                 </div>
               </div>
 
-              <CardContent className="space-y-5 p-5 sm:p-6">
+             <CardContent className="space-y-4 p-4">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-2xl font-semibold tracking-tight text-slate-950 dark:text-white">
@@ -258,13 +265,13 @@ export function CompanyFleetManagementPage({
                       View details
                     </Link>
                   </Button>
-                  <Button
+                  {/* <Button
                     variant="outline"
                     onClick={() => setIsAddDialogOpen(true)}
                     className="h-11 flex-1 rounded-2xl border-slate-200 hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-900"
                   >
                     Add another
-                  </Button>
+                  </Button> */}
                 </div>
               </CardContent>
             </Card>
