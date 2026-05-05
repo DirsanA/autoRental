@@ -11,6 +11,7 @@ export type VehicleStatus =
   | "BOOKED"
   | "MAINTENANCE"
   | "RETIRED"
+  | "SUSPENDED"
   | "PENDING_APPROVAL";
 
 export interface IVehiclePhotos {
@@ -129,7 +130,14 @@ const vehicleSchema = new Schema<IVehicle>(
 
     status: {
       type: String,
-      enum: ["AVAILABLE", "BOOKED", "MAINTENANCE", "RETIRED", "PENDING_APPROVAL"],
+      enum: [
+        "AVAILABLE",
+        "BOOKED",
+        "MAINTENANCE",
+        "RETIRED",
+        "SUSPENDED",
+        "PENDING_APPROVAL",
+      ],
       default: "PENDING_APPROVAL",
     },
 

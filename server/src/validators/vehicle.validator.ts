@@ -38,6 +38,7 @@ export const createVehicleSchema = z
         "BOOKED",
         "MAINTENANCE",
         "RETIRED",
+        "SUSPENDED",
         "PENDING_APPROVAL",
       ])
       .optional(),
@@ -84,6 +85,7 @@ export const updateVehicleStatusSchema = z.object({
     "BOOKED",
     "MAINTENANCE",
     "RETIRED",
+    "SUSPENDED",
     "PENDING_APPROVAL",
   ]),
 });
@@ -112,6 +114,7 @@ export const updateVehicleSchema = z
         "BOOKED",
         "MAINTENANCE",
         "RETIRED",
+        "SUSPENDED",
         "PENDING_APPROVAL",
       ])
       .optional(),
