@@ -1,4 +1,5 @@
 import Navbar from "@/components/navbar";
+import { LandingChatbot } from "@/components/marketing/landing-chatbot";
 import { LandingHero } from "@/components/marketing/landing-hero";
 import { LandingSearch } from "@/components/marketing/laning-search";
 import { LandingFeatures } from "@/components/marketing/landing-features";
@@ -28,6 +29,7 @@ export default function HomePage() {
        
       </main>
       <LandingFooter />
+      <LandingChatbot />
     </div>
   );
 }
