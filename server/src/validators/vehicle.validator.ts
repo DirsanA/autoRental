@@ -46,6 +46,8 @@ export const createVehicleSchema = z
     monthlyDiscount: z.number().min(0).max(100).optional(),
     availability: z.string().trim().max(1000).optional(),
     delivery: z.string().trim().max(1000).optional(),
+    pickupAddress: z.string().trim().max(240).optional(),
+    returnAddress: z.string().trim().max(240).optional(),
 
     photos: z.object({
       front: uploadValueSchema,
@@ -108,6 +110,8 @@ export const updateVehicleSchema = z
     monthlyDiscount: z.number().min(0).max(100).optional(),
     availability: z.string().trim().max(1000).optional(),
     delivery: z.string().trim().max(1000).optional(),
+    pickupAddress: z.string().trim().max(240).optional(),
+    returnAddress: z.string().trim().max(240).optional(),
     status: z
       .enum([
         "AVAILABLE",

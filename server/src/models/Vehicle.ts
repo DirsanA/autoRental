@@ -27,6 +27,12 @@ export interface IVehicleDocuments {
   insurance?: string | undefined;
 }
 
+export interface IVehicleGeoPoint {
+  lat: number;
+  lng: number;
+  precision: "exact" | "approx";
+}
+
 export interface IVehicle {
   // Ownership
   ownerId: Types.ObjectId;
@@ -55,6 +61,13 @@ export interface IVehicle {
   // Become Host: Optional availability and delivery notes
   availability?: string | undefined;
   delivery?: string | undefined;
+
+  // Pickup & return location (peerhost-entered; company derived from Company.location)
+  pickupAddress?: string | undefined;
+  returnAddress?: string | undefined;
+  pickupGeo?: IVehicleGeoPoint | undefined;
+  returnGeo?: IVehicleGeoPoint | undefined;
+  geoUpdatedAt?: Date | undefined;
 
   // Become Host: Uploaded media and documents
   photos?: IVehiclePhotos | undefined;
@@ -94,6 +107,15 @@ const documentsSchema = new Schema<IVehicleDocuments>(
   { _id: false },
 );
 
+const geoPointSchema = new Schema<IVehicleGeoPoint>(
+  {
+    lat: { type: Number, required: true, min: -90, max: 90 },
+    lng: { type: Number, required: true, min: -180, max: 180 },
+    precision: { type: String, required: true, enum: ["exact", "approx"] },
+  },
+  { _id: false },
+);
+
 const vehicleSchema = new Schema<IVehicle>(
   {
     ownerId: { type: Schema.Types.ObjectId, required: true, refPath: "ownerType" },
@@ -124,6 +146,12 @@ const vehicleSchema = new Schema<IVehicle>(
 
     availability: { type: String, trim: true },
     delivery: { type: String, trim: true },
+
+    pickupAddress: { type: String, trim: true },
+    returnAddress: { type: String, trim: true },
+    pickupGeo: { type: geoPointSchema },
+    returnGeo: { type: geoPointSchema },
+    geoUpdatedAt: { type: Date },
 
     photos: { type: photosSchema, default: {} },
     documents: { type: documentsSchema, default: {} },

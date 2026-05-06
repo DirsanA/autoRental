@@ -557,7 +557,7 @@ export class BookingService {
   async initializeChapaCheckout(
     caller: RequestUser,
     input: ChapaCheckoutInput,
-    baseUrls?: { serverBaseUrl?: string; frontendBaseUrl?: string },
+    baseUrls?: { serverBaseUrl?: string|undefined; frontendBaseUrl?: string |undefined},
   ) {
     const context = await this.buildCheckoutContext(caller, input);
 
