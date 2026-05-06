@@ -17,7 +17,12 @@ interface BookingCardProps {
   dailyRate: number;
   location: string;
   ownerType?: "User" | "Company";
-  vehicleStatus?: "available" | "rented" | "maintenance" | "pending_approval" | "retired";
+  vehicleStatus?:
+    | "available"
+    | "rented"
+    | "maintenance"
+    | "pending_approval"
+    | "retired";
   availabilityBlocks?: VehicleAvailabilityBlock[];
 }
 
@@ -123,7 +128,8 @@ export default function BookingCard({
       };
     }
 
-    const hours = Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100;
+    const hours =
+      Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100;
 
     if (hours < 6) {
       return {
@@ -148,13 +154,15 @@ export default function BookingCard({
         }
         return {
           valid: false,
-          message: "This vehicle is still pending approval and cannot be booked yet.",
+          message:
+            "This vehicle is still pending approval and cannot be booked yet.",
           hours,
         };
       case "maintenance":
         return {
           valid: false,
-          message: "This vehicle is currently in maintenance and unavailable for booking.",
+          message:
+            "This vehicle is currently in maintenance and unavailable for booking.",
           hours,
         };
       case "retired":
@@ -290,7 +298,9 @@ export default function BookingCard({
         return;
       }
 
-      if (/selected time range|payment hold|already has a booking/i.test(message)) {
+      if (
+        /selected time range|payment hold|already has a booking/i.test(message)
+      ) {
         setSubmissionError(
           "The selected date range is already booked or temporarily held. Please choose a different time.",
         );

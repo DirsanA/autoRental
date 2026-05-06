@@ -174,10 +174,9 @@ function mapBookingListItem(booking: Record<string, any>) {
     [renter?.firstName, renter?.lastName].filter(Boolean).join(" ") ||
     "Anonymous renter";
 
-  const renterPhone =
-    renter?.phoneNumber
-      ? renter.phoneNumber.replace(/^251/, "0")
-      : booking.contactPhone;
+  const renterPhone = renter?.phoneNumber
+    ? renter.phoneNumber.replace(/^251/, "0")
+    : booking.contactPhone;
 
   const gallery = Array.isArray(vehicle?.photos?.gallery)
     ? vehicle.photos.gallery.filter(Boolean)
@@ -195,10 +194,8 @@ function mapBookingListItem(booking: Record<string, any>) {
 
     renterId: booking.renterId
       ? typeof booking.renterId === "object"
-        ? booking.renterId._id?.toString?.() ??
-          String(booking.renterId._id)
-        : booking.renterId.toString?.() ??
-          String(booking.renterId)
+        ? (booking.renterId._id?.toString?.() ?? String(booking.renterId._id))
+        : (booking.renterId.toString?.() ?? String(booking.renterId))
       : undefined,
 
     renter: renter
@@ -217,8 +214,8 @@ function mapBookingListItem(booking: Record<string, any>) {
       payment.status === "PAID"
         ? ("paid" as const)
         : payment.status === "FAILED" || booking.status === "CANCELLED"
-        ? ("failed" as const)
-        : ("pending" as const),
+          ? ("failed" as const)
+          : ("pending" as const),
 
     startTime: booking.startTime ?? null,
     endTime: booking.endTime ?? null,
@@ -558,7 +555,10 @@ export class BookingService {
   async initializeChapaCheckout(
     caller: RequestUser,
     input: ChapaCheckoutInput,
-    baseUrls?: { serverBaseUrl?: string|undefined; frontendBaseUrl?: string |undefined},
+    baseUrls?: {
+      serverBaseUrl?: string | undefined;
+      frontendBaseUrl?: string | undefined;
+    },
   ) {
     const context = await this.buildCheckoutContext(caller, input);
 
@@ -731,10 +731,10 @@ export class BookingService {
           path: "vehicleId",
           select: "make model year plate availability delivery",
         })
-         .populate({
-    path: "renterId",
-    select: "name firstName lastName email phoneNumber profilePicture",
-  })
+        .populate({
+          path: "renterId",
+          select: "name firstName lastName email phoneNumber profilePicture",
+        })
         .lean(),
       Booking.countDocuments(filter as any),
     ]);
@@ -993,16 +993,16 @@ export class BookingService {
       _id: bookingId,
       renterId: renter._id,
     })
-       
+
       .populate({
         path: "vehicleId",
         select:
           "make model year plate photos availability delivery ownerType ownerId",
       })
-        .populate({
-    path: "renterId",
-    select: "name firstName lastName email phoneNumber profilePicture",
-  })
+      .populate({
+        path: "renterId",
+        select: "name firstName lastName email phoneNumber profilePicture",
+      })
       .populate({
         path: "driverAssigned",
         select: "firstName lastName email phoneNumber profilePicture",

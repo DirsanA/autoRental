@@ -194,7 +194,8 @@ export function UserAccountMenuContent({
     user?.verificationLevel === "ID_VERIFIED" ||
     user?.verificationLevel === "LICENSE_VERIFIED";
 
-  const shouldShowBecomePeerHost = isVerified && !isPeerHost && !isCompany && !isAdmin;
+  const shouldShowBecomePeerHost =
+    isVerified && !isPeerHost && !isCompany && !isAdmin;
   const shouldShowRegisterCompany =
     user?.accountType === "USER" &&
     !roles.company &&
@@ -225,8 +226,11 @@ export function UserAccountMenuContent({
   if (!user) return null;
 
   const role = resolveUserRole(user, company);
-  const dashboardHref =
-    isAdmin ? "/sysadmin/dashboard" : isCompany ? "/company/dashboard" : "/renter/dashboard";
+  const dashboardHref = isAdmin
+    ? "/sysadmin/dashboard"
+    : isCompany
+      ? "/company/dashboard"
+      : "/renter/dashboard";
   const displayName = buildDisplayName(user);
   const initials = buildInitials(user);
   const shouldShowBadge = Boolean(role.label);
@@ -327,7 +331,7 @@ export function UserAccountMenuContent({
 
         {shouldShowBecomePeerHost && (
           <DropdownMenuItem asChild>
-            <Link href="/peerhost/become">
+            <Link href="/peerhost/become-host">
               <Car className="mr-2 h-4 w-4" />
               Become a Peer Host
             </Link>
@@ -336,7 +340,7 @@ export function UserAccountMenuContent({
 
         {shouldShowRegisterCompany && (
           <DropdownMenuItem asChild>
-            <Link href="/company/register">
+            <Link href="auth/register-company">
               <Building2 className="mr-2 h-4 w-4" />
               Register Company
             </Link>
