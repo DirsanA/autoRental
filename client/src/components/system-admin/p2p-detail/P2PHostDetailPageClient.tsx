@@ -2,7 +2,13 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, CarFront, DollarSign, Loader2, ShieldCheck } from "lucide-react";
+import {
+  ArrowLeft,
+  CarFront,
+  DollarSign,
+  Loader2,
+  ShieldCheck,
+} from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,7 +46,10 @@ export default function P2PHostDetailPageClient({
   const [hostData, setHostData] = useState<P2PHostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [modalConfig, setModalConfig] = useState<ConfirmationConfig | null>(null);
+  const [modalConfig, setModalConfig] = useState<ConfirmationConfig | null>(
+    null,
+  );
+  const [rejectReason, setRejectReason] = useState("");
 
   const loadHost = useCallback(async () => {
     setLoading(true);
@@ -125,7 +134,10 @@ export default function P2PHostDetailPageClient({
         try {
           await reviewP2PHost(hostId, { status: "approved" });
           await loadHost();
-          showSuccess("Host Approved", `${hostData.user.name} is now a P2P host.`);
+          showSuccess(
+            "Host Approved",
+            `${hostData.user.name} is now a P2P host.`,
+          );
         } catch (cause) {
           addToast(
             "error",
@@ -137,24 +149,26 @@ export default function P2PHostDetailPageClient({
     });
   };
 
-  const handleRejectHost = async () => {
-    const reason = prompt("Enter rejection reason (optional):");
-    if (reason === null) return;
-
+  const handleRejectHost = () => {
+    setRejectReason("");
     setModalConfig({
       title: "Reject P2P Host",
       description: `Reject ${hostData.user.name}'s host application? Their pending vehicles will be marked rejected.`,
       confirmLabel: "Reject",
       variant: "destructive",
+      showReasonInput: true,
+      reasonValue: rejectReason,
+      onReasonChange: setRejectReason,
       onConfirm: async () => {
         await wait();
         try {
           await reviewP2PHost(hostId, {
             status: "rejected",
-            adminComment: reason || undefined,
+            adminComment: rejectReason || undefined,
           });
           await loadHost();
           showSuccess("Host Rejected", "Application has been rejected.");
+          setRejectReason("");
         } catch (cause) {
           addToast(
             "error",
@@ -182,43 +196,52 @@ export default function P2PHostDetailPageClient({
           addToast(
             "error",
             "Error",
-            cause instanceof Error ? cause.message : "Failed to approve document",
+            cause instanceof Error
+              ? cause.message
+              : "Failed to approve document",
           );
         }
       },
     });
   };
 
-  const handleRejectDoc = async (doc: DocumentItem) => {
-    const reason = prompt("Enter rejection reason (optional):");
-    if (reason === null) return;
-
+  const handleRejectDoc = (doc: DocumentItem) => {
+    setRejectReason("");
     setModalConfig({
       title: "Reject Document",
       description: `Reject ${doc.title} for ${hostData.user.name}?`,
       confirmLabel: "Reject",
       variant: "destructive",
+      showReasonInput: true,
+      reasonValue: rejectReason,
+      onReasonChange: setRejectReason,
       onConfirm: async () => {
         await wait();
         try {
           await reviewVerification(doc.id, {
             status: "REJECTED",
-            adminComment: reason || undefined,
+            adminComment: rejectReason || undefined,
           });
           await loadHost();
           showSuccess("Document Rejected", `${doc.title} was rejected.`);
+          setRejectReason("");
         } catch (cause) {
           addToast(
             "error",
             "Error",
-            cause instanceof Error ? cause.message : "Failed to reject document",
+            cause instanceof Error
+              ? cause.message
+              : "Failed to reject document",
           );
         }
       },
     });
   };
 
-  const handleApproveVehicle = async (vehicleId: string, vehicleTitle: string) => {
+  const handleApproveVehicle = async (
+    vehicleId: string,
+    vehicleTitle: string,
+  ) => {
     if (hostData.user.verificationLevel !== "PEER_HOST") {
       addToast(
         "info",
@@ -243,14 +266,19 @@ export default function P2PHostDetailPageClient({
           addToast(
             "error",
             "Error",
-            cause instanceof Error ? cause.message : "Failed to approve vehicle",
+            cause instanceof Error
+              ? cause.message
+              : "Failed to approve vehicle",
           );
         }
       },
     });
   };
 
-  const handleRejectVehicle = async (vehicleId: string, vehicleTitle: string) => {
+  const handleRejectVehicle = async (
+    vehicleId: string,
+    vehicleTitle: string,
+  ) => {
     const reason = prompt("Enter rejection reason (optional):");
     if (reason === null) return;
 
@@ -262,7 +290,10 @@ export default function P2PHostDetailPageClient({
       onConfirm: async () => {
         await wait();
         try {
-          await reviewVehicle(vehicleId, { status: "REJECTED", adminComment: reason || undefined });
+          await reviewVehicle(vehicleId, {
+            status: "REJECTED",
+            adminComment: reason || undefined,
+          });
           await loadHost();
           showSuccess("Vehicle Rejected", `${vehicleTitle} was rejected.`);
         } catch (cause) {
@@ -471,7 +502,10 @@ export default function P2PHostDetailPageClient({
                     </TabsTrigger>
                   </TabsList>
 
-                  <TabsContent value="kyc" className="mt-0 focus-visible:ring-0">
+                  <TabsContent
+                    value="kyc"
+                    className="mt-0 focus-visible:ring-0"
+                  >
                     <VerificationTab
                       data={verificationData}
                       verifications={hostData.verifications}
@@ -480,7 +514,10 @@ export default function P2PHostDetailPageClient({
                     />
                   </TabsContent>
 
-                  <TabsContent value="listings" className="mt-0 focus-visible:ring-0">
+                  <TabsContent
+                    value="listings"
+                    className="mt-0 focus-visible:ring-0"
+                  >
                     <ListingsTab
                       listings={listings}
                       onViewVehicle={handleViewVehicle}
@@ -490,7 +527,10 @@ export default function P2PHostDetailPageClient({
                     />
                   </TabsContent>
 
-                  <TabsContent value="earnings" className="mt-0 focus-visible:ring-0">
+                  <TabsContent
+                    value="earnings"
+                    className="mt-0 focus-visible:ring-0"
+                  >
                     <EarningsTab earnings={[]} />
                   </TabsContent>
                 </Tabs>

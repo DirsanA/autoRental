@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import type { ConfirmationConfig } from "./types";
 
@@ -33,6 +34,18 @@ export function ConfirmationModal({ config, onClose }: ConfirmationModalProps) {
         <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
           {config.description}
         </p>
+        {config.showReasonInput && (
+          <div className="mt-4">
+            <label className="text-sm font-medium">Reason (optional)</label>
+            <Input
+              value={config.reasonValue || ""}
+              onChange={(e) => config.onReasonChange?.(e.target.value)}
+              placeholder="Enter reason..."
+              className="mt-1"
+              disabled={loading}
+            />
+          </div>
+        )}
         <div className="mt-6 flex items-center justify-end gap-3">
           <Button
             variant="outline"

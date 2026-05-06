@@ -6,8 +6,17 @@ import { buildAuthHeader } from "./auth-token";
  */
 export type P2PHostStatus = "pending" | "approved" | "rejected" | "flagged";
 export type VerificationStatus = "PENDING" | "APPROVED" | "REJECTED";
-export type VehicleStatus = "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "RETIRED" | "PENDING_APPROVAL";
-export type VerificationLevel = "NONE" | "ID_VERIFIED" | "LICENSE_VERIFIED" | "PEER_HOST";
+export type VehicleStatus =
+  | "AVAILABLE"
+  | "BOOKED"
+  | "MAINTENANCE"
+  | "RETIRED"
+  | "PENDING_APPROVAL";
+export type VerificationLevel =
+  | "NONE"
+  | "ID_VERIFIED"
+  | "LICENSE_VERIFIED"
+  | "PEER_HOST";
 
 /**
  * P2P Host summary for listing.
@@ -207,9 +216,9 @@ const API_BASE_URL = resolveApiBaseUrl();
  * Parses an API error into a user-facing message.
  */
 async function parseError(response: Response) {
-  const payload = (await response.json().catch(() => null)) as
-    | { error?: { message?: string } }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    error?: { message?: string };
+  } | null;
 
   return payload?.error?.message || `Request failed (HTTP ${response.status})`;
 }
@@ -270,7 +279,9 @@ export async function fetchP2PHosts(
 /**
  * Fetches full P2P host detail.
  */
-export async function fetchP2PHostDetail(hostId: string): Promise<P2PHostDetail> {
+export async function fetchP2PHostDetail(
+  hostId: string,
+): Promise<P2PHostDetail> {
   const response = await fetch(
     `${API_BASE_URL}/admin/p2p/${encodeURIComponent(hostId)}`,
     buildRequestInit(),
@@ -294,7 +305,9 @@ export async function fetchP2PHostDetail(hostId: string): Promise<P2PHostDetail>
 /**
  * Fetches full vehicle detail for admin review.
  */
-export async function fetchP2PVehicleDetail(vehicleId: string): Promise<P2PVehicleDetail> {
+export async function fetchP2PVehicleDetail(
+  vehicleId: string,
+): Promise<P2PVehicleDetail> {
   const response = await fetch(
     `${API_BASE_URL}/admin/p2p/vehicles/${encodeURIComponent(vehicleId)}`,
     buildRequestInit(),
@@ -321,7 +334,15 @@ export async function fetchP2PVehicleDetail(vehicleId: string): Promise<P2PVehic
 export async function reviewP2PHost(
   hostId: string,
   body: HostDecisionBody,
-): Promise<{ user: { id: string; name: string; email: string; verificationLevel: string; roles: string[] } }> {
+): Promise<{
+  user: {
+    id: string;
+    name: string;
+    email: string;
+    verificationLevel: string;
+    roles: string[];
+  };
+}> {
   const response = await fetch(
     `${API_BASE_URL}/admin/p2p/${encodeURIComponent(hostId)}/decision`,
     buildRequestInit({
@@ -338,7 +359,15 @@ export async function reviewP2PHost(
   }
 
   const payload = (await response.json()) as {
-    data?: { user: { id: string; name: string; email: string; verificationLevel: string; roles: string[] } };
+    data?: {
+      user: {
+        id: string;
+        name: string;
+        email: string;
+        verificationLevel: string;
+        roles: string[];
+      };
+    };
   };
 
   return payload.data!;

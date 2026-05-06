@@ -31,6 +31,16 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   AlertTriangle,
   CheckCircle2,
   Clock,
@@ -131,7 +141,9 @@ function PromotionReadiness({
       ) : (
         <AlertTriangle className="h-3 w-3" />
       )}
-      {canPromote ? "Ready to promote" : `${blockerCount} blocker${blockerCount === 1 ? "" : "s"}`}
+      {canPromote
+        ? "Ready to promote"
+        : `${blockerCount} blocker${blockerCount === 1 ? "" : "s"}`}
     </span>
   );
 }
@@ -177,6 +189,20 @@ const EMPTY_RESULT: P2PHostListResult = {
   },
 };
 
+type DialogType = "approve" | "reject" | "blockers" | null;
+
+interface DialogState {
+  type: DialogType;
+  host: P2PHostSummary | null;
+  reason: string;
+}
+
+const DEFAULT_DIALOG: DialogState = {
+  type: null,
+  host: null,
+  reason: "",
+};
+
 export function P2PApprovalPageClient() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -184,14 +210,18 @@ export function P2PApprovalPageClient() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
-  const [searchInput, setSearchInput] = useState(searchParams.get("search") || "");
+  const [searchInput, setSearchInput] = useState(
+    searchParams.get("search") || "",
+  );
+  const [dialog, setDialog] = useState<DialogState>(DEFAULT_DIALOG);
 
   const currentFilters = useMemo(
     () => ({
       status: (searchParams.get("status") as P2PHostStatus | "all") || "all",
       search: searchParams.get("search") || "",
       page: Number(searchParams.get("page") || "1") || 1,
-      limit: Number(searchParams.get("limit") || String(PAGE_SIZE)) || PAGE_SIZE,
+      limit:
+        Number(searchParams.get("limit") || String(PAGE_SIZE)) || PAGE_SIZE,
     }),
     [searchParams],
   );
@@ -202,10 +232,14 @@ export function P2PApprovalPageClient() {
 
   const stats = useMemo(
     () => ({
-      pending: hostsData.hosts.filter((host) => host.status === "pending").length,
-      approved: hostsData.hosts.filter((host) => host.status === "approved").length,
-      flagged: hostsData.hosts.filter((host) => host.status === "flagged").length,
-      rejected: hostsData.hosts.filter((host) => host.status === "rejected").length,
+      pending: hostsData.hosts.filter((host) => host.status === "pending")
+        .length,
+      approved: hostsData.hosts.filter((host) => host.status === "approved")
+        .length,
+      flagged: hostsData.hosts.filter((host) => host.status === "flagged")
+        .length,
+      rejected: hostsData.hosts.filter((host) => host.status === "rejected")
+        .length,
     }),
     [hostsData.hosts],
   );
@@ -252,46 +286,50 @@ export function P2PApprovalPageClient() {
     router.push(`/sysadmin/p2p/${host.id}`);
   };
 
-  const handleApprove = async (host: P2PHostSummary) => {
+  const openApproveDialog = (host: P2PHostSummary) => {
     if (!host.reviewReadiness.canPromote) {
-      alert("This applicant still has review blockers. Open the detail page to finish reviewing their documents and vehicle submissions.");
+      setDialog({ type: "blockers", host, reason: "" });
       return;
     }
+    setDialog({ type: "approve", host, reason: "" });
+  };
 
-    if (
-      !confirm(
-        `Promote ${host.name} to peer host? Their pending vehicles will stay in review until you approve them separately.`,
-      )
-    ) {
-      return;
-    }
+  const openRejectDialog = (host: P2PHostSummary) => {
+    setDialog({ type: "reject", host, reason: "" });
+  };
 
-    setActionInProgress(host.id);
+  const executeApprove = async () => {
+    if (!dialog.host) return;
+    setActionInProgress(dialog.host.id);
     try {
-      await reviewP2PHost(host.id, { status: "approved" });
+      await reviewP2PHost(dialog.host.id, { status: "approved" });
       await loadHosts();
     } catch (cause) {
-      alert(cause instanceof Error ? cause.message : "Failed to approve host");
+      setError(
+        cause instanceof Error ? cause.message : "Failed to approve host",
+      );
     } finally {
       setActionInProgress(null);
+      setDialog(DEFAULT_DIALOG);
     }
   };
 
-  const handleReject = async (host: P2PHostSummary) => {
-    const reason = prompt("Enter rejection reason (optional):");
-    if (reason === null) return;
-
-    setActionInProgress(host.id);
+  const executeReject = async () => {
+    if (!dialog.host) return;
+    setActionInProgress(dialog.host.id);
     try {
-      await reviewP2PHost(host.id, {
+      await reviewP2PHost(dialog.host.id, {
         status: "rejected",
-        adminComment: reason || undefined,
+        adminComment: dialog.reason || undefined,
       });
       await loadHosts();
     } catch (cause) {
-      alert(cause instanceof Error ? cause.message : "Failed to reject host");
+      setError(
+        cause instanceof Error ? cause.message : "Failed to reject host",
+      );
     } finally {
       setActionInProgress(null);
+      setDialog(DEFAULT_DIALOG);
     }
   };
 
@@ -332,7 +370,11 @@ export function P2PApprovalPageClient() {
               icon={CheckCircle2}
               cls="border-green-200 dark:border-green-900/50"
             />
-            <StatCard label="Flagged" value={stats.flagged} icon={AlertTriangle} />
+            <StatCard
+              label="Flagged"
+              value={stats.flagged}
+              icon={AlertTriangle}
+            />
             <StatCard label="Rejected" value={stats.rejected} icon={XCircle} />
           </div>
 
@@ -371,7 +413,10 @@ export function P2PApprovalPageClient() {
             <Select
               value={currentFilters.status}
               onValueChange={(value) =>
-                pushFilters({ status: value === "all" ? undefined : value, page: 1 })
+                pushFilters({
+                  status: value === "all" ? undefined : value,
+                  page: 1,
+                })
               }
             >
               <SelectTrigger className="sm:w-[160px]">
@@ -386,7 +431,11 @@ export function P2PApprovalPageClient() {
               </SelectContent>
             </Select>
 
-            <Button variant="outline" onClick={() => void loadHosts()} disabled={loading}>
+            <Button
+              variant="outline"
+              onClick={() => void loadHosts()}
+              disabled={loading}
+            >
               Refresh
             </Button>
           </div>
@@ -413,7 +462,10 @@ export function P2PApprovalPageClient() {
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={8}
+                      className="py-16 text-center text-muted-foreground"
+                    >
                       <div className="flex flex-col items-center gap-2">
                         <Loader2 className="h-8 w-8 animate-spin opacity-60" />
                         <span>Loading applications...</span>
@@ -422,7 +474,10 @@ export function P2PApprovalPageClient() {
                   </TableRow>
                 ) : hostsData.hosts.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16 text-center text-muted-foreground">
+                    <TableCell
+                      colSpan={8}
+                      className="py-16 text-center text-muted-foreground"
+                    >
                       <div className="flex flex-col items-center gap-2">
                         <Handshake className="h-8 w-8 opacity-30" />
                         <span>No P2P host applications found.</span>
@@ -431,7 +486,10 @@ export function P2PApprovalPageClient() {
                   </TableRow>
                 ) : (
                   hostsData.hosts.map((host) => (
-                    <TableRow key={host.id} className="group transition-colors hover:bg-muted/50">
+                    <TableRow
+                      key={host.id}
+                      className="group transition-colors hover:bg-muted/50"
+                    >
                       <TableCell>
                         <div className="text-sm font-medium">{host.name}</div>
                         <div className="max-w-[140px] truncate text-xs text-muted-foreground">
@@ -461,21 +519,28 @@ export function P2PApprovalPageClient() {
                         {(host.reviewReadiness.pendingVerificationCount > 0 ||
                           host.reviewReadiness.pendingVehicleCount > 0) && (
                           <div className="mt-1 text-xs text-muted-foreground">
-                            {host.reviewReadiness.pendingVerificationCount} doc pending ·{" "}
-                            {host.reviewReadiness.pendingVehicleCount} vehicle pending
+                            {host.reviewReadiness.pendingVerificationCount} doc
+                            pending · {host.reviewReadiness.pendingVehicleCount}{" "}
+                            vehicle pending
                           </div>
                         )}
                       </TableCell>
                       <TableCell>
-                        <div className="text-sm">{host.vehiclesOwned} total</div>
+                        <div className="text-sm">
+                          {host.vehiclesOwned} total
+                        </div>
                         <div className="text-xs text-muted-foreground">
-                          {host.vehiclesPendingApproval} pending · {host.vehiclesApproved} approved
+                          {host.vehiclesPendingApproval} pending ·{" "}
+                          {host.vehiclesApproved} approved
                         </div>
                       </TableCell>
                       <TableCell>
                         <div className="flex flex-wrap gap-1">
                           <DocCheck ok={host.hasIdDocument} label="ID" />
-                          <DocCheck ok={host.hasDriverLicense} label="License" />
+                          <DocCheck
+                            ok={host.hasDriverLicense}
+                            label="License"
+                          />
                         </div>
                       </TableCell>
                       <TableCell>
@@ -504,7 +569,7 @@ export function P2PApprovalPageClient() {
                             </DropdownMenuItem>
                             {host.status !== "approved" && (
                               <DropdownMenuItem
-                                onClick={() => void handleApprove(host)}
+                                onClick={() => openApproveDialog(host)}
                                 disabled={
                                   actionInProgress === host.id ||
                                   !host.reviewReadiness.canPromote
@@ -516,7 +581,7 @@ export function P2PApprovalPageClient() {
                             <DropdownMenuSeparator />
                             {host.status !== "rejected" && (
                               <DropdownMenuItem
-                                onClick={() => void handleReject(host)}
+                                onClick={() => openRejectDialog(host)}
                                 className="text-red-600 focus:text-red-600"
                                 disabled={actionInProgress === host.id}
                               >
@@ -536,7 +601,8 @@ export function P2PApprovalPageClient() {
           {hostsData.pagination.totalPages > 1 && (
             <div className="flex items-center justify-between">
               <p className="text-sm text-muted-foreground">
-                Page {hostsData.pagination.page} of {hostsData.pagination.totalPages}
+                Page {hostsData.pagination.page} of{" "}
+                {hostsData.pagination.totalPages}
               </p>
               <div className="flex gap-2">
                 <Button
@@ -567,6 +633,117 @@ export function P2PApprovalPageClient() {
           )}
         </Main>
       </div>
+
+      {/* Approve Confirmation Dialog */}
+      <AlertDialog
+        open={dialog.type === "approve"}
+        onOpenChange={(open) => !open && setDialog(DEFAULT_DIALOG)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Approve P2P Host</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialog.host &&
+                `Promote ${dialog.host.name} to peer host? Their pending vehicles will stay in review until you approve them separately.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDialog(DEFAULT_DIALOG)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeApprove}
+              disabled={actionInProgress !== null}
+            >
+              {actionInProgress !== null && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Approve
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reject Confirmation Dialog */}
+      <AlertDialog
+        open={dialog.type === "reject"}
+        onOpenChange={(open) => !open && setDialog(DEFAULT_DIALOG)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reject P2P Host</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialog.host &&
+                `Reject ${dialog.host.name}'s host application? Their pending vehicles will be marked rejected.`}
+            </AlertDialogDescription>
+            <div className="mt-4">
+              <label className="text-sm font-medium">Reason (optional)</label>
+              <Input
+                value={dialog.reason}
+                onChange={(e) =>
+                  setDialog({ ...dialog, reason: e.target.value })
+                }
+                placeholder="Enter rejection reason..."
+                className="mt-1"
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDialog(DEFAULT_DIALOG)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeReject}
+              disabled={actionInProgress !== null}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              {actionInProgress !== null && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Blockers Info Dialog */}
+      <AlertDialog
+        open={dialog.type === "blockers"}
+        onOpenChange={(open) => !open && setDialog(DEFAULT_DIALOG)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-amber-500" />
+              Promotion Blocked
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This applicant still has review blockers. Open the detail page to
+              finish reviewing their documents and vehicle submissions.
+            </AlertDialogDescription>
+            {dialog.host?.reviewReadiness?.blockers &&
+              dialog.host.reviewReadiness.blockers.length > 0 && (
+                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/40">
+                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                    Blockers:
+                  </p>
+                  <ul className="mt-2 list-disc list-inside text-sm text-amber-700 dark:text-amber-400">
+                    {dialog.host.reviewReadiness.blockers.map(
+                      (blocker, idx) => (
+                        <li key={idx}>{blocker}</li>
+                      ),
+                    )}
+                  </ul>
+                </div>
+              )}
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogAction onClick={() => setDialog(DEFAULT_DIALOG)}>
+              Understood
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

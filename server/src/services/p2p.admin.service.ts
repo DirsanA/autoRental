@@ -80,18 +80,18 @@ function buildHostReviewReadiness(input: {
   if (!hasApprovedVerification) {
     if (input.pendingVerificationCount > 0) {
       blockers.push(
-        "A host verification document is still pending admin review."
+        "A host verification document is still pending admin review.",
       );
     } else {
       blockers.push(
-        "At least one approved ID or driver's license verification is required."
+        "At least one approved ID or driver's license verification is required.",
       );
     }
   }
 
   if (input.totalVehicleCount === 0) {
     blockers.push(
-      "At least one vehicle submission is required before promotion."
+      "At least one vehicle submission is required before promotion.",
     );
   }
 
@@ -102,7 +102,7 @@ function buildHostReviewReadiness(input: {
     input.rejectedVehicleCount > 0
   ) {
     blockers.push(
-      "All submitted vehicles have been rejected. Review a new vehicle submission before promotion."
+      "All submitted vehicles have been rejected. Review a new vehicle submission before promotion.",
     );
   }
 
@@ -252,7 +252,7 @@ function deriveApplicationStatus(input: {
 
 function deriveSubmittedAt(
   latestVerificationAt?: Date | null,
-  latestVehicleSubmission?: Date | null
+  latestVehicleSubmission?: Date | null,
 ) {
   if (latestVerificationAt && latestVehicleSubmission) {
     return latestVerificationAt > latestVehicleSubmission
@@ -433,7 +433,7 @@ export class P2PAdminService {
           rejectedVehicles: aggregation.rejectedVehicles || 0,
           latestVehicleSubmission: aggregation.latestVehicleSubmission || null,
         },
-      ])
+      ]),
     );
 
     let hosts: P2PHostSummary[] = users.map((user) => {
@@ -459,7 +459,7 @@ export class P2PAdminService {
       });
       const submittedAt = deriveSubmittedAt(
         latestVerification?.createdAt || null,
-        vehicleStats.latestVehicleSubmission
+        vehicleStats.latestVehicleSubmission,
       );
 
       return {
@@ -545,13 +545,13 @@ export class P2PAdminService {
     }
 
     const pendingVehicles = vehicles.filter(
-      (vehicle) => vehicle.status === "PENDING_APPROVAL"
+      (vehicle) => vehicle.status === "PENDING_APPROVAL",
     ).length;
     const approvedVehicles = vehicles.filter(
-      (vehicle) => vehicle.status === "AVAILABLE"
+      (vehicle) => vehicle.status === "AVAILABLE",
     ).length;
     const rejectedVehicles = vehicles.filter(
-      (vehicle) => vehicle.status === "RETIRED"
+      (vehicle) => vehicle.status === "RETIRED",
     ).length;
     const verificationSummary = summarizeVerifications(verifications);
     const reviewReadiness = buildHostReviewReadiness({
@@ -643,7 +643,9 @@ export class P2PAdminService {
     }
 
     const owner = await User.findById(vehicle.ownerId)
-      .select("name email phoneNumber verificationLevel status image firstName lastName")
+      .select(
+        "name email phoneNumber verificationLevel status image firstName lastName",
+      )
       .lean();
 
     return {
@@ -718,7 +720,7 @@ export class P2PAdminService {
 
     if (user.verificationLevel === VerificationLevel.PEER_HOST) {
       throw ApiError.unprocessable(
-        "This user is already a peer host. Use a dedicated suspension flow for active hosts."
+        "This user is already a peer host. Use a dedicated suspension flow for active hosts.",
       );
     }
 
@@ -771,7 +773,7 @@ export class P2PAdminService {
     if (data.status === "approved") {
       if (!reviewReadiness.canPromote) {
         throw ApiError.unprocessable(
-          `Host cannot be promoted yet: ${reviewReadiness.blockers.join(" ")}`
+          `Host cannot be promoted yet: ${reviewReadiness.blockers.join(" ")}`,
         );
       }
 
@@ -800,7 +802,7 @@ export class P2PAdminService {
         {
           $set: rejectionUpdate,
           $unset: { verifiedAt: "", verifiedBy: "" },
-        }
+        },
       );
     }
 
@@ -855,13 +857,14 @@ export class P2PAdminService {
 
       if (owner.verificationLevel !== VerificationLevel.PEER_HOST) {
         throw ApiError.unprocessable(
-          "Promote this applicant to peer host before approving vehicle listings."
+          "Promote this applicant to peer host before approving vehicle listings.",
         );
       }
     }
 
-    const adminPrimaryKey =
-      await userPersistenceService.resolveUserPrimaryKey(caller.id);
+    const adminPrimaryKey = await userPersistenceService.resolveUserPrimaryKey(
+      caller.id,
+    );
 
     vehicle.status = data.status === "APPROVED" ? "AVAILABLE" : "RETIRED";
     vehicle.adminComment = data.adminComment?.trim() || undefined;
