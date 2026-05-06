@@ -1,4 +1,9 @@
-notes.txt
+node_modules/
 .env
 .env.*
 !.env*.example
+notes.txt
+.DS_Store
+dist/
+build/
+.next/
