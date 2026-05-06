@@ -24,9 +24,29 @@ export type VehicleAvailabilityBlock = {
 
 export type VehicleFilterStatus = "available" | "rented" | "maintenance";
 
+export type VehicleOwnerSummary = {
+  id?: string;
+  name: string;
+  image?: string;
+  type?: "peerhost" | "company";
+};
+
+export type VehicleGeoPoint = {
+  lat: number;
+  lng: number;
+  precision?: "exact" | "approx";
+};
+
+export type CompanyLocationSummary = {
+  lat: number;
+  lng: number;
+  address?: string | null;
+};
+
 export type Vehicle = {
   id: string;
   ownerType?: "User" | "Company";
+  owner?: VehicleOwnerSummary;
   make: string;
   model: string;
   year: number;
@@ -46,4 +66,13 @@ export type Vehicle = {
   description?: string;
   ratingAvg: number;
   ratingCount: number;
+
+  // Optional pickup/return location (peerhost vehicles)
+  pickupAddress?: string;
+  returnAddress?: string;
+  pickupGeo?: VehicleGeoPoint;
+  returnGeo?: VehicleGeoPoint;
+
+  // Optional derived company location (company vehicles via marketplace endpoints)
+  companyLocation?: CompanyLocationSummary;
 };

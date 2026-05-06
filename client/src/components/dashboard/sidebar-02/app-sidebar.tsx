@@ -19,6 +19,7 @@ import {
   ShoppingCart,
   Store,
   UserCheck,
+  AlertCircle,
 } from "lucide-react";
 import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
@@ -137,6 +138,12 @@ const dashboardRoutes: Route[] = [
     //     icon: <Infinity className="size-4" />,
     //   },
     // ],
+  },
+  {
+    id: "Reports",
+    title: "Reports",
+    icon: <AlertCircle className="size-4" />,
+    link: "/sysadmin/reports",
   },
 ];
 

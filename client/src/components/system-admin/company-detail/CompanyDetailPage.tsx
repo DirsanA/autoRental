@@ -15,6 +15,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
@@ -22,12 +23,17 @@ import {
   ArrowLeft,
   Ban,
   CheckCircle2,
+  CircleUserRound,
   Globe,
   Loader2,
   Mail,
   MapPin,
   Phone,
   ShieldCheck,
+  FileText,
+  IdCard,
+  CreditCard,
+  Download,
 } from "lucide-react";
 import {
   approveAdminCompany,
@@ -35,6 +41,7 @@ import {
   type AdminCompanyDetail,
   suspendAdminCompany,
 } from "@/lib/admin-companies-api";
+import { CompanyFleetTab } from "./CompanyFleetTab";
 
 function formatDateTime(value: string | null) {
   return value ? new Date(value).toLocaleString() : "Not available";
@@ -60,6 +67,32 @@ function formatLabel(value: string | null | undefined) {
     .join(" ");
 }
 
+function normalizeExternalUrl(raw: string) {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed}`;
+}
+
+async function downloadFile(url: string, filename: string) {
+  try {
+    const response = await fetch(url);
+    const blob = await response.blob();
+    const blobUrl = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(blobUrl);
+  } catch (error) {
+    console.error("Download failed", error);
+    // Fallback: open in new tab
+    window.open(url, "_blank");
+  }
+}
+
 /**
  * Live company detail page for system-admin moderation workflows.
  */
@@ -75,8 +108,13 @@ export default function CompanyDetailPage({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [approveOpen, setApproveOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
   const [suspendReason, setSuspendReason] = useState("");
+  const [docPreview, setDocPreview] = useState<{
+    title: string;
+    url: string;
+  } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -107,12 +145,6 @@ export default function CompanyDetailPage({
 
   const handleApprove = async () => {
     if (!company) return;
-
-    const actionLabel =
-      company.statusValue === "SUSPENDED" ? "reactivate" : "approve";
-    if (!window.confirm(`Do you want to ${actionLabel} ${company.name}?`)) {
-      return;
-    }
 
     setBusy(true);
 
@@ -200,7 +232,7 @@ export default function CompanyDetailPage({
                     <Button
                       variant="outline"
                       className="gap-2"
-                      onClick={handleApprove}
+                      onClick={() => setApproveOpen(true)}
                       disabled={busy}
                     >
                       <CheckCircle2 className="h-4 w-4" />
@@ -225,184 +257,600 @@ export default function CompanyDetailPage({
             </div>
 
             {loading ? (
-              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground">
-                Loading company...
+              <div className="rounded-xl border bg-card p-6 text-sm text-muted-foreground flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin" /> Loading company...
               </div>
             ) : error ? (
               <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
                 {error}
               </div>
             ) : company ? (
-              <>
-                <div className="grid gap-4 md:grid-cols-4">
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Company Status
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {formatLabel(company.statusValue)}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Verification
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="flex items-center gap-2 text-lg font-semibold">
-                      <ShieldCheck className="h-5 w-5 text-primary" />
-                      {company.isVerified ? "Verified" : "Not verified"}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Wallet Balance
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {formatMoney(company.walletBalance)}
-                    </CardContent>
-                  </Card>
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground">
-                        Auth Account
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="text-lg font-semibold">
-                      {company.authAccount?.name || "Not linked"}
-                    </CardContent>
-                  </Card>
-                </div>
+              <Tabs defaultValue="overview" className="space-y-6">
+                <TabsList className="bg-muted/50 p-1">
+                  <TabsTrigger value="overview">Overview</TabsTrigger>
+                  <TabsTrigger value="documents">Documents</TabsTrigger>
+                  <TabsTrigger value="fleet">Fleet</TabsTrigger>
+                </TabsList>
 
-                <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Company Profile</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4 md:grid-cols-2">
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Name</div>
-                        <div className="font-medium">{company.name}</div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">TIN number</div>
-                        <div className="font-medium">
-                          {company.tinNumber || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Contact email</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Mail className="h-4 w-4 text-muted-foreground" />
-                          {company.contactEmail || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Contact phone</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          {company.contactPhone || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Website</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <Globe className="h-4 w-4 text-muted-foreground" />
-                          {company.website || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Address</div>
-                        <div className="flex items-center gap-2 font-medium">
-                          <MapPin className="h-4 w-4 text-muted-foreground" />
-                          {company.address || "Not provided"}
-                        </div>
-                      </div>
-                      <div className="space-y-1 md:col-span-2">
-                        <div className="text-sm text-muted-foreground">Bio</div>
-                        <div className="font-medium">
-                          {company.bio || "No company bio on file."}
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                {/* OVERVIEW TAB */}
+                <TabsContent value="overview" className="space-y-6">
+                  <div className="grid gap-4 md:grid-cols-4">
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Company Status
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {formatLabel(company.statusValue)}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Verification
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="flex items-center gap-2 text-lg font-semibold">
+                        <ShieldCheck className="h-5 w-5 text-primary" />
+                        {company.isVerified ? "Verified" : "Not verified"}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Wallet Balance
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {formatMoney(company.walletBalance)}
+                      </CardContent>
+                    </Card>
+                    <Card>
+                      <CardHeader className="pb-2">
+                        <CardTitle className="text-sm font-medium text-muted-foreground">
+                          Auth Account
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="text-lg font-semibold">
+                        {company.authAccount?.name || "Not linked"}
+                      </CardContent>
+                    </Card>
+                  </div>
 
-                  <Card>
-                    <CardHeader>
-                      <CardTitle>Lifecycle And Compliance</CardTitle>
-                    </CardHeader>
-                    <CardContent className="grid gap-4">
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Created at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.createdAt)}
+                  <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Company Profile</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-4 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Name</div>
+                          <div className="font-medium">{company.name}</div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Updated at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.updatedAt)}
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">TIN number</div>
+                          <div className="font-medium">
+                            {company.tinNumber || "Not provided"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">Verified at</div>
-                        <div className="font-medium">
-                          {formatDateTime(company.verifiedAt)}
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Contact email</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Mail className="h-4 w-4 text-muted-foreground" />
+                            {company.contactEmail || "Not provided"}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-2">
-                        <div className="text-sm text-muted-foreground">
-                          Moderation markers
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Contact phone</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            {company.contactPhone || "Not provided"}
+                          </div>
                         </div>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="secondary" className="font-normal">
-                            {company.isVerified ? "Verified" : "Pending verification"}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {formatLabel(company.authAccount?.status)}
-                          </Badge>
-                          <Badge variant="outline" className="font-normal">
-                            {formatLabel(company.authAccount?.accountType)}
-                          </Badge>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Website</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <Globe className="h-4 w-4 text-muted-foreground" />
+                            {company.website?.trim() ? (
+                              <a
+                                href={normalizeExternalUrl(company.website) || undefined}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="underline underline-offset-4 hover:text-primary"
+                              >
+                                {company.website.trim()}
+                              </a>
+                            ) : (
+                              "Not provided"
+                            )}
+                          </div>
                         </div>
-                      </div>
-                      <div className="space-y-1">
-                        <div className="text-sm text-muted-foreground">
-                          Suspension or rejection reason
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Address</div>
+                          <div className="flex items-center gap-2 font-medium">
+                            <MapPin className="h-4 w-4 text-muted-foreground" />
+                            {company.address || "Not provided"}
+                          </div>
                         </div>
-                        <div className="font-medium">
-                          {company.rejectionReason || "No reason recorded"}
+                        <div className="space-y-1 md:col-span-2">
+                          <div className="text-sm text-muted-foreground">Bio</div>
+                          <div className="font-medium">
+                            {company.bio || "No company bio on file."}
+                          </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </div>
+                      </CardContent>
+                    </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Admin Notes</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3 text-sm text-muted-foreground">
-                    <div className="rounded-lg border bg-muted/10 p-4">
-                      This view is backed by current company records and live
-                      moderation actions.
-                    </div>
-                    <div className="rounded-lg border bg-muted/10 p-4">
-                      Related company analytics such as fleet metrics, bookings,
-                      and financial rollups should move into dedicated admin
-                      endpoints before they are shown here.
-                    </div>
-                  </CardContent>
-                </Card>
-              </>
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Auth Account Details</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-4">
+                        {company.authAccount ? (
+                          <>
+                            <div className="flex items-start gap-3">
+                              <div className="h-10 w-10 rounded-full overflow-hidden border bg-muted flex items-center justify-center shrink-0">
+                                {company.authAccount.image ? (
+                                  <img
+                                    src={company.authAccount.image}
+                                    alt="Auth user profile"
+                                    className="h-full w-full object-cover"
+                                  />
+                                ) : (
+                                  <CircleUserRound className="h-5 w-5 text-muted-foreground" />
+                                )}
+                              </div>
+                              <div className="min-w-0">
+                                <div className="font-medium truncate">
+                                  {company.authAccount.name || "Unnamed auth user"}
+                                </div>
+                                <div className="text-sm text-muted-foreground truncate">
+                                  {company.authAccount.email || "No email"}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="space-y-3">
+                              <div className="text-sm font-medium">Uploaded documents</div>
+                              <div className="grid gap-3">
+                                <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <IdCard className="h-4 w-4 text-muted-foreground" />
+                                    National ID (image)
+                                  </div>
+                                  {company.authAccount.idImageUrl ? (
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          setDocPreview({
+                                            title: "National ID",
+                                            url: company.authAccount!.idImageUrl!,
+                                          })
+                                        }
+                                        className="text-sm underline underline-offset-4 hover:text-primary"
+                                      >
+                                        View
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          downloadFile(
+                                            company.authAccount!.idImageUrl!,
+                                            `national_id_${company.name.replace(/\s+/g, "_")}`,
+                                          )
+                                        }
+                                        className="text-muted-foreground hover:text-primary"
+                                        title="Download"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">
+                                      Not found
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+                                  <div className="flex items-center gap-2 text-sm">
+                                    <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                    Driver license (verification)
+                                  </div>
+                                  {company.authDocuments?.verifications?.some(
+                                    (doc) => doc.documentType === "DRIVER_LICENSE",
+                                  ) ? (
+                                    <div className="flex items-center gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const url =
+                                            company.authDocuments!.verifications.find(
+                                              (doc) =>
+                                                doc.documentType === "DRIVER_LICENSE",
+                                            )!.documentFrontUrl;
+                                          setDocPreview({
+                                            title: "Driver license",
+                                            url,
+                                          });
+                                        }}
+                                        className="text-sm underline underline-offset-4 hover:text-primary"
+                                      >
+                                        View
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          const url =
+                                            company.authDocuments!.verifications.find(
+                                              (doc) =>
+                                                doc.documentType === "DRIVER_LICENSE",
+                                            )!.documentFrontUrl;
+                                          downloadFile(
+                                            url,
+                                            `driver_license_${company.name.replace(/\s+/g, "_")}`,
+                                          );
+                                        }}
+                                        className="text-muted-foreground hover:text-primary"
+                                        title="Download"
+                                      >
+                                        <Download className="h-4 w-4" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <span className="text-sm text-muted-foreground">
+                                      Not found
+                                    </span>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="p-6 text-sm text-muted-foreground border border-dashed rounded-xl text-center">
+                            No auth account is linked to this company.
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Lifecycle And Compliance</CardTitle>
+                      </CardHeader>
+                      <CardContent className="grid gap-4">
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Created at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.createdAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Updated at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.updatedAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">Verified at</div>
+                          <div className="font-medium">
+                            {formatDateTime(company.verifiedAt)}
+                          </div>
+                        </div>
+                        <div className="space-y-2">
+                          <div className="text-sm text-muted-foreground">
+                            Moderation markers
+                          </div>
+                          <div className="flex flex-wrap gap-2">
+                            <Badge variant="secondary" className="font-normal">
+                              {company.isVerified ? "Verified" : "Pending verification"}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal">
+                              {formatLabel(company.authAccount?.status)}
+                            </Badge>
+                            <Badge variant="outline" className="font-normal">
+                              {formatLabel(company.authAccount?.accountType)}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="space-y-1">
+                          <div className="text-sm text-muted-foreground">
+                            Suspension or rejection reason
+                          </div>
+                          <div className="font-medium text-red-600">
+                            {company.rejectionReason || "No reason recorded"}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* DOCUMENTS TAB */}
+                <TabsContent value="documents" className="space-y-6">
+                  <div className="grid gap-6 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <FileText className="h-5 w-5 text-primary" />
+                          License Document
+                        </CardTitle>
+                        {company.licenseDocumentUrl && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-2"
+                            onClick={() =>
+                              downloadFile(
+                                company.licenseDocumentUrl!,
+                                `company_license_${company.name.replace(/\s+/g, "_")}`,
+                              )
+                            }
+                          >
+                            <Download className="h-4 w-4" />
+                            Download
+                          </Button>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        {company.licenseDocumentUrl ? (
+                          <div className="rounded-xl overflow-hidden border">
+                            {company.licenseDocumentUrl.toLowerCase().endsWith('.pdf') ? (
+                              <embed 
+                                src={company.licenseDocumentUrl} 
+                                className="w-full h-[400px]" 
+                                type="application/pdf" 
+                              />
+                            ) : (
+                              <img 
+                                src={company.licenseDocumentUrl} 
+                                alt="Company License" 
+                                className="w-full h-auto object-contain"
+                              />
+                            )}
+                          </div>
+                        ) : (
+                          <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+                            No license document uploaded
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                          <IdCard className="h-5 w-5 text-primary" />
+                          Auth User Documents
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="space-y-6">
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <IdCard className="h-4 w-4 text-muted-foreground" />
+                                ID document
+                              </div>
+                              {company.authAccount?.idImageUrl && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 gap-1.5 text-xs"
+                                  onClick={() =>
+                                    downloadFile(
+                                      company.authAccount!.idImageUrl!,
+                                      `id_document_${company.name.replace(/\s+/g, "_")}`,
+                                    )
+                                  }
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
+                            {company.authAccount?.idImageUrl ? (
+                              <div className="rounded-xl overflow-hidden border">
+                                {company.authAccount.idImageUrl
+                                  .toLowerCase()
+                                  .endsWith(".pdf") ? (
+                                  <embed
+                                    src={company.authAccount.idImageUrl}
+                                    className="w-full h-[360px]"
+                                    type="application/pdf"
+                                  />
+                                ) : (
+                                  <img
+                                    src={company.authAccount.idImageUrl}
+                                    alt="Auth user ID document"
+                                    className="w-full h-auto object-contain"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-6 text-center text-muted-foreground border border-dashed rounded-xl">
+                                No ID document found
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="space-y-2">
+                            <div className="flex items-center justify-between gap-2 text-sm font-medium">
+                              <div className="flex items-center gap-2">
+                                <CreditCard className="h-4 w-4 text-muted-foreground" />
+                                Driver license (verification)
+                              </div>
+                              {company.authDocuments?.verifications?.find(
+                                (doc) => doc.documentType === "DRIVER_LICENSE",
+                              )?.documentFrontUrl && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 gap-1.5 text-xs"
+                                  onClick={() => {
+                                    const url =
+                                      company.authDocuments!.verifications.find(
+                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                      )!.documentFrontUrl;
+                                    downloadFile(
+                                      url,
+                                      `driver_license_${company.name.replace(/\s+/g, "_")}`,
+                                    );
+                                  }}
+                                >
+                                  <Download className="h-3.5 w-3.5" />
+                                  Download
+                                </Button>
+                              )}
+                            </div>
+                            {company.authDocuments?.verifications?.find(
+                              (doc) => doc.documentType === "DRIVER_LICENSE",
+                            )?.documentFrontUrl ? (
+                              <div className="rounded-xl overflow-hidden border">
+                                {company.authDocuments.verifications
+                                  .find((doc) => doc.documentType === "DRIVER_LICENSE")!
+                                  .documentFrontUrl.toLowerCase()
+                                  .endsWith(".pdf") ? (
+                                  <embed
+                                    src={
+                                      company.authDocuments.verifications.find(
+                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                      )!.documentFrontUrl
+                                    }
+                                    className="w-full h-[360px]"
+                                    type="application/pdf"
+                                  />
+                                ) : (
+                                  <img
+                                    src={
+                                      company.authDocuments.verifications.find(
+                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                      )!.documentFrontUrl
+                                    }
+                                    alt="Driver license document"
+                                    className="w-full h-auto object-contain"
+                                  />
+                                )}
+                              </div>
+                            ) : (
+                              <div className="p-6 text-center text-muted-foreground border border-dashed rounded-xl">
+                                No driver license verification found
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+
+                {/* FLEET TAB */}
+                <TabsContent value="fleet">
+                  <CompanyFleetTab companyId={company.id} />
+                </TabsContent>
+              </Tabs>
             ) : null}
           </div>
         </Main>
       </div>
+
+      <Dialog
+        open={approveOpen}
+        onOpenChange={(open) => setApproveOpen(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>
+              {company?.statusValue === "SUSPENDED"
+                ? "Reactivate company"
+                : "Approve company"}
+            </DialogTitle>
+            <DialogDescription>
+              {company?.statusValue === "SUSPENDED"
+                ? `This will restore access for ${company?.name}.`
+                : `This will approve ${company?.name} and activate their company account.`}
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setApproveOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={async () => {
+                await handleApprove();
+                setApproveOpen(false);
+              }}
+              disabled={busy}
+              className="gap-2"
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              {company?.statusValue === "SUSPENDED" ? "Reactivate" : "Approve"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!docPreview}
+        onOpenChange={(open) => {
+          if (!open) setDocPreview(null);
+        }}
+      >
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>{docPreview?.title || "Document"}</DialogTitle>
+            <DialogDescription>
+              Previewing uploaded document.
+            </DialogDescription>
+          </DialogHeader>
+
+          {docPreview?.url ? (
+            <div className="rounded-xl overflow-hidden border">
+              {docPreview.url.toLowerCase().endsWith(".pdf") ? (
+                <embed
+                  src={docPreview.url}
+                  className="w-full h-[70vh]"
+                  type="application/pdf"
+                />
+              ) : (
+                <img
+                  src={docPreview.url}
+                  alt={docPreview.title}
+                  className="w-full h-auto object-contain"
+                />
+              )}
+            </div>
+          ) : (
+            <div className="p-8 text-center text-muted-foreground border border-dashed rounded-xl">
+              Document not available
+            </div>
+          )}
+
+          <DialogFooter className="sm:justify-between">
+            {docPreview?.url && (
+              <Button
+                variant="outline"
+                className="gap-2"
+                onClick={() =>
+                  downloadFile(
+                    docPreview.url,
+                    `${docPreview.title.toLowerCase().replace(/\s+/g, "_")}_${company?.name.replace(/\s+/g, "_")}`,
+                  )
+                }
+              >
+                <Download className="h-4 w-4" />
+                Download Original
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => setDocPreview(null)}>
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog
         open={suspendOpen}

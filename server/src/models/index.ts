@@ -14,3 +14,4 @@ export * from "./Verification.js";
 export * from "./Vehicle.js";
 export * from "./Wallet.js";
 export * from "./WalletEntry.js";
+export * from "./Report.js";

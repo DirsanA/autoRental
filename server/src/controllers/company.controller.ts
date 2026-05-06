@@ -5,6 +5,9 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { requireRequestUser } from "../utils/requestContext.js";
+import { User } from "../models/User.js";
+import { Verification } from "../models/Verification.js";
+import { Company } from "../models/Company.js";
 
 /**
  * Parses company list query params into service options.
@@ -145,6 +148,75 @@ export const companyController = {
     res.json({
       success: true,
       data: { company },
+    });
+  }),
+
+  /**
+   * GET /api/companies/:id/admin
+   * Returns a single company by id including linked auth account + uploaded docs.
+   */
+  getByIdAdmin: asyncHandler(async (req: Request, res: Response) => {
+    // 1. Fetch company with specific fields needed for detail page
+    const company = await Company.findById(req.params.id as string)
+      .select("name tinNumber website bio logoUrl licenseDocumentUrl contactInfo socialLinks location isVerified verifiedAt status rejectionReason walletBalance createdAt updatedAt authUserId")
+      .lean();
+
+    if (!company) {
+      throw ApiError.notFound("Company not found");
+    }
+
+    // 2. Fetch auth account with controlled projection
+    const authAccount = company.authUserId
+      ? await User.findById(company.authUserId)
+          .select("name email image idImageUrl accountType status")
+          .lean()
+      : null;
+
+    // 3. Fetch verification docs for the owner/company
+    const authUserObjectId = authAccount?._id ?? null;
+    const verificationDocs = authUserObjectId
+      ? await Verification.find({
+          $or: [
+            { userId: authUserObjectId },
+            { companyId: company._id },
+          ],
+          documentType: { $in: ["NATIONAL_ID", "DRIVER_LICENSE", "PASSPORT"] },
+        })
+          .select("documentType documentFrontUrl documentBackUrl status createdAt updatedAt")
+          .sort({ createdAt: -1 })
+          .lean()
+      : [];
+
+    res.json({
+      success: true,
+      data: {
+        company: {
+          ...company,
+          id: company._id.toString(),
+          authAccount: authAccount
+            ? {
+                id: authAccount._id.toString(),
+                name: authAccount.name ?? null,
+                email: authAccount.email ?? null,
+                image: authAccount.image ?? null,
+                status: authAccount.status ?? null,
+                accountType: authAccount.accountType ?? null,
+                idImageUrl: authAccount.idImageUrl ?? null,
+              }
+            : null,
+          authDocuments: {
+            verifications: verificationDocs.map((doc: any) => ({
+              id: doc._id.toString(),
+              documentType: doc.documentType,
+              documentFrontUrl: doc.documentFrontUrl,
+              documentBackUrl: doc.documentBackUrl ?? null,
+              status: doc.status,
+              createdAt: doc.createdAt ?? null,
+              updatedAt: doc.updatedAt ?? null,
+            })),
+          },
+        },
+      },
     });
   }),
 

@@ -9,6 +9,7 @@ import { createBookingRoutes } from "./booking.routes.js";
 import { createWalletRoutes } from "./wallet.routes.js";
 import { createPayoutRoutes } from "./payout.routes.js";
 import { createTransactionRoutes } from "./transaction.routes.js";
+import { createReportRoutes } from "./report.routes.js";
 import type { Auth } from "../config/auth.js";
 
 /**
@@ -29,6 +30,7 @@ export function createApiRoutes(auth: Auth): Router {
   router.use("/wallet", createWalletRoutes(auth));
   router.use("/payouts", createPayoutRoutes(auth));
   router.use("/transactions", createTransactionRoutes(auth));
+  router.use("/reports", createReportRoutes(auth));
 
   return router;
 }

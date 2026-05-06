@@ -386,6 +386,7 @@ export class CompanyService {
 
     const [companies, total] = await Promise.all([
       Company.find(filter)
+        .select("name tinNumber website status isVerified verifiedAt contactInfo createdAt updatedAt authUserId")
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit)

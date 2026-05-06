@@ -113,6 +113,9 @@ export function PeerHostBecomeHostPage() {
     monthlyDiscount: "",
     availability: "",
     delivery: "",
+    pickupAddress: "",
+    returnAddress: "",
+    sameReturnAsPickup: true,
   });
 
   const steps = [
@@ -388,6 +391,10 @@ export function PeerHostBecomeHostPage() {
         monthlyDiscount: monthlyDiscountNumber,
         availability: formData.availability.trim() || undefined,
         delivery: formData.delivery.trim() || undefined,
+        pickupAddress: formData.pickupAddress.trim() || undefined,
+        returnAddress: formData.sameReturnAsPickup
+          ? formData.pickupAddress.trim() || undefined
+          : formData.returnAddress.trim() || undefined,
 
         photos: {
           front: photos.front.preview,
@@ -986,6 +993,50 @@ export function PeerHostBecomeHostPage() {
                         setFormData({ ...formData, price: e.target.value })
                       }
                       className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-muted-foreground dark:text-slate-400 text-xs">
+                      Pickup address (shown approximately on listing)
+                    </Label>
+                    <Input
+                      placeholder="e.g. Bole, Addis Ababa"
+                      value={formData.pickupAddress}
+                      onChange={(e) =>
+                        setFormData({ ...formData, pickupAddress: e.target.value })
+                      }
+                      className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">
+                        Return address
+                      </Label>
+                      <label className="flex items-center gap-2 text-[11px] text-muted-foreground dark:text-slate-400">
+                        <input
+                          type="checkbox"
+                          checked={formData.sameReturnAsPickup}
+                          onChange={(e) =>
+                            setFormData({
+                              ...formData,
+                              sameReturnAsPickup: e.target.checked,
+                            })
+                          }
+                        />
+                        Same as pickup
+                      </label>
+                    </div>
+                    <Input
+                      placeholder="Optional (if different)"
+                      disabled={formData.sameReturnAsPickup}
+                      value={formData.returnAddress}
+                      onChange={(e) =>
+                        setFormData({ ...formData, returnAddress: e.target.value })
+                      }
+                      className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm disabled:opacity-60"
                     />
                   </div>
                 </div>
