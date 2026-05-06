@@ -78,8 +78,8 @@ function formatJoinedDate(value: unknown): string {
 function extractRoleNames(user: UserViewSource): string[] {
   return Array.isArray(user.roles)
     ? user.roles
-        .map((role: { name?: string }) => role?.name)
-        .filter((name): name is string => Boolean(name))
+      .map((role: { name?: string }) => role?.name)
+      .filter((name): name is string => Boolean(name))
     : [];
 }
 
@@ -130,7 +130,7 @@ function buildAuthUserIdentifiers(userId: string, user: UserViewSource): string[
  * User service for profile and admin user-management workflows.
  */
 export class UserService {
-  constructor(private readonly auth: Auth) {}
+  constructor(private readonly auth: Auth) { }
 
   /**
    * Loads the peer host role id when admin promotion requires it.
@@ -335,13 +335,13 @@ export class UserService {
     const transactionFeedFilter = {
       $or: company?._id
         ? [
-            { payerId: mongoUserId },
-            { receiverId: company._id, receiverModel: "Company" },
-          ]
+          { payerId: mongoUserId },
+          { receiverId: company._id, receiverModel: "Company" },
+        ]
         : [
-            { payerId: mongoUserId },
-            { receiverId: mongoUserId, receiverModel: "User" },
-          ],
+          { payerId: mongoUserId },
+          { receiverId: mongoUserId, receiverModel: "User" },
+        ],
     } as Record<string, unknown>;
 
     const [
@@ -420,15 +420,15 @@ export class UserService {
             {
               $match: company?._id
                 ? {
-                    receiverId: company._id,
-                    receiverModel: "Company",
-                    status: "COMPLETED",
-                  }
+                  receiverId: company._id,
+                  receiverModel: "Company",
+                  status: "COMPLETED",
+                }
                 : {
-                    receiverId: mongoUserId,
-                    receiverModel: "User",
-                    status: "COMPLETED",
-                  },
+                  receiverId: mongoUserId,
+                  receiverModel: "User",
+                  status: "COMPLETED",
+                },
             },
             {
               $group: {
@@ -466,17 +466,17 @@ export class UserService {
       },
       company: company
         ? {
-            id: company._id?.toString?.() ?? String(company._id),
-            name: company.name,
-            status: company.status,
-            isVerified: company.isVerified,
-            verifiedAt: company.verifiedAt,
-            contactEmail: company.contactInfo?.email ?? null,
-            contactPhone: company.contactInfo?.phoneNumber ?? null,
-            website: company.website ?? null,
-            tinNumber: company.tinNumber,
-            createdAt: company.createdAt ?? null,
-          }
+          id: company._id?.toString?.() ?? String(company._id),
+          name: company.name,
+          status: company.status,
+          isVerified: company.isVerified,
+          verifiedAt: company.verifiedAt,
+          contactEmail: company.contactInfo?.email ?? null,
+          contactPhone: company.contactInfo?.phoneNumber ?? null,
+          website: company.website ?? null,
+          tinNumber: company.tinNumber,
+          createdAt: company.createdAt ?? null,
+        }
         : null,
       metrics: {
         bookingsAsRenter: bookingMetrics[0],
@@ -597,6 +597,189 @@ export class UserService {
   }
 
   /**
+   * Generates peer host dashboard stats.
+   */
+  async getPeerHostDashboard(caller: RequestUser) {
+    const mongoUserId = new mongoose.Types.ObjectId(caller.id);
+
+    const userVehicles = await Vehicle.find({
+      ownerType: "User",
+      ownerId: mongoUserId,
+    })
+      .select("_id status")
+      .lean();
+
+    const vehicleIds = userVehicles.map((vehicle) => vehicle._id);
+
+    const activeListings = userVehicles.filter(
+      (v) => v.status === "AVAILABLE"
+    ).length;
+
+    if (vehicleIds.length === 0) {
+      return {
+        earnings: 0,
+        activeListings: 0,
+        pendingBookings: 0,
+        averageRating: 0,
+        recentBookings: [],
+        revenueTrend: {
+          weekly: Array.from({ length: 7 }, (_, index) => ({
+            day: ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"][index],
+            revenue: 0,
+            bookings: 0,
+          })),
+          monthly: Array.from({ length: 12 }, (_, index) => ({
+            name: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][index],
+            total: 0,
+          })),
+        },
+      };
+    }
+
+    const reviewMatchFilters: Array<Record<string, unknown>> = [
+      {
+        targetId: mongoUserId,
+        targetType: "User",
+      },
+    ];
+
+    if (vehicleIds.length > 0) {
+      reviewMatchFilters.push({
+        targetId: { $in: vehicleIds },
+        targetType: "Vehicle",
+      });
+    }
+
+    const [pendingBookings, earningsResult, avgRatingResult] = await Promise.all([
+      Booking.countDocuments({
+        vehicleId: { $in: vehicleIds },
+        status: "PENDING",
+      }),
+      Booking.aggregate([
+        {
+          $match: {
+            vehicleId: { $in: vehicleIds },
+            "payment.status": "PAID",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$priceSnapshot.totalAmount" },
+          },
+        },
+      ]),
+      Review.aggregate([
+        {
+          $match: { $or: reviewMatchFilters },
+        },
+        {
+          $group: {
+            _id: null,
+            avg: { $avg: "$rating" },
+          },
+        },
+      ]),
+    ]);
+
+    const earnings = earningsResult?.[0]?.total ?? 0;
+    const averageRating = avgRatingResult?.[0]?.avg ?? 0;
+
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const weeklyStart = new Date(now);
+    weeklyStart.setHours(0, 0, 0, 0);
+    weeklyStart.setDate(weeklyStart.getDate() - 6);
+
+    const yearStart = new Date(currentYear, 0, 1);
+
+    const recentBookingsRaw = await Booking.find({
+      vehicleId: { $in: vehicleIds },
+    })
+      .sort({ createdAt: -1 })
+      .limit(5)
+      .populate({ path: "renterId", select: "name email firstName lastName" })
+      .select("bookingId renterId priceSnapshot status payment createdAt")
+      .lean();
+
+    const recentBookings = recentBookingsRaw.map((booking: any) => {
+      const name = booking.renterId?.name || `${booking.renterId?.firstName || ""} ${booking.renterId?.lastName || ""}`.trim() || "Guest";
+      return {
+        id: booking._id?.toString() ?? String(booking._id),
+        bookingId: booking.bookingId,
+        customerName: name,
+        customerEmail: booking.renterId?.email || "",
+        amount: booking.priceSnapshot?.totalAmount ?? 0,
+        status: booking.status,
+      };
+    });
+
+    const allYearBookings = await Booking.find({
+      vehicleId: { $in: vehicleIds },
+      "payment.status": "PAID",
+      createdAt: { $gte: yearStart },
+    })
+      .select("createdAt priceSnapshot.totalAmount")
+      .lean();
+
+    const weeklyMap = new Map<string, { revenue: number; bookings: number }>();
+    const monthMap = new Map<number, { revenue: number; bookings: number }>();
+
+    allYearBookings.forEach((booking) => {
+      const createdAt = new Date(booking.createdAt);
+      const dateKey = createdAt.toISOString().slice(0, 10);
+      const revenue = booking.priceSnapshot?.totalAmount ?? 0;
+
+      if (createdAt >= weeklyStart) {
+        const existing = weeklyMap.get(dateKey) ?? { revenue: 0, bookings: 0 };
+        existing.revenue += revenue;
+        existing.bookings += 1;
+        weeklyMap.set(dateKey, existing);
+      }
+
+      const monthIndex = createdAt.getMonth();
+      const existingMonth = monthMap.get(monthIndex) ?? { revenue: 0, bookings: 0 };
+      existingMonth.revenue += revenue;
+      existingMonth.bookings += 1;
+      monthMap.set(monthIndex, existingMonth);
+    });
+
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const weekly = Array.from({ length: 7 }, (_, index) => {
+      const day = new Date(weeklyStart);
+      day.setDate(day.getDate() + index);
+      const key = day.toISOString().slice(0, 10);
+      const stats = weeklyMap.get(key) ?? { revenue: 0, bookings: 0 };
+      return {
+        day: dayNames[day.getDay()],
+        revenue: stats.revenue,
+        bookings: stats.bookings,
+      };
+    });
+
+    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthly = Array.from({ length: 12 }, (_, index) => {
+      const stats = monthMap.get(index) ?? { revenue: 0, bookings: 0 };
+      return {
+        name: monthNames[index],
+        total: stats.revenue,
+      };
+    });
+
+    return {
+      earnings,
+      activeListings,
+      pendingBookings,
+      averageRating,
+      recentBookings,
+      revenueTrend: {
+        weekly,
+        monthly,
+      },
+    };
+  }
+
+  /**
    * Updates a user's status while preventing self-updates.
    */
   async updateStatus(
@@ -624,6 +807,87 @@ export class UserService {
 
     return {
       user: toAdminUserSummary(updated as UserViewSource),
+    };
+  }
+
+  /**
+   * Fetches reviews for a peer host (reviews where the host is the target).
+   */
+  async getPeerHostReviews(caller: RequestUser) {
+    const mongoUserId = new mongoose.Types.ObjectId(caller.id);
+
+    // Get user's vehicles to include vehicle names in response
+    const userVehicles = await Vehicle.find({
+      ownerType: "User",
+      ownerId: mongoUserId,
+    })
+      .select("_id make model year")
+      .lean();
+
+    const vehicleMap = new Map(
+      userVehicles.map((v) => [v._id.toString(), `${v.year} ${v.make} ${v.model}`])
+    );
+
+    const vehicleIds = userVehicles.map((vehicle) => vehicle._id);
+    const reviewMatchFilters: Array<Record<string, unknown>> = [
+      {
+        targetId: mongoUserId,
+        targetType: "User",
+      },
+    ];
+
+    if (vehicleIds.length > 0) {
+      reviewMatchFilters.push({
+        targetId: { $in: vehicleIds },
+        targetType: "Vehicle",
+      });
+    }
+
+    // Fetch reviews for this peerhost directly or for vehicles they own
+    const reviews = await Review.find({
+      $or: reviewMatchFilters,
+    })
+      .sort({ createdAt: -1 })
+      .populate({ path: "reviewerId", select: "firstName lastName name email" })
+      .populate({ path: "bookingId", select: "vehicleId" })
+      .select("reviewerId bookingId rating comment createdAt")
+      .lean();
+
+    // Calculate rating distribution
+    const totalReviews = reviews.length;
+    const ratingCounts = [5, 4, 3, 2, 1].map((star) => ({
+      star,
+      count: reviews.filter((r) => r.rating === star).length,
+    }));
+
+    const averageRating = totalReviews > 0
+      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+      : 0;
+
+    const formattedReviews = reviews.map((review: any) => {
+      const reviewerName = review.reviewerId?.name ||
+        `${review.reviewerId?.firstName || ""} ${review.reviewerId?.lastName || ""}`.trim() ||
+        "Guest";
+
+      // Get vehicle name from booking if available, otherwise unknown
+      const vehicleId = review.bookingId?.vehicleId?.toString();
+      const vehicleName = vehicleId ? vehicleMap.get(vehicleId) || "Unknown Vehicle" : "Unknown Vehicle";
+
+      return {
+        id: review._id?.toString() ?? String(review._id),
+        vehicleName,
+        guestName: reviewerName,
+        rating: review.rating,
+        comment: review.comment ?? "",
+        createdAt: review.createdAt?.toISOString() ?? new Date().toISOString(),
+      };
+    });
+
+    return {
+      reviews: formattedReviews,
+      totalReviews,
+      averageRating,
+      ratingDistribution: ratingCounts,
     };
   }
 

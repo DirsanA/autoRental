@@ -26,6 +26,18 @@ export const bookingController = {
     });
   }),
 
+  listPeerHostBookings: asyncHandler(async (req: Request, res: Response) => {
+    const data = await bookingService.listPeerHostBookings(
+      requireRequestUser(req, "Please sign in to view your host booking history"),
+      req.query as RenterBookingListQueryInput,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
   initializeChapaCheckout: asyncHandler(async (req: Request, res: Response) => {
     const forwardedProtoRaw = req.headers["x-forwarded-proto"];
     const forwardedProto =
@@ -41,14 +53,15 @@ export const bookingController = {
       typeof originHeader === "string" && originHeader.trim()
         ? originHeader.trim()
         : undefined;
+    const baseUrls = {
+      ...(serverBaseUrl ? { serverBaseUrl } : {}),
+      ...(frontendBaseUrl ? { frontendBaseUrl } : {}),
+    };
 
     const data = await bookingService.initializeChapaCheckout(
       requireRequestUser(req, "Please sign in before booking a vehicle"),
       req.body,
-      {
-        serverBaseUrl,
-        frontendBaseUrl,
-      },
+      baseUrls,
     );
 
     res.status(201).json({

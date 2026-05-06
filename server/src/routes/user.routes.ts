@@ -25,6 +25,8 @@ export function createUserRoutes(auth: Auth): Router {
   router.use(requireAccountType(AccountType.USER, AccountType.ADMIN));
 
   router.get("/me", userController.getMe);
+  router.get("/me/peerhost-dashboard", userController.getPeerHostDashboard);
+  router.get("/me/peerhost-reviews", userController.getPeerHostReviews);
 
   router.patch(
     "/me",
