@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState } from "react";
+import { type FormEvent, useEffect, useRef, useState, useCallback } from "react";
 import { Bot, MessageSquareText, Send, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -19,7 +19,61 @@ type ChatMessage = {
   id: number;
   role: "assistant" | "user";
   content: string;
+  isTyping?: boolean;
 };
+
+// Hook for typing animation - reveals text word by word
+function useTypingAnimation(
+  fullText: string,
+  isTyping: boolean,
+  onComplete: () => void,
+  wordsPerSecond = 8
+) {
+  const [displayedText, setDisplayedText] = useState("");
+  const wordsRef = useRef<string[]>([]);
+  const currentIndexRef = useRef(0);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    if (!isTyping) {
+      setDisplayedText(fullText);
+      return;
+    }
+
+    // Reset and start typing
+    wordsRef.current = fullText.split(/(\s+)/); // Keep whitespace as separate tokens
+    currentIndexRef.current = 0;
+    setDisplayedText("");
+
+    const wordDelay = 1000 / wordsPerSecond;
+
+    const typeNext = () => {
+      if (currentIndexRef.current >= wordsRef.current.length) {
+        onComplete();
+        return;
+      }
+
+      const nextWords = wordsRef.current.slice(0, currentIndexRef.current + 1);
+      setDisplayedText(nextWords.join(""));
+      currentIndexRef.current++;
+
+      // Randomize delay slightly for natural feel
+      const randomDelay = wordDelay * (0.8 + Math.random() * 0.4);
+      timeoutRef.current = setTimeout(typeNext, randomDelay);
+    };
+
+    // Start typing after a small delay
+    timeoutRef.current = setTimeout(typeNext, 300);
+
+    return () => {
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+    };
+  }, [fullText, isTyping, onComplete, wordsPerSecond]);
+
+  return displayedText;
+}
 
 const STARTER_PROMPTS = [
   "Show me family-friendly SUVs",
@@ -33,95 +87,136 @@ const INITIAL_MESSAGES: ChatMessage[] = [
     role: "assistant",
     content:
       "Hi, I am your AutoRent assistant. Tell me what kind of trip or car you have in mind, and I will point you in the right direction.",
+    isTyping: false,
   },
 ];
 
-function buildAssistantReply(prompt: string) {
-  const normalizedPrompt = prompt.trim().toLowerCase();
+const SYSTEM_PROMPT =
+  "You are AutoRent Assistant, a helpful chatbot for a car rental marketplace website. Ask brief clarifying questions when needed, suggest suitable car categories (SUV, van, budget, luxury, airport pickup), and keep answers concise and actionable.";
 
-  if (
-    normalizedPrompt.includes("airport") ||
-    normalizedPrompt.includes("flight") ||
-    normalizedPrompt.includes("pickup")
-  ) {
-    return "Airport transfers are a strong fit here. Check the Airport Transfers row for convenient pickup options, then open the car page to confirm availability and pricing.";
+async function fetchAssistantReply(conversation: ChatMessage[]) {
+  const res = await fetch("/api/chat", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      messages: [
+        { role: "system", content: SYSTEM_PROMPT },
+        ...conversation.map((m) => ({ role: m.role, content: m.content })),
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(text || `Request failed with status ${res.status}`);
   }
 
-  if (
-    normalizedPrompt.includes("family") ||
-    normalizedPrompt.includes("space") ||
-    normalizedPrompt.includes("group") ||
-    normalizedPrompt.includes("suv") ||
-    normalizedPrompt.includes("van")
-  ) {
-    return "For family or group travel, start with the SUVs and Vans section. Look for more seats, luggage room, and compare daily rates before booking.";
-  }
+  const data = (await res.json()) as { content?: string };
+  if (!data.content) throw new Error("Empty assistant response.");
+  return data.content;
+}
 
-  if (
-    normalizedPrompt.includes("budget") ||
-    normalizedPrompt.includes("cheap") ||
-    normalizedPrompt.includes("affordable") ||
-    normalizedPrompt.includes("low price")
-  ) {
-    return "The Community Hosted Vehicles list is usually the best place to start for budget-friendly options. It gives you a strong mix of price, flexibility, and local hosts.";
-  }
+// Component for individual chat message with typing animation
+function ChatMessageBubble({
+  message,
+  isCurrentlyTyping,
+  onTypingComplete,
+}: {
+  message: ChatMessage;
+  isCurrentlyTyping: boolean;
+  onTypingComplete: () => void;
+}) {
+  const displayedContent = useTypingAnimation(
+    message.content,
+    isCurrentlyTyping,
+    onTypingComplete,
+    12 // words per second - adjust for faster/slower typing
+  );
 
-  if (
-    normalizedPrompt.includes("luxury") ||
-    normalizedPrompt.includes("business") ||
-    normalizedPrompt.includes("premium")
-  ) {
-    return "The Luxury Fleet section is your best match. It is better for premium comfort, business travel, and more polished arrivals.";
-  }
-
-  if (
-    normalizedPrompt.includes("host") ||
-    normalizedPrompt.includes("rent out") ||
-    normalizedPrompt.includes("list my car")
-  ) {
-    return "If you want to earn with your vehicle, the next step is creating an account and starting the host flow. After verification, you can list your car and manage bookings from the dashboard.";
-  }
-
-  return "A smart starting point is the featured car rows on the landing page. Ask for a budget, trip type, or vehicle style and I will narrow it down for you.";
+  return (
+    <div
+      className={cn(
+        "flex",
+        message.role === "user" ? "justify-end" : "justify-start",
+      )}
+    >
+      <div
+        className={cn(
+          "shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6 relative",
+          message.role === "user"
+            ? "rounded-br-md bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+            : "rounded-bl-md bg-muted text-foreground",
+        )}
+      >
+        {displayedContent}
+        {isCurrentlyTyping && (
+          <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+        )}
+      </div>
+    </div>
+  );
 }
 
 export function LandingChatbot() {
   const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES);
   const [draft, setDraft] = useState("");
   const [isThinking, setIsThinking] = useState(false);
+  const [typingMessageId, setTypingMessageId] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-  }, [messages, isThinking]);
+  }, [messages, isThinking, typingMessageId]);
 
-  const submitPrompt = (rawPrompt: string) => {
+  const submitPrompt = async (rawPrompt: string) => {
     const prompt = rawPrompt.trim();
-    if (!prompt) return;
+    if (!prompt || isThinking) return;
 
-    setMessages((current) => [
-      ...current,
-      {
-        id: Date.now(),
-        role: "user",
-        content: prompt,
-      },
-    ]);
+    const userMessage: ChatMessage = {
+      id: Date.now(),
+      role: "user",
+      content: prompt,
+    };
+
+    const nextConversation = [...messages, userMessage];
+    setMessages(nextConversation);
     setDraft("");
     setIsThinking(true);
 
-    window.setTimeout(() => {
+    try {
+      const content = await fetchAssistantReply(nextConversation);
+      const newMessageId = Date.now() + 1;
+      setMessages((current) => [
+        ...current,
+        { id: newMessageId, role: "assistant", content, isTyping: true },
+      ]);
+      setTypingMessageId(newMessageId);
+    } catch {
+      const errorMessageId = Date.now() + 1;
       setMessages((current) => [
         ...current,
         {
-          id: Date.now() + 1,
+          id: errorMessageId,
           role: "assistant",
-          content: buildAssistantReply(prompt),
+          content:
+            "Sorry — I could not reach the assistant service right now. Please try again in a moment.",
+          isTyping: true,
         },
       ]);
+      setTypingMessageId(errorMessageId);
+    } finally {
       setIsThinking(false);
-    }, 450);
+    }
   };
+
+  const handleTypingComplete = useCallback((messageId: number) => {
+    setTypingMessageId((current) => (current === messageId ? null : current));
+    setMessages((current) =>
+      current.map((msg) =>
+        msg.id === messageId ? { ...msg, isTyping: false } : msg
+      )
+    );
+  }, []);
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -209,26 +304,12 @@ export function LandingChatbot() {
 
               <div className="flex-1 space-y-4 px-6 py-5 overflow-y-auto">
                 {messages.map((message) => (
-                  <div
+                  <ChatMessageBubble
                     key={message.id}
-                    className={cn(
-                      "flex",
-                      message.role === "user"
-                        ? "justify-end"
-                        : "justify-start",
-                    )}
-                  >
-                    <div
-                      className={cn(
-                        "shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6",
-                        message.role === "user"
-                          ? "rounded-br-md bg-slate-900 text-white dark:bg-white dark:text-slate-900"
-                          : "rounded-bl-md bg-muted text-foreground",
-                      )}
-                    >
-                      {message.content}
-                    </div>
-                  </div>
+                    message={message}
+                    isCurrentlyTyping={typingMessageId === message.id}
+                    onTypingComplete={() => handleTypingComplete(message.id)}
+                  />
                 ))}
 
                 {isThinking ? (
@@ -248,8 +329,9 @@ export function LandingChatbot() {
                       <button
                         key={prompt}
                         type="button"
+                        disabled={isThinking}
                         onClick={() => submitPrompt(prompt)}
-                        className="bg-background hover:bg-accent px-3 py-2 border border-border/70 rounded-full font-medium text-foreground text-xs transition-colors"
+                        className="bg-background disabled:opacity-60 hover:bg-accent px-3 py-2 border border-border/70 rounded-full font-medium text-foreground text-xs transition-colors"
                       >
                         {prompt}
                       </button>
