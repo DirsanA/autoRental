@@ -138,7 +138,7 @@ export class CompanyService {
    * Returns the company owned by a specific auth account.
    */
   async getByAuthUserId(authUserId: string): Promise<CompanyDocument | null> {
-    return Company.findOne({ authUserId }).select("-logoUrl -licenseDocumentUrl");
+    return Company.findOne({ authUserId });
   }
 
   async getDashboardForAuthUser(authUserId: string) {
@@ -332,6 +332,43 @@ export class CompanyService {
       throw ApiError.forbidden("You can only update your own company");
     }
 
+    // If company is already active/verified, we store changes as pending
+    if (company.status === "ACTIVE") {
+      const pending: Record<string, any> = { ...company.pendingChanges };
+
+      if (data.name !== undefined) pending.name = data.name;
+      if (data.website !== undefined) pending.website = data.website ?? undefined;
+      if (data.bio !== undefined) pending.bio = data.bio ?? undefined;
+      if (data.logoUrl !== undefined) pending.logoUrl = data.logoUrl ?? undefined;
+      if (data.licenseDocumentUrl !== undefined) {
+        pending.licenseDocumentUrl = data.licenseDocumentUrl ?? undefined;
+      }
+
+      if (data.contactInfo) {
+        pending.contactInfo = {
+          ...(pending.contactInfo || company.contactInfo),
+          ...(data.contactInfo as any),
+        };
+      }
+
+      if (data.location !== undefined) {
+        pending.location = data.location ?? undefined;
+      }
+
+      if (data.socialLinks) {
+        pending.socialLinks = {
+          ...(pending.socialLinks || company.socialLinks),
+          ...(data.socialLinks as any),
+        };
+      }
+
+      company.pendingChanges = pending;
+      company.pendingChangesRequestedAt = new Date();
+      await company.save();
+      return company;
+    }
+
+    // Otherwise, apply changes immediately (initial onboarding phase)
     if (data.name !== undefined) company.name = data.name;
     if (data.website !== undefined) company.website = data.website ?? undefined;
     if (data.bio !== undefined) company.bio = data.bio ?? undefined;
@@ -363,6 +400,81 @@ export class CompanyService {
       };
     }
 
+    await company.save();
+    return company;
+  }
+
+  /**
+   * Approves pending changes for a company.
+   */
+  async approvePendingChanges(companyId: string): Promise<CompanyDocument> {
+    const company = await Company.findById(companyId);
+    if (!company) {
+      throw ApiError.notFound("Company not found");
+    }
+
+    if (!company.pendingChanges) {
+      throw ApiError.unprocessable("No pending company changes to approve");
+    }
+
+    const pending = company.pendingChanges as Record<string, unknown>;
+    
+    if (pending.name !== undefined) {
+      company.name = pending.name as string;
+    }
+    if (pending.website !== undefined) {
+      company.website = pending.website as string | undefined;
+    }
+    if (pending.bio !== undefined) {
+      company.bio = pending.bio as string | undefined;
+    }
+    if (pending.logoUrl !== undefined) {
+      company.logoUrl = pending.logoUrl as string | undefined;
+    }
+    if (pending.licenseDocumentUrl !== undefined) {
+      company.licenseDocumentUrl = pending.licenseDocumentUrl as string | undefined;
+    }
+    if (pending.contactInfo) {
+      company.contactInfo = {
+        ...company.contactInfo,
+        ...(pending.contactInfo as Record<string, unknown>),
+      } as any;
+    }
+    if (pending.location !== undefined) {
+      company.location = pending.location as any;
+    }
+    if (pending.socialLinks) {
+      company.socialLinks = {
+        ...company.socialLinks,
+        ...(pending.socialLinks as Record<string, unknown>),
+      };
+    }
+
+    company.pendingChanges = undefined;
+    company.pendingChangesRequestedAt = undefined;
+    await company.save();
+    return company;
+  }
+
+  /**
+   * Rejects pending changes for a company.
+   */
+  async rejectPendingChanges(
+    companyId: string,
+    reason: string,
+  ): Promise<CompanyDocument> {
+    const company = await Company.findById(companyId);
+    if (!company) {
+      throw ApiError.notFound("Company not found");
+    }
+
+    if (!company.pendingChanges) {
+      throw ApiError.unprocessable("No pending company changes to reject");
+    }
+
+    company.pendingChanges = undefined;
+    company.pendingChangesRequestedAt = undefined;
+    // Optionally log the reason or send an email here
     await company.save();
     return company;
   }

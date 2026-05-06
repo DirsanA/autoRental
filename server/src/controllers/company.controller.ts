@@ -158,7 +158,7 @@ export const companyController = {
   getByIdAdmin: asyncHandler(async (req: Request, res: Response) => {
     // 1. Fetch company with specific fields needed for detail page
     const company = await Company.findById(req.params.id as string)
-      .select("name tinNumber website bio logoUrl licenseDocumentUrl contactInfo socialLinks location isVerified verifiedAt status rejectionReason walletBalance createdAt updatedAt authUserId")
+      .select("name tinNumber website bio logoUrl licenseDocumentUrl contactInfo socialLinks location isVerified verifiedAt status rejectionReason walletBalance createdAt updatedAt authUserId pendingChanges pendingChangesRequestedAt")
       .lean();
 
     if (!company) {
@@ -222,14 +222,32 @@ export const companyController = {
 
   /**
    * PATCH /api/companies/:id
-   * Updates the authenticated company's profile.
+   * Updates the authenticated company's profile, handling optional file uploads.
    */
   update: asyncHandler(async (req: Request, res: Response) => {
     const user = requireRequestUser(req);
+
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const body: Record<string, unknown> = { ...req.body };
+
+    if (files?.logo?.[0]) {
+      body.logoUrl = await uploadToCloudinary(
+        fileBufferToDataUrl(files.logo[0]),
+        "auto-rental/company-logos",
+      );
+    }
+
+    if (files?.licenseDocument?.[0]) {
+      body.licenseDocumentUrl = await uploadToCloudinary(
+        fileBufferToDataUrl(files.licenseDocument[0]),
+        "auto-rental/company-documents",
+      );
+    }
+
     const company = await companyService.update(
       req.params.id as string,
       user.id,
-      req.body,
+      body as any,
     );
 
     res.json({
@@ -285,6 +303,49 @@ export const companyController = {
       data: {
         company,
         message: "Company suspended",
+      },
+    });
+  }),
+
+  /**
+   * PATCH /api/companies/:id/approve-pending
+   * Approves pending changes for a company.
+   */
+  approvePending: asyncHandler(async (req: Request, res: Response) => {
+    const company = await companyService.approvePendingChanges(
+      req.params.id as string,
+    );
+
+    res.json({
+      success: true,
+      data: {
+        company,
+        message: "Pending changes approved",
+      },
+    });
+  }),
+
+  /**
+   * PATCH /api/companies/:id/reject-pending
+   * Rejects pending changes for a company.
+   */
+  rejectPending: asyncHandler(async (req: Request, res: Response) => {
+    const { reason } = req.body;
+
+    if (!reason || typeof reason !== "string") {
+      throw ApiError.badRequest("Rejection reason is required");
+    }
+
+    const company = await companyService.rejectPendingChanges(
+      req.params.id as string,
+      reason,
+    );
+
+    res.json({
+      success: true,
+      data: {
+        company,
+        message: "Pending changes rejected",
       },
     });
   }),
