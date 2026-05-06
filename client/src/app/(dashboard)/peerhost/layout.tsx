@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import { PeerToPeerSidebar } from "@/components/peer-host/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
@@ -13,6 +14,7 @@ export default function PeerHostLayout({
 }: {
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
   const { isSyncing } = useSyncUserRoleState();
   const { activeRole, companyStatus, roles } = useUserRoleState();
   const [isInitialSidebarLoading, setIsInitialSidebarLoading] = useState(true);
@@ -44,14 +46,21 @@ export default function PeerHostLayout({
     }
   }, [activeRole, companyStatus, isSyncing, roles]);
 
-  return (
-    <ProtectedRoute allowedRoles={["peerhost"]}>
-      <SidebarProvider suppressHydrationWarning>
-        <div className="relative flex h-dvh w-full">
-          <PeerToPeerSidebar isLoading={isSidebarLoading} />
-          <SidebarInset className="flex flex-col">{children}</SidebarInset>
-        </div>
-      </SidebarProvider>
-    </ProtectedRoute>
+  const content = (
+    <SidebarProvider suppressHydrationWarning>
+      <div className="relative flex h-dvh w-full">
+        <PeerToPeerSidebar isLoading={isSidebarLoading} />
+        <SidebarInset className="flex flex-col">{children}</SidebarInset>
+      </div>
+    </SidebarProvider>
+  );
+
+  const allowUnauthenticatedPeerHostOnboarding =
+    pathname?.endsWith("/become-host") ?? false;
+
+  return allowUnauthenticatedPeerHostOnboarding ? (
+    content
+  ) : (
+    <ProtectedRoute allowedRoles={["peerhost"]}>{content}</ProtectedRoute>
   );
 }

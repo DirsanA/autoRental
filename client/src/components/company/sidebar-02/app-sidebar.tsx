@@ -134,10 +134,13 @@ const dashboardRoutes: Route[] = [
     //   },
     // ],
   },
-
 ];
 
-export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean }) {
+export function DashboardSidebar({
+  isLoading = false,
+}: {
+  isLoading?: boolean;
+}) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
   const router = useRouter();
@@ -150,8 +153,6 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
       </Sidebar>
     );
   }
-
-
 
   return (
     <Sidebar variant="inset" collapsible="icon">
@@ -190,10 +191,7 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
         <DashboardNavigation routes={dashboardRoutes} />
       </SidebarContent>
       <SidebarFooter className="px-2">
-        <div className="space-y-2">
-
-
-        </div>
+        <div className="space-y-2"></div>
       </SidebarFooter>
     </Sidebar>
   );

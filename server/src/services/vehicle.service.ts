@@ -5,6 +5,7 @@ import {
   type VehicleStatus,
 } from "../models/Vehicle.js";
 import { Booking } from "../models/Booking.js";
+import { Review } from "../models/Review.js";
 import { AccountType, VerificationLevel, User } from "../models/User.js";
 import { Company } from "../models/Company.js";
 import type {
@@ -114,7 +115,39 @@ export class VehicleService {
 
     if (vehicles.length === 0) return [];
 
-    return this.enrichWithOwners(vehicles);
+   const enrichedVehicles = await this.enrichWithOwners(vehicles);
+
+    const reviewStats = await Review.aggregate([
+      {
+        $match: {
+          targetType: "Vehicle",
+          targetId: { $in: vehicles.map((v) => v._id) },
+        },
+      },
+      {
+        $group: {
+          _id: "$targetId",
+          avg: { $avg: "$rating" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const reviewStatsByVehicle = new Map(
+      reviewStats.map((stat) => [stat._id.toString(), { avg: stat.avg, count: stat.count }]),
+    );
+
+    return enrichedVehicles.map((vehicle) => {
+  const stats = reviewStatsByVehicle.get(
+    vehicle.id?.toString?.() || vehicle.id,
+  );
+
+  return {
+    ...vehicle,
+    ratingAvg: stats?.avg ?? 0,
+    ratingCount: stats?.count ?? 0,
+  };
+});
   }
 
   /**
@@ -333,8 +366,8 @@ export class VehicleService {
         gallery: [front, back, side, interior],
       },
       documents: {
-        ownership,
-        insurance,
+        ownership: ownership || undefined,
+        insurance: insurance || undefined,
       },
     };
   }

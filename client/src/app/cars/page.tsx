@@ -9,7 +9,6 @@ import {
   ArrowRight,
   BadgeCheck,
   Car,
-  Loader2,
   MapPin,
   Search,
   Star,
@@ -37,6 +36,16 @@ type ApiVehicle = {
   price?: number;
   delivery?: string;
   availability?: string;
+  ratingAvg?: number;
+  ratingCount?: number;
+  photos?: {
+    front?: string;
+    back?: string;
+    side?: string;
+    interior?: string;
+    gallery?: string[];
+  };
+  ownerType?: "User" | "Company";
   owner?: {
     name: string;
     image?: string;
@@ -58,6 +67,8 @@ type VehicleListingCard = {
     image?: string;
     type: "peerhost" | "company";
   };
+  ratingAvg: number;
+  ratingCount: number;
   aliases: string[];
   searchText: string;
 };
@@ -110,6 +121,12 @@ function parsePriceIntent(query: string): PriceIntent {
   }
 
   return { type: "number", amount };
+}
+
+function parseNumberParam(value: string | null) {
+  if (typeof value !== "string") return undefined;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : undefined;
 }
 
 function buildFuseQuery(query: string) {
@@ -195,6 +212,8 @@ function toListingCard(vehicle: ApiVehicle, index: number): VehicleListingCard {
     image: buildVehicleImage(vehicle),
     isCompany,
     owner: vehicle.owner,
+    ratingAvg: typeof vehicle.ratingAvg === "number" ? vehicle.ratingAvg : 0,
+    ratingCount: typeof vehicle.ratingCount === "number" ? vehicle.ratingCount : 0,
     ...profile,
   };
 }
@@ -326,7 +345,7 @@ function VehicleCard({ vehicle }: { vehicle: VehicleListingCard }) {
               </div>
               <div className="flex shrink-0 items-center gap-1 text-sm font-semibold text-gray-800 dark:text-gray-100">
                 <Star className="h-4 w-4 fill-yellow-500 text-yellow-500" />
-                4.9
+                {vehicle.ratingCount > 0 ? vehicle.ratingAvg.toFixed(1) : "New"}
               </div>
             </div>
 
@@ -373,7 +392,20 @@ function CarsListingContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const queryFromUrl = searchParams.get("q")?.trim() || "";
+  const priceMinFromUrl = parseNumberParam(searchParams.get("priceMin"));
+  const priceMaxFromUrl = parseNumberParam(searchParams.get("priceMax"));
+  const ratingMinFromUrl = parseNumberParam(searchParams.get("ratingMin"));
+
   const [searchInput, setSearchInput] = useState(queryFromUrl);
+  const [priceMinInput, setPriceMinInput] = useState(
+    priceMinFromUrl?.toString() || "",
+  );
+  const [priceMaxInput, setPriceMaxInput] = useState(
+    priceMaxFromUrl?.toString() || "",
+  );
+  const [ratingMinInput, setRatingMinInput] = useState(
+    ratingMinFromUrl?.toString() || "",
+  );
   const [vehicles, setVehicles] = useState<VehicleListingCard[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -381,6 +413,18 @@ function CarsListingContent() {
   useEffect(() => {
     setSearchInput(queryFromUrl);
   }, [queryFromUrl]);
+
+  useEffect(() => {
+    setPriceMinInput(priceMinFromUrl?.toString() || "");
+  }, [priceMinFromUrl]);
+
+  useEffect(() => {
+    setPriceMaxInput(priceMaxFromUrl?.toString() || "");
+  }, [priceMaxFromUrl]);
+
+  useEffect(() => {
+    setRatingMinInput(ratingMinFromUrl?.toString() || "");
+  }, [ratingMinFromUrl]);
 
   useEffect(() => {
     let cancelled = false;
@@ -449,13 +493,63 @@ function CarsListingContent() {
     [fuse, queryFromUrl, vehicles],
   );
 
+  const filteredResults = useMemo(() => {
+    return results.filter((vehicle) => {
+      if (
+        typeof priceMinFromUrl === "number" &&
+        vehicle.price < priceMinFromUrl
+      ) {
+        return false;
+      }
+
+      if (
+        typeof priceMaxFromUrl === "number" &&
+        vehicle.price > priceMaxFromUrl
+      ) {
+        return false;
+      }
+
+      if (
+        typeof ratingMinFromUrl === "number" &&
+        vehicle.ratingAvg < ratingMinFromUrl
+      ) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [priceMaxFromUrl, priceMinFromUrl, ratingMinFromUrl, results]);
+
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    applyFilters();
+  }
 
+  function applyFilters() {
     const trimmedQuery = searchInput.trim();
-    router.push(
-      trimmedQuery ? `/cars?q=${encodeURIComponent(trimmedQuery)}` : "/cars",
-    );
+    const params = new URLSearchParams();
+
+    if (trimmedQuery) {
+      params.set("q", trimmedQuery);
+    }
+
+    if (priceMinInput.trim()) {
+      const value = Number(priceMinInput.trim());
+      if (Number.isFinite(value)) params.set("priceMin", String(value));
+    }
+
+    if (priceMaxInput.trim()) {
+      const value = Number(priceMaxInput.trim());
+      if (Number.isFinite(value)) params.set("priceMax", String(value));
+    }
+
+    if (ratingMinInput.trim()) {
+      const value = Number(ratingMinInput.trim());
+      if (Number.isFinite(value)) params.set("ratingMin", String(value));
+    }
+
+    const queryString = params.toString();
+    router.push(queryString ? `/cars?${queryString}` : "/cars");
   }
 
   function searchFor(query: string) {
@@ -465,6 +559,9 @@ function CarsListingContent() {
 
   function clearSearch() {
     setSearchInput("");
+    setPriceMinInput("");
+    setPriceMaxInput("");
+    setRatingMinInput("");
     router.push("/cars");
   }
 
@@ -511,7 +608,110 @@ function CarsListingContent() {
           <div className="rounded-full border bg-white px-4 py-2 text-sm font-semibold text-gray-700 shadow-sm dark:border-gray-800 dark:bg-gray-800 dark:text-gray-200">
             {loading
               ? "Loading..."
-              : `${results.length} ${results.length === 1 ? "car" : "cars"} found`}
+              : `${filteredResults.length} ${filteredResults.length === 1 ? "car" : "cars"} found`}
+          </div>
+        </section>
+
+        <section className="grid gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm dark:border-gray-800 dark:bg-gray-900/80 lg:grid-cols-[1.4fr_320px]">
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm font-semibold text-foreground dark:text-gray-100">
+                Refine your search
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground dark:text-gray-400">
+                Filter vehicles by daily price range and minimum rating.
+              </p>
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <label className="grid gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Min price</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={priceMinInput}
+                  onChange={(event) => setPriceMinInput(event.target.value)}
+                  placeholder="ETB"
+                  className="h-12"
+                />
+              </label>
+              <label className="grid gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Max price</span>
+                <Input
+                  type="number"
+                  min={0}
+                  value={priceMaxInput}
+                  onChange={(event) => setPriceMaxInput(event.target.value)}
+                  placeholder="ETB"
+                  className="h-12"
+                />
+              </label>
+              <label className="grid gap-2 text-sm text-gray-700 dark:text-gray-300">
+                <span className="font-semibold">Min rating</span>
+                <select
+                  value={ratingMinInput}
+                  onChange={(event) => setRatingMinInput(event.target.value)}
+                  className="h-12 rounded-xl border border-gray-200 bg-gray-50 px-3 text-sm text-gray-900 shadow-none outline-none transition-colors focus:border-blue-500 focus:ring-2 focus:ring-blue-200 dark:border-gray-800 dark:bg-gray-800 dark:text-gray-100"
+                >
+                  <option value="">Any</option>
+                  <option value="5">5+</option>
+                  <option value="4">4+</option>
+                  <option value="3">3+</option>
+                  <option value="2">2+</option>
+                </select>
+              </label>
+            </div>
+          </div>
+
+          <div className="rounded-3xl border border-gray-100 bg-gray-50 p-4 dark:border-gray-800 dark:bg-gray-900/70">
+            <p className="text-sm font-semibold text-foreground dark:text-gray-100">
+              Active filters
+            </p>
+            <div className="mt-3 flex flex-wrap gap-2">
+              {priceMinFromUrl ? (
+                <span className="rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+                  Min price: ETB {priceMinFromUrl}
+                </span>
+              ) : null}
+              {priceMaxFromUrl ? (
+                <span className="rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+                  Max price: ETB {priceMaxFromUrl}
+                </span>
+              ) : null}
+              {ratingMinFromUrl ? (
+                <span className="rounded-full bg-blue-50 px-3 py-2 text-xs font-semibold text-blue-700 dark:bg-blue-950 dark:text-blue-200">
+                  Rating: {ratingMinFromUrl}+ stars
+                </span>
+              ) : null}
+              {!priceMinFromUrl && !priceMaxFromUrl && !ratingMinFromUrl ? (
+                <span className="text-sm text-muted-foreground dark:text-gray-400">
+                  No active filters.
+                </span>
+              ) : null}
+            </div>
+            <div className="mt-5 flex flex-wrap gap-3">
+              <Button type="button" onClick={applyFilters} className="h-12 px-5">
+                Apply filters
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-12 px-5"
+                onClick={() => {
+                  setPriceMinInput("");
+                  setPriceMaxInput("");
+                  setRatingMinInput("");
+                  const params = new URLSearchParams();
+                  if (queryFromUrl) {
+                    params.set("q", queryFromUrl);
+                  }
+                  const queryString = params.toString();
+                  router.push(queryString ? `/cars?${queryString}` : "/cars");
+                }}
+              >
+                Clear filters
+              </Button>
+            </div>
           </div>
         </section>
 
@@ -548,14 +748,14 @@ function CarsListingContent() {
           </div>
         ) : null}
 
-        {!loading && !error && results.length === 0 ? (
+        {!loading && !error && filteredResults.length === 0 ? (
           <div className="rounded-2xl border bg-white p-10 text-center shadow-sm dark:border-gray-800 dark:bg-gray-800">
             <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600 dark:bg-blue-950 dark:text-blue-300">
               <Search className="h-6 w-6" />
             </div>
             <h2 className="text-xl font-bold">No vehicles matched</h2>
             <p className="mx-auto mt-2 max-w-md text-sm text-muted-foreground dark:text-gray-400">
-              Try a car name, a city, or a simple price phrase.
+              Try a car name, a city, a price range, or a higher rating.
             </p>
             <div className="mt-6 flex flex-wrap justify-center gap-2">
               {SEARCH_SUGGESTIONS.map((suggestion) => (
@@ -572,9 +772,9 @@ function CarsListingContent() {
           </div>
         ) : null}
 
-        {!loading && !error && results.length > 0 ? (
+        {!loading && !error && filteredResults.length > 0 ? (
           <div className="grid gap-5">
-            {results.map((vehicle) => (
+            {filteredResults.map((vehicle) => (
               <VehicleCard key={vehicle.id} vehicle={vehicle} />
             ))}
           </div>
