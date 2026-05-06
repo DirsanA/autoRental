@@ -7,6 +7,7 @@ import { Main } from "@/components/layout/main";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   ArrowLeft,
   Ban,
+  Building2,
   CheckCircle2,
   CircleUserRound,
   Globe,
@@ -34,14 +36,30 @@ import {
   IdCard,
   CreditCard,
   Download,
+  AlertCircle,
 } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   approveAdminCompany,
   fetchAdminCompanyDetail,
   type AdminCompanyDetail,
   suspendAdminCompany,
+  approvePendingCompany,
+  rejectPendingCompany,
 } from "@/lib/admin-companies-api";
 import { CompanyFleetTab } from "./CompanyFleetTab";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import Image from "next/image";
 
 function formatDateTime(value: string | null) {
   return value ? new Date(value).toLocaleString() : "Not available";
@@ -65,6 +83,17 @@ function formatLabel(value: string | null | undefined) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function getInitials(value: string) {
+  return (
+    value
+      .trim()
+      .split(/\s+/)
+      .slice(0, 2)
+      .map((part) => part.charAt(0).toUpperCase())
+      .join("") || "CO"
+  );
 }
 
 function normalizeExternalUrl(raw: string) {
@@ -115,6 +144,8 @@ export default function CompanyDetailPage({
     title: string;
     url: string;
   } | null>(null);
+  const [rejectPendingOpen, setRejectPendingOpen] = useState(false);
+  const [rejectPendingReason, setRejectPendingReason] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -186,7 +217,10 @@ export default function CompanyDetailPage({
     setBusy(true);
 
     try {
-      const updated = await suspendAdminCompany(company.id, suspendReason.trim());
+      const updated = await suspendAdminCompany(
+        company.id,
+        suspendReason.trim(),
+      );
       setCompany((current) =>
         current
           ? { ...current, ...updated, rejectionReason: suspendReason.trim() }
@@ -209,6 +243,121 @@ export default function CompanyDetailPage({
       setBusy(false);
     }
   };
+  // this handles
+  const handleApprovePendingChanges = async () => {
+    if (!company) return;
+
+    <AlertDialog>
+      <AlertDialogTrigger>Open</AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. This will permanently delete your
+            account and remove your data from our servers.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={handleApprovePendingChanges}>
+            Continue
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>;
+    setBusy(true);
+
+    try {
+      const updatedCompany = await approvePendingCompany(company.id);
+      setCompany(updatedCompany);
+      toast({
+        title: "Changes approved",
+        description: `${company.name}'s profile has been updated.`,
+      });
+    } catch (cause: unknown) {
+      toast({
+        title: "Approval failed",
+        description:
+          cause instanceof Error ? cause.message : "Failed to approve changes",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRejectPendingChanges = async () => {
+    if (!company) return;
+    if (!rejectPendingReason.trim()) {
+      toast({
+        title: "Reason required",
+        description: "Please provide a reason for rejecting the changes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const updatedCompany = await rejectPendingCompany(
+        company.id,
+        rejectPendingReason.trim(),
+      );
+      setCompany(updatedCompany);
+      toast({
+        title: "Changes rejected",
+        description: `${company.name}'s changes have been rejected.`,
+      });
+      setRejectPendingOpen(false);
+      setRejectPendingReason("");
+    } catch (cause: unknown) {
+      toast({
+        title: "Rejection failed",
+        description:
+          cause instanceof Error ? cause.message : "Failed to reject changes",
+        variant: "destructive",
+      });
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  function isImageUrl(value: unknown): value is string {
+    return (
+      typeof value === "string" &&
+      (value.startsWith("http") || value.startsWith("/")) &&
+      /\.(jpg|jpeg|png|webp|gif)/i.test(value)
+    );
+  }
+
+  function formatPendingValue(value: unknown): string | JSX.Element {
+    if (!value) return "Not provided";
+
+    if (Array.isArray(value)) {
+      return value.join(", ");
+    }
+
+    // Image support
+    if (isImageUrl(value)) {
+      return (
+        <img
+          src={value as string}
+          alt="pending"
+          className="max-h-40 w-full rounded-md border object-contain bg-white"
+        />
+      );
+    }
+
+    if (typeof value === "object") {
+      return Object.entries(value as Record<string, unknown>)
+        .map(([key, val]) => (val ? `${formatLabel(key)}: ${val}` : null))
+        .filter(Boolean)
+        .join(" • ");
+    }
+
+    return String(value);
+  }
 
   return (
     <div className="relative flex h-dvh w-full">
@@ -261,9 +410,11 @@ export default function CompanyDetailPage({
                 <Loader2 className="h-4 w-4 animate-spin" /> Loading company...
               </div>
             ) : error ? (
-              <div className="rounded-xl border border-red-200 bg-red-50 p-6 text-sm text-red-700">
-                {error}
-              </div>
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             ) : company ? (
               <Tabs defaultValue="overview" className="space-y-6">
                 <TabsList className="bg-muted/50 p-1">
@@ -318,43 +469,176 @@ export default function CompanyDetailPage({
                     </Card>
                   </div>
 
+                  {company.pendingChanges && (
+                    <Card className="border-orange-200 bg-orange-50">
+                      <CardHeader>
+                        <CardTitle className="text-orange-800">
+                          Pending Changes
+                        </CardTitle>
+                        <div className="text-sm text-orange-600">
+                          Submitted on{" "}
+                          {formatDateTime(company.pendingChangesRequestedAt)}
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="space-y-4">
+                        {Object.entries(company.pendingChanges).map(
+                          ([key, value]) => {
+                            const currentValue = (
+                              company as Record<string, unknown>
+                            )[key];
+
+                            const formattedCurrent =
+                              formatPendingValue(currentValue);
+                            const formattedNew = formatPendingValue(value);
+
+                            const isChanged =
+                              JSON.stringify(currentValue) !==
+                              JSON.stringify(value);
+
+                            return (
+                              <div
+                                key={key}
+                                className="grid gap-4 md:grid-cols-2"
+                              >
+                                {/* NEW VALUE */}
+                                <div className="space-y-1">
+                                  <div className="text-xs font-bold text-orange-800 uppercase tracking-tight">
+                                    Pending {formatLabel(key)}
+                                  </div>
+
+                                  <div
+                                    className={`text-sm p-3 rounded-lg ${
+                                      isChanged
+                                        ? "bg-green-100 text-green-900 border border-green-200"
+                                        : "bg-orange-100/50 text-orange-800"
+                                    }`}
+                                  >
+                                    {formattedNew}
+                                  </div>
+                                </div>
+
+                                {/* CURRENT VALUE */}
+                                <div className="space-y-1">
+                                  <div className="text-xs font-bold text-muted-foreground uppercase tracking-tight">
+                                    Current {formatLabel(key)}
+                                  </div>
+
+                                  <div
+                                    className={`text-sm p-3 rounded-lg ${
+                                      isChanged
+                                        ? "bg-red-50 text-red-900 border border-red-100"
+                                        : "bg-muted text-muted-foreground"
+                                    }`}
+                                  >
+                                    {formattedCurrent}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          },
+                        )}
+
+                        <div className="flex gap-3 pt-4">
+                          <Button
+                            className="gap-2 bg-green-600 hover:bg-green-700"
+                            onClick={() => handleApprovePendingChanges()}
+                            disabled={busy}
+                          >
+                            <CheckCircle2 className="h-4 w-4" />
+                            Approve Changes
+                          </Button>
+
+                          <Button
+                            variant="destructive"
+                            className="gap-2"
+                            onClick={() => setRejectPendingOpen(true)}
+                            disabled={busy}
+                          >
+                            <Ban className="h-4 w-4" />
+                            Reject Changes
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
                   <div className="grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
                     <Card>
                       <CardHeader>
                         <CardTitle>Company Profile</CardTitle>
                       </CardHeader>
                       <CardContent className="grid gap-4 md:grid-cols-2">
+                        <div className="flex items-center gap-4 md:col-span-2">
+                          <Avatar className="h-20 w-20 rounded-2xl border bg-muted shadow-sm">
+                            <AvatarImage
+                              src={company.logoUrl || undefined}
+                              alt={`${company.name} logo`}
+                              className="object-cover"
+                            />
+                            <AvatarFallback className="rounded-2xl bg-primary/10 text-primary">
+                              {company.name ? (
+                                <span className="text-xl font-semibold">
+                                  {getInitials(company.name)}
+                                </span>
+                              ) : (
+                                <Building2 className="h-8 w-8" />
+                              )}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <div className="text-sm text-muted-foreground">
+                              Company logo
+                            </div>
+                            <div className="truncate text-xl font-semibold">
+                              {company.name}
+                            </div>
+                          </div>
+                        </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Name</div>
+                          <div className="text-sm text-muted-foreground">
+                            Name
+                          </div>
                           <div className="font-medium">{company.name}</div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">TIN number</div>
+                          <div className="text-sm text-muted-foreground">
+                            TIN number
+                          </div>
                           <div className="font-medium">
                             {company.tinNumber || "Not provided"}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Contact email</div>
+                          <div className="text-sm text-muted-foreground">
+                            Contact email
+                          </div>
                           <div className="flex items-center gap-2 font-medium">
                             <Mail className="h-4 w-4 text-muted-foreground" />
                             {company.contactEmail || "Not provided"}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Contact phone</div>
+                          <div className="text-sm text-muted-foreground">
+                            Contact phone
+                          </div>
                           <div className="flex items-center gap-2 font-medium">
                             <Phone className="h-4 w-4 text-muted-foreground" />
                             {company.contactPhone || "Not provided"}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Website</div>
+                          <div className="text-sm text-muted-foreground">
+                            Website
+                          </div>
                           <div className="flex items-center gap-2 font-medium">
                             <Globe className="h-4 w-4 text-muted-foreground" />
                             {company.website?.trim() ? (
                               <a
-                                href={normalizeExternalUrl(company.website) || undefined}
+                                href={
+                                  normalizeExternalUrl(company.website) ||
+                                  undefined
+                                }
                                 target="_blank"
                                 rel="noreferrer"
                                 className="underline underline-offset-4 hover:text-primary"
@@ -367,14 +651,18 @@ export default function CompanyDetailPage({
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Address</div>
+                          <div className="text-sm text-muted-foreground">
+                            Address
+                          </div>
                           <div className="flex items-center gap-2 font-medium">
                             <MapPin className="h-4 w-4 text-muted-foreground" />
                             {company.address || "Not provided"}
                           </div>
                         </div>
                         <div className="space-y-1 md:col-span-2">
-                          <div className="text-sm text-muted-foreground">Bio</div>
+                          <div className="text-sm text-muted-foreground">
+                            Bio
+                          </div>
                           <div className="font-medium">
                             {company.bio || "No company bio on file."}
                           </div>
@@ -403,7 +691,8 @@ export default function CompanyDetailPage({
                               </div>
                               <div className="min-w-0">
                                 <div className="font-medium truncate">
-                                  {company.authAccount.name || "Unnamed auth user"}
+                                  {company.authAccount.name ||
+                                    "Unnamed auth user"}
                                 </div>
                                 <div className="text-sm text-muted-foreground truncate">
                                   {company.authAccount.email || "No email"}
@@ -412,7 +701,9 @@ export default function CompanyDetailPage({
                             </div>
 
                             <div className="space-y-3">
-                              <div className="text-sm font-medium">Uploaded documents</div>
+                              <div className="text-sm font-medium">
+                                Uploaded documents
+                              </div>
                               <div className="grid gap-3">
                                 <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
                                   <div className="flex items-center gap-2 text-sm">
@@ -426,7 +717,8 @@ export default function CompanyDetailPage({
                                         onClick={() =>
                                           setDocPreview({
                                             title: "National ID",
-                                            url: company.authAccount!.idImageUrl!,
+                                            url: company.authAccount!
+                                              .idImageUrl!,
                                           })
                                         }
                                         className="text-sm underline underline-offset-4 hover:text-primary"
@@ -460,7 +752,8 @@ export default function CompanyDetailPage({
                                     Driver license (verification)
                                   </div>
                                   {company.authDocuments?.verifications?.some(
-                                    (doc) => doc.documentType === "DRIVER_LICENSE",
+                                    (doc) =>
+                                      doc.documentType === "DRIVER_LICENSE",
                                   ) ? (
                                     <div className="flex items-center gap-3">
                                       <button
@@ -469,7 +762,8 @@ export default function CompanyDetailPage({
                                           const url =
                                             company.authDocuments!.verifications.find(
                                               (doc) =>
-                                                doc.documentType === "DRIVER_LICENSE",
+                                                doc.documentType ===
+                                                "DRIVER_LICENSE",
                                             )!.documentFrontUrl;
                                           setDocPreview({
                                             title: "Driver license",
@@ -486,7 +780,8 @@ export default function CompanyDetailPage({
                                           const url =
                                             company.authDocuments!.verifications.find(
                                               (doc) =>
-                                                doc.documentType === "DRIVER_LICENSE",
+                                                doc.documentType ===
+                                                "DRIVER_LICENSE",
                                             )!.documentFrontUrl;
                                           downloadFile(
                                             url,
@@ -522,19 +817,25 @@ export default function CompanyDetailPage({
                       </CardHeader>
                       <CardContent className="grid gap-4">
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Created at</div>
+                          <div className="text-sm text-muted-foreground">
+                            Created at
+                          </div>
                           <div className="font-medium">
                             {formatDateTime(company.createdAt)}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Updated at</div>
+                          <div className="text-sm text-muted-foreground">
+                            Updated at
+                          </div>
                           <div className="font-medium">
                             {formatDateTime(company.updatedAt)}
                           </div>
                         </div>
                         <div className="space-y-1">
-                          <div className="text-sm text-muted-foreground">Verified at</div>
+                          <div className="text-sm text-muted-foreground">
+                            Verified at
+                          </div>
                           <div className="font-medium">
                             {formatDateTime(company.verifiedAt)}
                           </div>
@@ -545,7 +846,9 @@ export default function CompanyDetailPage({
                           </div>
                           <div className="flex flex-wrap gap-2">
                             <Badge variant="secondary" className="font-normal">
-                              {company.isVerified ? "Verified" : "Pending verification"}
+                              {company.isVerified
+                                ? "Verified"
+                                : "Pending verification"}
                             </Badge>
                             <Badge variant="outline" className="font-normal">
                               {formatLabel(company.authAccount?.status)}
@@ -597,16 +900,18 @@ export default function CompanyDetailPage({
                       <CardContent>
                         {company.licenseDocumentUrl ? (
                           <div className="rounded-xl overflow-hidden border">
-                            {company.licenseDocumentUrl.toLowerCase().endsWith('.pdf') ? (
-                              <embed 
-                                src={company.licenseDocumentUrl} 
-                                className="w-full h-[400px]" 
-                                type="application/pdf" 
+                            {company.licenseDocumentUrl
+                              .toLowerCase()
+                              .endsWith(".pdf") ? (
+                              <embed
+                                src={company.licenseDocumentUrl}
+                                className="w-full h-[400px]"
+                                type="application/pdf"
                               />
                             ) : (
-                              <img 
-                                src={company.licenseDocumentUrl} 
-                                alt="Company License" 
+                              <img
+                                src={company.licenseDocumentUrl}
+                                alt="Company License"
                                 className="w-full h-auto object-contain"
                               />
                             )}
@@ -692,7 +997,8 @@ export default function CompanyDetailPage({
                                   onClick={() => {
                                     const url =
                                       company.authDocuments!.verifications.find(
-                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                        (doc) =>
+                                          doc.documentType === "DRIVER_LICENSE",
                                       )!.documentFrontUrl;
                                     downloadFile(
                                       url,
@@ -710,13 +1016,17 @@ export default function CompanyDetailPage({
                             )?.documentFrontUrl ? (
                               <div className="rounded-xl overflow-hidden border">
                                 {company.authDocuments.verifications
-                                  .find((doc) => doc.documentType === "DRIVER_LICENSE")!
+                                  .find(
+                                    (doc) =>
+                                      doc.documentType === "DRIVER_LICENSE",
+                                  )!
                                   .documentFrontUrl.toLowerCase()
                                   .endsWith(".pdf") ? (
                                   <embed
                                     src={
                                       company.authDocuments.verifications.find(
-                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                        (doc) =>
+                                          doc.documentType === "DRIVER_LICENSE",
                                       )!.documentFrontUrl
                                     }
                                     className="w-full h-[360px]"
@@ -726,7 +1036,8 @@ export default function CompanyDetailPage({
                                   <img
                                     src={
                                       company.authDocuments.verifications.find(
-                                        (doc) => doc.documentType === "DRIVER_LICENSE",
+                                        (doc) =>
+                                          doc.documentType === "DRIVER_LICENSE",
                                       )!.documentFrontUrl
                                     }
                                     alt="Driver license document"
@@ -756,10 +1067,7 @@ export default function CompanyDetailPage({
         </Main>
       </div>
 
-      <Dialog
-        open={approveOpen}
-        onOpenChange={(open) => setApproveOpen(open)}
-      >
+      <Dialog open={approveOpen} onOpenChange={(open) => setApproveOpen(open)}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>
@@ -794,6 +1102,48 @@ export default function CompanyDetailPage({
       </Dialog>
 
       <Dialog
+        open={rejectPendingOpen}
+        onOpenChange={(open) => setRejectPendingOpen(open)}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reject Pending Changes</DialogTitle>
+            <DialogDescription>
+              Please provide a reason for rejecting the changes requested by{" "}
+              {company?.name}.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-2 py-4">
+            <Label htmlFor="rejectReason">Rejection Reason</Label>
+            <Textarea
+              id="rejectReason"
+              placeholder="e.g. Invalid document uploaded, missing information..."
+              value={rejectPendingReason}
+              onChange={(e) => setRejectPendingReason(e.target.value)}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setRejectPendingOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleRejectPendingChanges}
+              disabled={busy || !rejectPendingReason.trim()}
+            >
+              {busy ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
+              Reject Changes
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
         open={!!docPreview}
         onOpenChange={(open) => {
           if (!open) setDocPreview(null);
@@ -802,9 +1152,7 @@ export default function CompanyDetailPage({
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>{docPreview?.title || "Document"}</DialogTitle>
-            <DialogDescription>
-              Previewing uploaded document.
-            </DialogDescription>
+            <DialogDescription>Previewing uploaded document.</DialogDescription>
           </DialogHeader>
 
           {docPreview?.url ? (
@@ -884,7 +1232,11 @@ export default function CompanyDetailPage({
             <Button variant="outline" onClick={() => setSuspendOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={handleSuspend} disabled={busy}>
+            <Button
+              variant="destructive"
+              onClick={handleSuspend}
+              disabled={busy}
+            >
               {busy ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
               Suspend company
             </Button>

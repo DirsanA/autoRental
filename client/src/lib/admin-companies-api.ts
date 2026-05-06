@@ -67,6 +67,8 @@ export type AdminCompanyDetail = AdminCompanySummary & {
     type: string | null;
     coordinates: number[];
   } | null;
+  pendingChanges: Record<string, any> | null;
+  pendingChangesRequestedAt: string | null;
 };
 
 export type AdminCompaniesPagination = {
@@ -129,6 +131,8 @@ type ApiCompany = {
     image?: string | null;
     idImageUrl?: string | null;
   } | null;
+  pendingChanges?: Record<string, any> | null;
+  pendingChangesRequestedAt?: string | null;
 };
 
 type ApiPagination = {
@@ -244,6 +248,8 @@ function mapApiCompanyToDetail(company: ApiCompany): AdminCompanyDetail {
           coordinates: company.location.coordinates || [],
         }
       : null,
+    pendingChanges: company.pendingChanges || null,
+    pendingChangesRequestedAt: company.pendingChangesRequestedAt || null,
   };
 }
 
@@ -404,4 +410,59 @@ export async function fetchCompanyReports(companyId: string) {
   if (!response.ok) throw new Error(await parseError(response));
   const payload = await response.json();
   return payload.data || [];
+}
+ 
+export async function approvePendingCompany(
+  companyId: string,
+): Promise<AdminCompanyDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/companies/${encodeURIComponent(companyId)}/approve-pending`,
+    buildRequestInit({
+      method: "PATCH",
+    }),
+  );
+ 
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+ 
+  const payload = (await response.json()) as {
+    data?: { company?: ApiCompany };
+  };
+ 
+  if (!payload.data?.company) {
+    throw new Error("Company not found");
+  }
+ 
+  return mapApiCompanyToDetail(payload.data.company);
+}
+ 
+export async function rejectPendingCompany(
+  companyId: string,
+  reason: string,
+): Promise<AdminCompanyDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/companies/${encodeURIComponent(companyId)}/reject-pending`,
+    buildRequestInit({
+      method: "PATCH",
+      body: JSON.stringify({ reason }),
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }),
+  );
+ 
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+ 
+  const payload = (await response.json()) as {
+    data?: { company?: ApiCompany };
+  };
+ 
+  if (!payload.data?.company) {
+    throw new Error("Company not found");
+  }
+ 
+  return mapApiCompanyToDetail(payload.data.company);
 }

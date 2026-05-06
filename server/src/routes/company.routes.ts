@@ -15,7 +15,17 @@ export function createCompanyRoutes(auth: Auth): Router {
   router.get("/me", authenticate, companyController.getMyCompany);
   router.get("/me/dashboard", authenticate, companyController.getMyCompanyDashboard);
 
-  router.patch("/:id", authenticate, validate({ body: updateCompanySchema }), companyController.update);
+  // Multer runs FIRST so req.body is populated before the validator inspects it
+  router.patch(
+    "/:id",
+    authenticate,
+    upload.fields([
+      { name: "logo", maxCount: 1 },
+      { name: "licenseDocument", maxCount: 1 },
+    ]),
+    validate({ body: updateCompanySchema }),
+    companyController.update,
+  );
 
   // Admin moderation routes
   router.get("/", authenticate, authorize("manage", "all"), companyController.list);
@@ -39,6 +49,20 @@ export function createCompanyRoutes(auth: Auth): Router {
     authenticate,
     authorize("manage", "all"),
     companyController.suspend,
+  );
+ 
+  router.patch(
+    "/:id/approve-pending",
+    authenticate,
+    authorize("manage", "all"),
+    companyController.approvePending,
+  );
+ 
+  router.patch(
+    "/:id/reject-pending",
+    authenticate,
+    authorize("manage", "all"),
+    companyController.rejectPending,
   );
 
   // Public routes

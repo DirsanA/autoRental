@@ -51,6 +51,10 @@ export interface ICompany {
   // Financial (mirrors User.walletBalance - platform earnings go here)
   walletBalance: number;
 
+  // Pending Changes (Moderation workflow)
+  pendingChanges?: Record<string, any> | undefined;
+  pendingChangesRequestedAt?: Date | undefined;
+
   createdAt?: Date | undefined;
   updatedAt?: Date | undefined;
 }
@@ -127,6 +131,10 @@ const companySchema = new Schema<ICompany>(
       default: 0,
       min: [0, "Wallet balance cannot be negative"],
     },
+
+    // Moderation workflow
+    pendingChanges: { type: Schema.Types.Mixed },
+    pendingChangesRequestedAt: { type: Date },
   },
   {
     timestamps: true,

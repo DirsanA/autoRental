@@ -13,7 +13,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Loader2, Ban, CheckCircle2 } from "lucide-react";
+import { Loader2, Ban, CheckCircle2, AlertCircle } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { useToast } from "@/hooks/use-toast";
 
 export function CompanyFleetTab({ companyId }: { companyId: string }) {
@@ -65,7 +66,15 @@ export function CompanyFleetTab({ companyId }: { companyId: string }) {
   };
 
   if (loading) return <div className="p-6 text-sm text-muted-foreground flex items-center gap-2"><Loader2 className="h-4 w-4 animate-spin" /> Loading fleet...</div>;
-  if (error) return <div className="p-6 text-sm text-red-600">Failed to load fleet: {error}</div>;
+  if (error) return (
+    <div className="p-6">
+      <Alert variant="destructive">
+        <AlertCircle className="h-4 w-4" />
+        <AlertTitle>Error Loading Fleet</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    </div>
+  );
   if (vehicles.length === 0) return <div className="p-6 text-sm text-muted-foreground">This company has no vehicles.</div>;
 
   const pendingVehicleId = confirmVehicle?.id;
