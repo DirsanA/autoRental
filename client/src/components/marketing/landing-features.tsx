@@ -44,6 +44,7 @@ type ApiVehicle = {
   price?: number;
   delivery?: string;
   availability?: string;
+  status?: string;
   ownerType?: "User" | "Company";
   weeklyDiscount?: number;
   monthlyDiscount?: number;
@@ -88,7 +89,7 @@ function parseVehiclesPayload(payload: unknown): ApiVehicle[] {
 
   const maybeWithData = payload as { data?: { vehicles?: ApiVehicle[] } };
   if (Array.isArray(maybeWithData.data?.vehicles)) {
-    return maybeWithData.data.vehicles;
+    return maybeWithData?.data?.vehicles || [];
   }
 
   const maybeWithVehicles = payload as { vehicles?: ApiVehicle[] };
@@ -105,7 +106,11 @@ function toCarName(vehicle: ApiVehicle) {
   return [make, model].filter(Boolean).join(" ") || "Toyota Camry";
 }
 
-function toCarCard(vehicle: ApiVehicle, fallbackImage: StaticImageData, idx: number): CarCardData {
+function toCarCard(
+  vehicle: ApiVehicle,
+  fallbackImage: StaticImageData,
+  idx: number,
+): CarCardData {
   const fromGallery = Array.isArray(vehicle.photos?.gallery)
     ? vehicle.photos?.gallery.find(Boolean)
     : undefined;
@@ -113,7 +118,8 @@ function toCarCard(vehicle: ApiVehicle, fallbackImage: StaticImageData, idx: num
   const discount =
     typeof vehicle.weeklyDiscount === "number" && vehicle.weeklyDiscount > 0
       ? vehicle.weeklyDiscount
-      : typeof vehicle.monthlyDiscount === "number" && vehicle.monthlyDiscount > 0
+      : typeof vehicle.monthlyDiscount === "number" &&
+          vehicle.monthlyDiscount > 0
         ? vehicle.monthlyDiscount
         : Math.round(basePrice * 0.09);
 
@@ -141,7 +147,11 @@ function isLuxuryCar(car: ApiVehicle) {
 
 function isSuvCar(car: ApiVehicle) {
   const text = `${car.make || ""} ${car.model || ""}`.toLowerCase();
-  return text.includes("suv") || text.includes("explorer") || text.includes("land cruiser");
+  return (
+    text.includes("suv") ||
+    text.includes("explorer") ||
+    text.includes("land cruiser")
+  );
 }
 
 const COMPANY_SECTIONS: CompanySection[] = [
@@ -237,8 +247,11 @@ export function LandingFeatures() {
     const loadCars = async () => {
       try {
         const preferredEndpoint = normalizeVehiclesEndpoint(API_BASE_URL);
-        const fallbackEndpoint = "http://localhost:5000/api/vehicles/marketplace";
-        const endpoints = Array.from(new Set([preferredEndpoint, fallbackEndpoint]));
+        const fallbackEndpoint =
+          "http://localhost:5000/api/vehicles/marketplace";
+        const endpoints = Array.from(
+          new Set([preferredEndpoint, fallbackEndpoint]),
+        );
 
         let allCars: ApiVehicle[] = [];
         for (const endpoint of endpoints) {
@@ -250,15 +263,25 @@ export function LandingFeatures() {
           if (!response?.ok) continue;
 
           const payload = (await response.json().catch(() => null)) as unknown;
-          allCars = parseVehiclesPayload(payload);
+          allCars = parseVehiclesPayload(payload).filter(
+            (car) => car.status?.toUpperCase() !== "SUSPENDED",
+          );
           if (allCars.length) break;
         }
 
-        if (!allCars.length || isCancelled) return;
+        if (isCancelled) return;
+
+        if (!allCars.length) {
+          setSections([]);
+          setIsLoading(false);
+          return;
+        }
 
         const sectionCars: Record<string, ApiVehicle[]> = {
           "newly-added": allCars.slice(0, 6),
-          "user-hosted": allCars.filter((car) => car.ownerType === "User").slice(0, 6),
+          "user-hosted": allCars
+            .filter((car) => car.ownerType === "User")
+            .slice(0, 6),
           airport: allCars.filter(isAirportCar).slice(0, 6),
           luxury: allCars.filter(isLuxuryCar).slice(0, 6),
           suv: allCars.filter(isSuvCar).slice(0, 6),
@@ -266,7 +289,8 @@ export function LandingFeatures() {
 
         const mapped = COMPANY_SECTIONS.map((section) => {
           const fallback = section.cars[0];
-          const imageFallback = typeof fallback.image === "string" ? car2 : fallback.image;
+          const imageFallback =
+            typeof fallback.image === "string" ? car2 : fallback.image;
           const fromApi = (sectionCars[section.id] || []).map((car, idx) =>
             toCarCard(car, imageFallback, idx),
           );
@@ -298,7 +322,10 @@ export function LandingFeatures() {
   return (
     <SectionContainer className="py-0 space-y-0 bg-white dark:bg-gray-900 transition-colors duration-300">
       {isLoading ? (
-        <CarLoadingState message="Discovering top rentals..." className="py-24" />
+        <CarLoadingState
+          message="Discovering top rentals..."
+          className="py-24"
+        />
       ) : (
         sections.map((section) => <CarRow key={section.id} section={section} />)
       )}
@@ -385,9 +412,7 @@ function CarRow({ section }: { section: CompanySection }) {
               key={car.id || idx + 1}
               className="block w-[250px] md:w-[calc((100%_-_2.5rem)/3)] md:min-w-[calc((100%_-_2.5rem)/3)] md:max-w-[calc((100%_-_2.5rem)/3)] shrink-0 snap-start"
             >
-              <Card
-                className="w-full overflow-hidden border-none shadow-none bg-transparent dark:bg-gray-800 hover:bg-accent/5 dark:hover:bg-accent/20 transition-colors p-2"
-              >
+              <Card className="w-full overflow-hidden border-none shadow-none bg-transparent dark:bg-gray-800 hover:bg-accent/5 dark:hover:bg-accent/20 transition-colors p-2">
                 <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden mb-3 shadow-sm">
                   <Image
                     src={car.image}

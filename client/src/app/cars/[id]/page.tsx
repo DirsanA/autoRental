@@ -500,7 +500,8 @@ const Index = () => {
               if (!raw) return undefined;
               const lat = typeof raw.lat === "number" ? raw.lat : undefined;
               const lng = typeof raw.lng === "number" ? raw.lng : undefined;
-              if (typeof lat !== "number" || typeof lng !== "number") return undefined;
+              if (typeof lat !== "number" || typeof lng !== "number")
+                return undefined;
 
               // Approximate display for public listing: ~2 decimals ≈ 1km.
               const round = (v: number) => Math.round(v * 100) / 100;

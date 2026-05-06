@@ -49,13 +49,15 @@ function normalizeFeatures(features: string[]) {
   return normalized;
 }
 
-
 export class VehicleService {
   /**
    * Returns blocked date ranges for a vehicle using the vehicle record and
    * overlapping active bookings.
    */
-  async getAvailability(vehicleId: string, range?: { start?: Date; end?: Date }) {
+  async getAvailability(
+    vehicleId: string,
+    range?: { start?: Date; end?: Date },
+  ) {
     const vehicle = await Vehicle.findById(vehicleId).select("_id").lean();
     if (!vehicle) {
       throw ApiError.notFound("Vehicle not found");
@@ -63,8 +65,7 @@ export class VehicleService {
 
     const start = range?.start ?? new Date();
     const end =
-      range?.end ??
-      new Date(start.getTime() + 365 * 24 * 60 * 60 * 1000);
+      range?.end ?? new Date(start.getTime() + 365 * 24 * 60 * 60 * 1000);
 
     const bookingBlocks = await Booking.find({
       vehicleId,
@@ -101,7 +102,10 @@ export class VehicleService {
    * Lists vehicles with an optional API shorthand filter.
    * Standard lean query, no owner enrichment.
    */
-  async list(filter?: "available" | "rented" | "maintenance", ownerId?: string) {
+  async list(
+    filter?: "available" | "rented" | "maintenance",
+    ownerId?: string,
+  ) {
     const query: any = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
     if (ownerId) {
       query.ownerId = ownerId;
@@ -115,7 +119,9 @@ export class VehicleService {
    * Lists vehicles for the public marketplace, enriched with owner summaries.
    */
   async listPublic(filter?: "available" | "rented" | "maintenance") {
-    const query = filter ? { status: VEHICLE_FILTER_STATUS[filter] } : {};
+    const query = filter
+      ? { status: VEHICLE_FILTER_STATUS[filter] }
+      : { status: { $ne: "SUSPENDED" } };
     const vehicles = await Vehicle.find(query).sort({ createdAt: -1 }).lean();
 
     if (vehicles.length === 0) return [];
@@ -296,8 +302,13 @@ export class VehicleService {
     }
 
     // If peerhost updates pickup/return addresses, attempt to refresh geocodes.
-    if (typeof updateData.pickupAddress === "string" || typeof updateData.returnAddress === "string") {
-      const current = await Vehicle.findById(id).select("ownerType pickupAddress returnAddress").lean();
+    if (
+      typeof updateData.pickupAddress === "string" ||
+      typeof updateData.returnAddress === "string"
+    ) {
+      const current = await Vehicle.findById(id)
+        .select("ownerType pickupAddress returnAddress")
+        .lean();
       if (current?.ownerType === "User") {
         const pickupAddress =
           typeof updateData.pickupAddress === "string"
@@ -311,7 +322,10 @@ export class VehicleService {
         if (pickupAddress?.trim()) {
           const coords = await geocodingService.geocode(pickupAddress);
           if (coords) {
-            (updateData as any).pickupGeo = { ...coords, precision: "exact" as const };
+            (updateData as any).pickupGeo = {
+              ...coords,
+              precision: "exact" as const,
+            };
             (updateData as any).geoUpdatedAt = new Date();
           }
         }
@@ -319,7 +333,10 @@ export class VehicleService {
         if (returnAddress?.trim()) {
           const coords = await geocodingService.geocode(returnAddress);
           if (coords) {
-            (updateData as any).returnGeo = { ...coords, precision: "exact" as const };
+            (updateData as any).returnGeo = {
+              ...coords,
+              precision: "exact" as const,
+            };
             (updateData as any).geoUpdatedAt = new Date();
           }
         }
@@ -524,8 +541,7 @@ export class VehicleService {
       returnAddress: returnAddress || undefined,
       pickupGeo: pickupGeo ? { ...pickupGeo, precision: "exact" } : undefined,
       returnGeo: returnGeo ? { ...returnGeo, precision: "exact" } : undefined,
-      geoUpdatedAt:
-        pickupGeo || returnGeo ? geoUpdatedAt : undefined,
+      geoUpdatedAt: pickupGeo || returnGeo ? geoUpdatedAt : undefined,
       photos: assets.photos,
       documents: assets.documents,
       status: initialStatus,
