@@ -121,24 +121,24 @@ const dashboardRoutes: Route[] = [
       },
     ],
   },
-  {
-    id: "Disputes",
-    title: "Disputes",
-    icon: <MessageCircleCheckIcon className="size-4" />,
-    link: "/sysadmin/disputes",
-    // subs: [
-    //   {
-    //     title: "Orders",
-    //     link: "#",
-    //     icon: <ShoppingBag className="size-4" />,
-    //   },
-    //   {
-    //     title: "Subscriptions",
-    //     link: "#",
-    //     icon: <Infinity className="size-4" />,
-    //   },
-    // ],
-  },
+  // {
+  //   id: "Disputes",
+  //   title: "Disputes",
+  //   icon: <MessageCircleCheckIcon className="size-4" />,
+  //   link: "/sysadmin/disputes",
+  //   // subs: [
+  //   //   {
+  //   //     title: "Orders",
+  //   //     link: "#",
+  //   //     icon: <ShoppingBag className="size-4" />,
+  //   //   },
+  //   //   {
+  //   //     title: "Subscriptions",
+  //   //     link: "#",
+  //   //     icon: <Infinity className="size-4" />,
+  //   //   },
+  //   // ],
+  // },
   {
     id: "Reports",
     title: "Reports",
@@ -147,7 +147,11 @@ const dashboardRoutes: Route[] = [
   },
 ];
 
-export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })  {
+export function DashboardSidebar({
+  isLoading = false,
+}: {
+  isLoading?: boolean;
+}) {
   const { state } = useSidebar();
   const isCollapsed = state === "collapsed";
 
@@ -195,9 +199,7 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
       <SidebarContent className="gap-4 px-2 py-4">
         <DashboardNavigation routes={dashboardRoutes} />
       </SidebarContent>
-      <SidebarFooter className="px-2">
-
-      </SidebarFooter>
+      <SidebarFooter className="px-2"></SidebarFooter>
     </Sidebar>
   );
 }

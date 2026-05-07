@@ -1,0 +1,268 @@
+"use client";
+
+import Link from "next/link";
+import Image from "next/image";
+import { Suspense, useState, useEffect, type FormEvent } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Car, Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import carImage from "@/assets/image.jpg";
+import { resetPassword } from "@/lib/auth-api";
+import { useToast } from "@/hooks/use-toast";
+
+function ResetPasswordContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
+
+  const token = searchParams.get("token");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  useEffect(() => {
+    if (!token) {
+      setError("Invalid or missing reset token. Please request a new password reset.");
+    }
+  }, [token]);
+
+  async function onSubmit(e: FormEvent) {
+    e.preventDefault();
+    setSubmitting(true);
+    setError(null);
+
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match");
+      setSubmitting(false);
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      setError("Password must be at least 8 characters long");
+      setSubmitting(false);
+      return;
+    }
+
+    if (!token) {
+      setError("Invalid reset token");
+      setSubmitting(false);
+      return;
+    }
+
+    try {
+      await resetPassword({ token, newPassword });
+      setSuccess(true);
+      toast({
+        title: "Password reset successful",
+        description: "Your password has been reset. You can now sign in.",
+      });
+    } catch (err: unknown) {
+      let errorMessage = "Failed to reset password";
+
+      if (err instanceof Error) {
+        try {
+          const parsed = JSON.parse(err.message);
+          errorMessage = parsed?.error?.message || "Failed to reset password";
+        } catch {
+          errorMessage = err.message;
+        }
+      }
+
+      setError(errorMessage);
+      toast({
+        title: "Reset failed",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  if (success) {
+    return (
+      <div className="relative flex min-h-screen">
+        <div className="relative hidden w-1/2 lg:block">
+          <Image
+            src={carImage}
+            alt="Luxury car"
+            className="h-full w-full object-cover"
+            fill
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+          <div className="absolute inset-0 flex flex-col justify-between p-10">
+            <div className="flex items-center gap-2 text-xl font-bold text-white">
+              <Car className="h-6 w-6" />
+              CarRental
+            </div>
+          </div>
+        </div>
+
+        <div className="flex w-full items-center justify-center bg-background px-6 lg:w-1/2">
+          <div className="w-full max-w-md space-y-8">
+            <div className="flex flex-col items-center space-y-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 dark:bg-green-900/30">
+                <CheckCircle2 className="h-8 w-8 text-green-600 dark:text-green-400" />
+              </div>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">
+                Password reset!
+              </h1>
+              <p className="text-muted-foreground">
+                Your password has been successfully reset. You can now sign in
+                with your new password.
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => router.push("/auth/signin")}
+              >
+                Sign In
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="relative flex min-h-screen">
+      <Link
+        href="/auth/signin"
+        className="absolute left-6 top-6 z-10 flex items-center gap-2 rounded-md border border-input bg-background px-4 py-2 text-sm font-medium text-foreground hover:bg-accent"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Sign In
+      </Link>
+
+      <div className="relative hidden w-1/2 lg:block">
+        <Image
+          src={carImage}
+          alt="Luxury car"
+          className="h-full w-full object-cover"
+          fill
+        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/40 to-black/20" />
+        <div className="absolute inset-0 flex flex-col justify-between p-10">
+          <div className="flex items-center gap-2 text-xl font-bold text-white">
+            <Car className="h-6 w-6" />
+            CarRental
+          </div>
+          <div className="space-y-4">
+            <blockquote className="border-l-2 border-primary pl-4 text-lg italic text-white/90">
+              Premium vehicles at your fingertips. Experience the road like
+              never before.
+            </blockquote>
+            <p className="text-sm font-medium text-white/70">
+              CarRental Community
+            </p>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex w-full items-center justify-center bg-background px-6 lg:w-1/2">
+        <div className="w-full max-w-md space-y-8">
+          <div className="space-y-2 text-center">
+            <h1 className="text-3xl font-bold tracking-tight text-foreground">
+              Reset password
+            </h1>
+            <p className="text-muted-foreground">
+              Enter your new password below.
+            </p>
+          </div>
+
+          <form className="space-y-5" onSubmit={onSubmit}>
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                New Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-3 text-muted-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-foreground">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                <input
+                  type={showConfirmPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  required
+                  minLength={8}
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  className="absolute right-3 top-3 text-muted-foreground"
+                >
+                  {showConfirmPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {error && (
+              <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                {error}
+              </div>
+            )}
+
+            <Button
+              type="submit"
+              className="w-full"
+              size="lg"
+              disabled={submitting || !token}
+            >
+              {submitting ? "Resetting..." : "Reset Password"}
+            </Button>
+          </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense fallback={null}>
+      <ResetPasswordContent />
+    </Suspense>
+  );
+}

@@ -280,3 +280,46 @@ export async function changePassword(input: {
 
   return payload.data;
 }
+
+export async function requestPasswordReset(email: string) {
+  const response = await fetch(`${API_BASE_URL}/auth/forgot-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) await throwAuthApiError(response);
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { message: string };
+  };
+
+  return payload.data;
+}
+
+export async function resetPassword(input: {
+  token: string;
+  newPassword: string;
+}) {
+  const response = await fetch(`${API_BASE_URL}/auth/reset-password`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+
+  if (!response.ok) await throwAuthApiError(response);
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { message: string };
+  };
+
+  return payload.data;
+}

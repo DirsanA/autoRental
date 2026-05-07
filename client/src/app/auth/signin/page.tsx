@@ -21,11 +21,11 @@ function SignInContent() {
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-const [showPassword, setShowPassword] = useState(false);
-const [fieldErrors, setFieldErrors] = useState<{
-  email?: string;
-  password?: string;
-}>({});
+  const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<{
+    email?: string;
+    password?: string;
+  }>({});
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -144,18 +144,16 @@ const [fieldErrors, setFieldErrors] = useState<{
                   type="email"
                   placeholder="you@example.com"
                   value={email}
-                 onChange={(e) => {
-  setEmail(e.target.value);
-  setFieldErrors((prev) => ({ ...prev, email: undefined }));
-}}
-
+                  onChange={(e) => {
+                    setEmail(e.target.value);
+                    setFieldErrors((prev) => ({ ...prev, email: undefined }));
+                  }}
                   className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
                 />
               </div>
               {fieldErrors.email && (
-  <p className="text-sm text-red-500">{fieldErrors.email}</p>
-)}
-
+                <p className="text-sm text-red-500">{fieldErrors.email}</p>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -164,33 +162,43 @@ const [fieldErrors, setFieldErrors] = useState<{
               </label>
               <div className="relative">
                 <Lock className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                  <input
-    type={showPassword ? "text" : "password"}
-    placeholder="••••••••"
-    value={password}
- onChange={(e) => {
-  setPassword(e.target.value);
-  setFieldErrors((prev) => ({ ...prev, password: undefined }));
-}}
-
-    className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
-  />
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setFieldErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                    }));
+                  }}
+                  className="w-full rounded-lg border border-input bg-background py-2.5 pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary"
+                />
                 <button
-    type="button"
-    onClick={() => setShowPassword((prev) => !prev)}
-    className="absolute right-3 top-3 text-muted-foreground"
-  >
-    {showPassword ? (
-      <EyeOff className="h-4 w-4" />
-    ) : (
-      <Eye className="h-4 w-4" />
-    )}
-  </button>
+                  type="button"
+                  onClick={() => setShowPassword((prev) => !prev)}
+                  className="absolute right-3 top-3 text-muted-foreground"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-4 w-4" />
+                  ) : (
+                    <Eye className="h-4 w-4" />
+                  )}
+                </button>
               </div>
               {fieldErrors.password && (
-  <p className="text-sm text-red-500">{fieldErrors.password}</p>
-)}
+                <p className="text-sm text-red-500">{fieldErrors.password}</p>
+              )}
+            </div>
 
+            <div className="flex justify-end">
+              <Link
+                href="/auth/forgot-password"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
             </div>
 
             {error && (
