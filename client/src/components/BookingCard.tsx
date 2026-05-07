@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { initializeChapaCheckout } from "@/lib/bookings-api";
 import { useToast } from "@/hooks/use-toast";
+import Link from "next/link";
 import { readAuthToken } from "@/lib/auth-token";
 import type { VehicleAvailabilityBlock } from "@/components/peer-host/vehicles/types";
 
@@ -70,6 +71,7 @@ export default function BookingCard({
   );
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
+  const [termsAccepted, setTermsAccepted] = useState(false);
 
   const startDateTime = `${startDate}T${startTimeStr}`;
   const endDateTime = `${endDate}T${endTimeStr}`;
@@ -442,9 +444,31 @@ export default function BookingCard({
           </div>
         )}
 
+        <div className="mb-6 flex items-start gap-3">
+          <input
+            type="checkbox"
+            id="terms"
+            checked={termsAccepted}
+            onChange={(e) => setTermsAccepted(e.target.checked)}
+            required
+            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+          />
+          <label htmlFor="terms" className="text-sm text-gray-700 leading-snug">
+            I agree to the{" "}
+            <Link
+              href="/terms"
+              target="_blank"
+              className="font-semibold text-primary hover:underline"
+            >
+              Terms and Policies
+            </Link>{" "}
+            required for booking
+          </label>
+        </div>
+
         <Button
           type="submit"
-          disabled={submitting}
+          disabled={submitting || !termsAccepted}
           className="mb-8 w-full rounded-xl bg-[#e5e5e5] px-4 py-[14px] text-base font-extrabold text-gray-800 hover:bg-[#d4d4d4] disabled:bg-[#f2f2f2] disabled:text-[#b4b4b4] disabled:opacity-100 transition-colors h-auto"
         >
           {submitting ? (
