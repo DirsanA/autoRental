@@ -24,6 +24,8 @@ import {
   ShieldBan,
   ShieldCheck,
 } from "lucide-react";
+import { ExportButton } from "@/components/system-admin/export/ExportButton";
+import { exportCompaniesToExcel } from "@/components/system-admin/export/export-utils";
 import { CompanyFilters } from "./CompanyFilters";
 import { CompanyTable } from "./CompanyTable";
 import type { Company } from "./data";
@@ -36,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import type {
   AdminCompanyApiStatus,
   AdminCompaniesPagination,
+  AdminCompanySummary,
 } from "@/lib/admin-companies-api";
 
 const PAGE_SIZE = 20;
@@ -221,12 +224,18 @@ export default function CompanyManagementPage() {
     }
   };
 
-  const activeCompanies = companies.filter((company) => company.status === "active").length;
-  const pendingCompanies = companies.filter((company) => company.status === "pending").length;
+  const activeCompanies = companies.filter(
+    (company) => company.status === "active",
+  ).length;
+  const pendingCompanies = companies.filter(
+    (company) => company.status === "pending",
+  ).length;
   const suspendedCompanies = companies.filter(
     (company) => company.status === "suspended",
   ).length;
-  const verifiedCompanies = companies.filter((company) => company.isVerified).length;
+  const verifiedCompanies = companies.filter(
+    (company) => company.isVerified,
+  ).length;
 
   return (
     <div className="relative flex h-dvh w-full">
@@ -272,8 +281,8 @@ export default function CompanyManagementPage() {
           </div>
 
           <div className="rounded-xl border border-dashed bg-muted/20 p-4 text-sm text-muted-foreground">
-            Company entities are managed here so user administration stays focused
-            on people and internal staff accounts.
+            Company entities are managed here so user administration stays
+            focused on people and internal staff accounts.
           </div>
 
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -287,20 +296,29 @@ export default function CompanyManagementPage() {
               }}
             />
 
-            <Button
-              variant="outline"
-              onClick={refreshCompanies}
-              disabled={loading}
-              className="gap-2"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton
+                onExport={() =>
+                  exportCompaniesToExcel(companies as AdminCompanySummary[])
+                }
+                disabled={loading || companies.length === 0}
+              />
+              <Button
+                variant="outline"
+                onClick={refreshCompanies}
+                disabled={loading}
+                className="gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
             <div>
-              Showing {companies.length} of {pagination.total} matching companies
+              Showing {companies.length} of {pagination.total} matching
+              companies
             </div>
             <div>
               Page {pagination.page} of {pagination.totalPages}
@@ -381,7 +399,8 @@ export default function CompanyManagementPage() {
           <DialogHeader>
             <DialogTitle>Suspend Company</DialogTitle>
             <DialogDescription>
-              Provide the reason that explains why this company is being suspended.
+              Provide the reason that explains why this company is being
+              suspended.
             </DialogDescription>
           </DialogHeader>
 

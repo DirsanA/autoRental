@@ -54,6 +54,8 @@ import {
   ThumbsUp,
   XCircle,
 } from "lucide-react";
+import { ExportButton } from "@/components/system-admin/export/ExportButton";
+import { exportP2PHostsToExcel } from "@/components/system-admin/export/export-utils";
 import { cn } from "@/lib/utils";
 import {
   fetchP2PHosts,
@@ -431,6 +433,10 @@ export function P2PApprovalPageClient() {
               </SelectContent>
             </Select>
 
+            <ExportButton
+              onExport={() => exportP2PHostsToExcel(hostsData.hosts)}
+              disabled={loading || hostsData.hosts.length === 0}
+            />
             <Button
               variant="outline"
               onClick={() => void loadHosts()}
@@ -723,7 +729,8 @@ export function P2PApprovalPageClient() {
             </AlertDialogDescription>
             {(dialog.host?.reviewReadiness?.blockerCount ?? 0) > 0 && (
               <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
-                {dialog.host?.reviewReadiness?.blockerCount} blocker(s) remaining.
+                {dialog.host?.reviewReadiness?.blockerCount} blocker(s)
+                remaining.
               </div>
             )}
           </AlertDialogHeader>

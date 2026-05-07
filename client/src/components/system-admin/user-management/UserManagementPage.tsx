@@ -7,6 +7,8 @@ import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, RefreshCcw, ShieldCheck, UserCog, Users } from "lucide-react";
+import { ExportButton } from "@/components/system-admin/export/ExportButton";
+import { exportUsersToExcel } from "@/components/system-admin/export/export-utils";
 import { UserFilters } from "./UserFilters";
 import { UserTable } from "./UserTable";
 import type { User } from "./data";
@@ -16,6 +18,7 @@ import type {
   AdminUserAccountType,
   AdminUserApiStatus,
   AdminUsersPagination,
+  AdminUserSummary,
 } from "@/lib/admin-users-api";
 
 const PAGE_SIZE = 20;
@@ -271,15 +274,21 @@ export default function UserManagementPage() {
               }}
             />
 
-            <Button
-              variant="outline"
-              onClick={refreshUsers}
-              disabled={loading}
-              className="gap-2"
-            >
-              <RefreshCcw className="h-4 w-4" />
-              Refresh
-            </Button>
+            <div className="flex gap-2">
+              <ExportButton
+                onExport={() => exportUsersToExcel(users as AdminUserSummary[])}
+                disabled={loading || users.length === 0}
+              />
+              <Button
+                variant="outline"
+                onClick={refreshUsers}
+                disabled={loading}
+                className="gap-2"
+              >
+                <RefreshCcw className="h-4 w-4" />
+                Refresh
+              </Button>
+            </div>
           </div>
 
           <div className="flex flex-col gap-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
