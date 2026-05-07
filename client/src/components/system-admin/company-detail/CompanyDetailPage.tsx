@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
@@ -331,7 +331,7 @@ export default function CompanyDetailPage({
     );
   }
 
-  function formatPendingValue(value: unknown): string | JSX.Element {
+  function formatPendingValue(value: unknown): string | ReactNode {
     if (!value) return "Not provided";
 
     if (Array.isArray(value)) {

@@ -1,5 +1,7 @@
-'use client';
-import { useEffect, useState } from "react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { useTheme } from "next-themes";
 import {
   Car,
   CalendarCheck,
@@ -26,11 +28,73 @@ import { motion } from "framer-motion";
 import { fetchCompanyDashboard, type CompanyDashboardData } from "@/lib/companyApi";
 import { CompanyDashboardSkeleton } from "./company-dashboard-skeleton";
 
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  isDark,
+  formatValue,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+  isDark: boolean;
+  formatValue: (value: unknown, name: string) => string;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  return (
+    <div
+      className={
+        "rounded-xl border px-3 py-2 shadow-lg backdrop-blur " +
+        (isDark
+          ? "border-slate-700/70 bg-slate-950/95 text-slate-100"
+          : "border-slate-200 bg-white/95 text-slate-900")
+      }
+    >
+      {label ? (
+        <div className="text-xs font-semibold text-slate-600 dark:text-slate-300">
+          {label}
+        </div>
+      ) : null}
+      <div className="mt-1 space-y-1">
+        {payload.map((p, idx) => {
+          const name = String(p?.name ?? p?.dataKey ?? "");
+          return (
+            <div key={idx} className="flex items-center justify-between gap-6 text-sm">
+              <span className="text-slate-700 dark:text-slate-200">{name}</span>
+              <span className="font-semibold tabular-nums">
+                {formatValue(p?.value, name)}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const [activeTab, setActiveTab] = useState<"weekly" | "monthly">("weekly");
   const [dashboardData, setDashboardData] = useState<CompanyDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const formatMoney = useMemo(() => {
+    return (amount: number, currency = "ETB") => {
+      try {
+        return new Intl.NumberFormat(undefined, {
+          style: "currency",
+          currency,
+          maximumFractionDigits: 0,
+        }).format(amount);
+      } catch {
+        return `${Number(amount || 0).toLocaleString()} ${currency}`;
+      }
+    };
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -142,7 +206,7 @@ export default function Dashboard() {
 
   if (error) {
     return (
-      <div className="p-6 rounded-3xl bg-white shadow-sm border border-slate-200">
+      <div className="p-6 rounded-3xl bg-white dark:bg-slate-950 shadow-sm border border-slate-200 dark:border-slate-800">
         <p className="text-rose-600">{error}</p>
       </div>
     );
@@ -153,8 +217,12 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4">
         <div>
-          <h2 className="font-bold text-slate-900 text-2xl">Fleet Dashboard</h2>
-          <p className="text-slate-500">Real-time performance and fleet status overview.</p>
+          <h2 className="font-bold text-slate-900 dark:text-slate-50 text-2xl">
+            Fleet Dashboard
+          </h2>
+          <p className="text-slate-600 dark:text-slate-300">
+            Real-time performance and fleet status overview.
+          </p>
         </div>
 
         <button className="flex justify-center items-center gap-2 bg-emerald-500 hover:bg-emerald-600 shadow-emerald-500/20 shadow-lg px-4 py-2 rounded-xl w-full sm:w-auto font-medium text-white transition-all">
@@ -171,16 +239,20 @@ export default function Dashboard() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: i * 0.1 }}
-            className="bg-white shadow-sm hover:shadow-md p-4 border border-slate-100 rounded-2xl transition-all"
+            className="bg-white dark:bg-slate-950 shadow-sm hover:shadow-md p-4 border border-slate-100 dark:border-slate-800 rounded-2xl transition-all"
           >
             <div className="flex flex-col gap-2">
               <div className="flex justify-between items-center">
-                <p className="font-medium text-slate-500 text-xs truncate">{stat.label}</p>
+                <p className="font-medium text-slate-600 dark:text-slate-300 text-xs truncate">
+                  {stat.label}
+                </p>
                 <div className={`${stat.color} p-2 rounded-xl text-white`}>
                   <stat.icon size={18} />
                 </div>
               </div>
-              <p className="font-bold text-slate-900 text-xl">{stat.value}</p>
+              <p className="font-bold text-slate-900 dark:text-slate-50 text-xl">
+                {stat.value}
+              </p>
               <p className={`text-xs font-bold flex items-center gap-0.5 ${stat.trend.startsWith('+') ? 'text-emerald-600' : 'text-rose-600'
                 }`}>
                 {stat.trend.startsWith('+') ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
@@ -194,21 +266,29 @@ export default function Dashboard() {
       {/* Charts Row */}
       <div className="gap-6 grid grid-cols-1 lg:grid-cols-3">
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
+        <div className="lg:col-span-2 bg-white dark:bg-slate-950 shadow-sm p-6 border border-slate-100 dark:border-slate-800 rounded-2xl min-w-0">
           <div className="flex sm:flex-row flex-col justify-between items-start sm:items-center gap-4 mb-6">
-            <h3 className="font-bold text-slate-900">Revenue Overview</h3>
-            <div className="flex gap-1 bg-slate-100 p-1 rounded-xl w-full sm:w-auto">
+            <h3 className="font-bold text-slate-900 dark:text-slate-50">
+              Revenue Overview
+            </h3>
+            <div className="flex gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl w-full sm:w-auto">
               <button
                 onClick={() => setActiveTab("weekly")}
-                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "weekly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === "weekly"
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-50"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50"
+                }`}
               >
                 Week
               </button>
               <button
                 onClick={() => setActiveTab("monthly")}
-                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${activeTab === "monthly" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500 hover:text-slate-700"
-                  }`}
+                className={`flex-1 sm:flex-none px-4 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  activeTab === "monthly"
+                    ? "bg-white text-slate-900 shadow-sm dark:bg-slate-800 dark:text-slate-50"
+                    : "text-slate-600 hover:text-slate-900 dark:text-slate-300 dark:hover:text-slate-50"
+                }`}
               >
                 Month
               </button>
@@ -224,27 +304,36 @@ export default function Dashboard() {
                     <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
                   </linearGradient>
                 </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                <CartesianGrid
+                  strokeDasharray="3 3"
+                  vertical={false}
+                  stroke={isDark ? "#1f2937" : "#f1f5f9"}
+                />
                 <XAxis
                   dataKey="day"
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
+                  tick={{ fill: isDark ? "#cbd5e1" : "#64748b", fontSize: 12 }}
                   dy={10}
                 />
                 <YAxis
                   axisLine={false}
                   tickLine={false}
-                  tick={{ fill: '#64748b', fontSize: 12 }}
-                  tickFormatter={(value) => `$${value}`}
+                  tick={{ fill: isDark ? "#cbd5e1" : "#64748b", fontSize: 12 }}
+                  tickFormatter={(value) => formatMoney(Number(value) || 0)}
                 />
                 <Tooltip
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    borderRadius: '12px',
-                    border: '1px solid #f1f5f9',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
+                  content={(props: any) => (
+                    <ChartTooltip
+                      {...props}
+                      isDark={isDark}
+                      formatValue={(value, name) =>
+                        String(name || "").toLowerCase() === "revenue"
+                          ? formatMoney(Number(value) || 0)
+                          : String(value ?? "")
+                      }
+                    />
+                  )}
                 />
                 <Area
                   type="monotone"
@@ -267,8 +356,8 @@ export default function Dashboard() {
         </div>
 
         {/* Fleet Status */}
-        <div className="bg-white shadow-sm p-6 border border-slate-100 rounded-2xl min-w-0">
-          <h3 className="mb-6 font-bold text-slate-900">Fleet Status</h3>
+        <div className="bg-white dark:bg-slate-950 shadow-sm p-6 border border-slate-100 dark:border-slate-800 rounded-2xl min-w-0">
+          <h3 className="mb-6 font-bold text-slate-900 dark:text-slate-50">Fleet Status</h3>
 
           <div className="h-40">
             <ResponsiveContainer width="100%" height="100%">
@@ -287,11 +376,13 @@ export default function Dashboard() {
                   ))}
                 </Pie>
                 <Tooltip
-                  contentStyle={{
-                    borderRadius: '12px',
-                    border: 'none',
-                    boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'
-                  }}
+                  content={(props: any) => (
+                    <ChartTooltip
+                      {...props}
+                      isDark={isDark}
+                      formatValue={(value) => String(value ?? "")}
+                    />
+                  )}
                 />
               </PieChart>
             </ResponsiveContainer>
@@ -303,11 +394,11 @@ export default function Dashboard() {
                 <div className="flex justify-between items-center text-sm">
                   <span className="flex items-center gap-2">
                     <div className="rounded-full w-2 h-2" style={{ backgroundColor: item.color }} />
-                    <span className="font-medium text-slate-600">{item.name}</span>
+                    <span className="font-medium text-slate-700 dark:text-slate-200">{item.name}</span>
                   </span>
-                  <span className="font-bold text-slate-900">{item.value} veh</span>
+                  <span className="font-bold text-slate-900 dark:text-slate-50">{item.value} veh</span>
                 </div>
-                <div className="bg-slate-100 rounded-full h-2 overflow-hidden">
+                <div className="bg-slate-100 dark:bg-slate-800 rounded-full h-2 overflow-hidden">
                   <motion.div
                     initial={{ width: 0 }}
                     animate={{ width: `${(item.value / 24) * 100}%` }}
@@ -319,9 +410,9 @@ export default function Dashboard() {
             ))}
           </div>
 
-          <div className="bg-emerald-50 mt-8 p-4 border border-emerald-100 rounded-xl">
-            <p className="text-emerald-700 text-xs leading-relaxed">
-              <span className="font-bold">💡 Pro Tip:</span> Your fleet utilization is at 87%. Consider adding 2 luxury vehicles to capture weekend demand.
+          <div className="mt-8 rounded-xl border border-emerald-100 bg-emerald-50 p-4 dark:border-emerald-900/60 dark:bg-emerald-950/30">
+            <p className="text-xs leading-relaxed text-emerald-800 dark:text-emerald-200">
+              <span className="font-bold">Pro tip:</span> Your fleet utilization is at 87%. Consider adding 2 luxury vehicles to capture weekend demand.
             </p>
           </div>
         </div>
