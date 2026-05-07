@@ -93,6 +93,12 @@ const STATUS_CONFIG: Record<
   RenterBookingStatus,
   { label: string; icon: any; variant: string }
 > = {
+  PENDING: {
+    label: "Pending",
+    icon: Clock,
+    variant:
+      "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400",
+  },
   CONFIRMED: {
     label: "Confirmed",
     icon: CheckCircle,
@@ -297,11 +303,6 @@ const BookingTableRow = ({ booking }: { booking: RenterBookingListItem }) => {
           <p className="font-bold text-foreground text-base">
             {formatCurrency(booking.pricing.totalAmount, booking.pricing.currency)}
           </p>
-          {booking.pricing.dailyRate && (
-            <p className="text-muted-foreground text-xs">
-              ${booking.pricing.dailyRate}/day
-            </p>
-          )}
         </div>
       </TableCell>
 
