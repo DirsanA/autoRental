@@ -31,6 +31,33 @@ function sendUnauthorized(res: Response, message: string): void {
   });
 }
 
+function sendServiceUnavailable(res: Response, message: string): void {
+  res.status(503).json({
+    success: false,
+    error: {
+      code: "SERVICE_UNAVAILABLE",
+      message,
+    },
+  });
+}
+
+function isTransientMongoOrNetworkError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as any;
+  const code = String(e.code || "");
+  const name = String(e.name || "");
+  const message = String(e.message || "");
+
+  // Common transient failures when Atlas/network drops.
+  if (code === "ECONNRESET" || code === "ETIMEDOUT" || code === "EPIPE") return true;
+  if (name === "MongoNetworkError" || name === "MongoServerSelectionError") return true;
+  if (message.includes("ECONNRESET") || message.includes("server selection") || message.includes("Topology is closed")) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Resolves a persisted session directly from a bearer token.
  */
@@ -117,7 +144,15 @@ export function createAuthMiddleware(auth: Auth) {
 
       sendUnauthorized(res, "Authentication required");
     } catch (error) {
+      // IMPORTANT:
+      // A DB/network blip must not be reported as 401. That creates "random logout" glitches.
+      // For transient Mongo/network errors, return 503 so the client can retry.
       console.error("Auth middleware error:", error);
+      if (isTransientMongoOrNetworkError(error)) {
+        sendServiceUnavailable(res, "Authentication temporarily unavailable");
+        return;
+      }
+
       sendUnauthorized(res, "Invalid or expired session");
     }
   };

@@ -16,7 +16,19 @@ function getRequiredDatabaseUrl(): string {
 }
 
 function createAuthMongoClient(uri: string) {
-  return new MongoClient(uri);
+  return new MongoClient(uri, {
+    // Keep auth/session lookups responsive during Atlas hiccups.
+    serverSelectionTimeoutMS: 5_000,
+    connectTimeoutMS: 10_000,
+    socketTimeoutMS: 20_000,
+
+    // Pool settings aligned with Mongoose maxPoolSize.
+    maxPoolSize: 10,
+
+    // Atlas/network transient resilience.
+    retryReads: true,
+    retryWrites: true,
+  });
 }
 
 async function connectAuthMongoClient(): Promise<MongoClient> {
