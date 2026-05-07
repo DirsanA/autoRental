@@ -54,27 +54,30 @@ export default function BookingCard({
   const router = useRouter();
   const { toast } = useToast();
   const now = useMemo(() => new Date(), []);
-  const initialStart = useMemo(() => addHours(now, 2), [now]);
-  const initialEnd = useMemo(() => addHours(initialStart, 24), [initialStart]);
+  // Default: start tomorrow, end 4 days later (3 day minimum + 1)
+  const initialStart = useMemo(() => addHours(now, 24), [now]);
+  const initialEnd = useMemo(() => addHours(initialStart, 72), [initialStart]);
 
   const [startDate, setStartDate] = useState(
     toDateTimeInputValue(initialStart).slice(0, 10),
   );
-  const [startTimeStr, setStartTimeStr] = useState(
-    toDateTimeInputValue(initialStart).slice(11, 16),
-  );
   const [endDate, setEndDate] = useState(
     toDateTimeInputValue(initialEnd).slice(0, 10),
-  );
-  const [endTimeStr, setEndTimeStr] = useState(
-    toDateTimeInputValue(initialEnd).slice(11, 16),
   );
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
 
-  const startDateTime = `${startDate}T${startTimeStr}`;
-  const endDateTime = `${endDate}T${endTimeStr}`;
+  // Use noon for calculations to avoid timezone edge cases
+  const startDateTime = `${startDate}T12:00`;
+  const endDateTime = `${endDate}T12:00`;
+
+  // Calculate max date (1 month from today) for date input constraints
+  const maxDate = useMemo(() => {
+    const max = new Date(now);
+    max.setMonth(max.getMonth() + 1);
+    return toDateTimeInputValue(max).slice(0, 10);
+  }, [now]);
 
   const overlappingAvailabilityBlock = useMemo(() => {
     const start = new Date(startDateTime);
@@ -132,11 +135,32 @@ export default function BookingCard({
 
     const hours =
       Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100;
+    const days = Math.ceil(hours / 24);
 
-    if (hours < 6) {
+    if (hours < 72) {
       return {
         valid: false,
-        message: "Bookings must be at least 6 hours long.",
+        message: "Bookings must be at least 3 days long.",
+        hours,
+      };
+    }
+
+    // Check if booking is within 1 month window from now
+    const oneMonthFromNow = new Date(currentTime);
+    oneMonthFromNow.setMonth(oneMonthFromNow.getMonth() + 1);
+
+    if (start > oneMonthFromNow) {
+      return {
+        valid: false,
+        message: "Bookings can only be made within 1 month from today.",
+        hours,
+      };
+    }
+
+    if (end > oneMonthFromNow) {
+      return {
+        valid: false,
+        message: "Return date must be within 1 month from today.",
         hours,
       };
     }
@@ -211,7 +235,7 @@ export default function BookingCard({
   const pricing = useMemo(() => {
     if (!bookingGuard.valid) {
       return {
-        hours: 0,
+        days: 0,
         subtotal: 0,
         commission: 0,
         total: 0,
@@ -219,13 +243,13 @@ export default function BookingCard({
       };
     }
 
-    const pricePerHour = dailyRate / 24;
-    const subtotal = bookingGuard.hours * pricePerHour;
+    const days = Math.ceil(bookingGuard.hours / 24);
+    const subtotal = days * dailyRate;
     const commission = subtotal * COMMISSION_RATE;
     const total = subtotal + commission;
 
     return {
-      hours: bookingGuard.hours,
+      days,
       subtotal,
       commission,
       total,
@@ -235,15 +259,7 @@ export default function BookingCard({
 
   useEffect(() => {
     setSubmissionError(null);
-  }, [
-    endDate,
-    endTimeStr,
-    startDate,
-    startTimeStr,
-    availabilityBlocks,
-    vehicleId,
-    vehicleStatus,
-  ]);
+  }, [endDate, startDate, availabilityBlocks, vehicleId, vehicleStatus]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -345,54 +361,36 @@ export default function BookingCard({
           <div className="space-y-4">
             <div>
               <div className="mb-2 text-[15px] font-semibold text-[#222222]">
-                Trip start
+                Pickup date
               </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    min={toDateTimeInputValue(addHours(new Date(), 1)).slice(
-                      0,
-                      10,
-                    )}
-                    className="flex-1 rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
-                  />
-                </div>
-                <div className="relative w-32">
-                  <Input
-                    type="time"
-                    value={startTimeStr}
-                    onChange={(e) => setStartTimeStr(e.target.value)}
-                    className="w-full rounded-xl border-gray-300 py-6 px-3 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
-                  />
-                </div>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  min={toDateTimeInputValue(addHours(new Date(), 1)).slice(
+                    0,
+                    10,
+                  )}
+                  max={maxDate}
+                  className="w-full rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
+                />
               </div>
             </div>
 
             <div className="pt-2">
               <div className="mb-2 text-[15px] font-semibold text-[#222222]">
-                Trip end
+                Return date
               </div>
-              <div className="flex gap-2">
-                <div className="relative flex-1">
-                  <Input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    min={startDate}
-                    className="flex-1 rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
-                  />
-                </div>
-                <div className="relative w-32">
-                  <Input
-                    type="time"
-                    value={endTimeStr}
-                    onChange={(e) => setEndTimeStr(e.target.value)}
-                    className="w-full rounded-xl border-gray-300 py-6 px-3 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
-                  />
-                </div>
+              <div className="relative">
+                <Input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  min={startDate}
+                  max={maxDate}
+                  className="w-full rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
+                />
               </div>
             </div>
           </div>
@@ -422,7 +420,7 @@ export default function BookingCard({
             <hr className="mb-6 border-gray-200" />
             <div className="flex items-center justify-between mb-4">
               <span className="text-[#222222] underline decoration-from-font underline-offset-4 cursor-pointer">
-                {formatMoney(pricing.subtotal)} x {pricing.hours} hr
+                {formatMoney(dailyRate)} x {pricing.days} days
               </span>
               <span className="text-[#222222]">
                 {formatMoney(pricing.subtotal)}
@@ -487,24 +485,6 @@ export default function BookingCard({
             <p>{submissionError || bookingGuard.message}</p>
           </div>
         )}
-
-        <div>
-          <h3 className="mb-4 text-xl font-bold text-[#222222]">
-            Cancellation policy
-          </h3>
-          <div className="flex gap-4 items-start">
-            <ThumbsUp className="h-[22px] w-[22px] mt-0.5 shrink-0 text-[#222222]" />
-            <div>
-              <h4 className="font-bold text-[15px] text-[#222222]">
-                Free cancellation
-              </h4>
-              <p className="mt-1 text-[15px] text-gray-700 leading-snug">
-                Full refund within 24 hours of booking. More flexible options
-                available at checkout.
-              </p>
-            </div>
-          </div>
-        </div>
       </form>
     </div>
   );
