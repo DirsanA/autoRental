@@ -26,6 +26,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import MapSection from "@/components/MapSection";
 import {
   createBookingReview,
   deleteBookingReview,
@@ -67,6 +68,11 @@ interface BookingDetail {
     imageUrl: string | null;
     availability?: string | null;
     delivery?: string | null;
+    ownerType?: string | null;
+    pickupAddress?: string | null;
+    returnAddress?: string | null;
+    pickupGeo?: { lat: number; lng: number; precision?: string } | null;
+    returnGeo?: { lat: number; lng: number; precision?: string } | null;
   } | null;
   createdAt: string | null;
   updatedAt?: string | null;
@@ -1070,6 +1076,45 @@ export function RenterBookingDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {(() => {
+            const vehicle = booking.vehicle;
+            
+            const pickupAddress = booking.pickupAddress || vehicle?.pickupAddress || null;
+            const returnAddress = booking.returnAddress || vehicle?.returnAddress || null;
+            const sameLocation = pickupAddress && returnAddress && pickupAddress === returnAddress;
+            
+            const locationText = (() => {
+              if (pickupAddress && returnAddress) {
+                if (sameLocation) {
+                  return pickupAddress;
+                }
+                return `Pickup: ${pickupAddress} | Return: ${returnAddress}`;
+              }
+              if (pickupAddress) return pickupAddress;
+              if (returnAddress) return returnAddress;
+              return "Pickup & return location";
+            })();
+
+            const coords = (() => {
+              if (!vehicle) return undefined;
+              
+              const geo = vehicle.pickupGeo || vehicle.returnGeo;
+              if (!geo?.lat || !geo?.lng) return undefined;
+              
+              return {
+                lat: Math.round(geo.lat * 100) / 100,
+                lng: Math.round(geo.lng * 100) / 100,
+              };
+            })();
+
+            return (
+              <MapSection
+                locationText={locationText}
+                coords={coords}
+              />
+            );
+          })()}
         </Main>
       </div>
     </div>

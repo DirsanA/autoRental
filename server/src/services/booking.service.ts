@@ -257,6 +257,23 @@ function mapBookingListItem(booking: Record<string, any>) {
           imageUrl,
           availability: vehicle.availability ?? null,
           delivery: vehicle.delivery ?? null,
+          ownerType: vehicle.ownerType ?? null,
+          pickupAddress: vehicle.pickupAddress ?? null,
+          returnAddress: vehicle.returnAddress ?? null,
+          pickupGeo: vehicle.pickupGeo
+            ? {
+                lat: vehicle.pickupGeo.lat ?? null,
+                lng: vehicle.pickupGeo.lng ?? null,
+                precision: vehicle.pickupGeo.precision ?? null,
+              }
+            : null,
+          returnGeo: vehicle.returnGeo
+            ? {
+                lat: vehicle.returnGeo.lat ?? null,
+                lng: vehicle.returnGeo.lng ?? null,
+                precision: vehicle.returnGeo.precision ?? null,
+              }
+            : null,
         }
       : null,
   };
@@ -997,7 +1014,7 @@ export class BookingService {
       .populate({
         path: "vehicleId",
         select:
-          "make model year plate photos availability delivery ownerType ownerId",
+          "make model year plate photos availability delivery ownerType ownerId pickupAddress returnAddress pickupGeo returnGeo",
       })
       .populate({
         path: "renterId",
