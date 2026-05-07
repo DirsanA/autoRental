@@ -31,6 +31,8 @@ export type AdminCompanySummary = {
     id: string;
     name: string | null;
     email: string | null;
+    image: string | null;
+    idImageUrl: string | null;
     status: string | null;
     accountType: string | null;
   } | null;
@@ -212,6 +214,8 @@ function mapApiCompanyToSummary(company: ApiCompany): AdminCompanySummary {
           id: company.authAccount.id || company.authAccount._id || "",
           name: company.authAccount.name || null,
           email: company.authAccount.email || null,
+          image: company.authAccount.image || null,
+          idImageUrl: company.authAccount.idImageUrl || null,
           status: company.authAccount.status || null,
           accountType: company.authAccount.accountType || null,
         }
