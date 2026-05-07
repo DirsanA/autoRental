@@ -721,21 +721,11 @@ export function P2PApprovalPageClient() {
               This applicant still has review blockers. Open the detail page to
               finish reviewing their documents and vehicle submissions.
             </AlertDialogDescription>
-            {dialog.host?.reviewReadiness?.blockers &&
-              dialog.host.reviewReadiness.blockers.length > 0 && (
-                <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-900/60 dark:bg-amber-950/40">
-                  <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
-                    Blockers:
-                  </p>
-                  <ul className="mt-2 list-disc list-inside text-sm text-amber-700 dark:text-amber-400">
-                    {dialog.host.reviewReadiness.blockers.map(
-                      (blocker, idx) => (
-                        <li key={idx}>{blocker}</li>
-                      ),
-                    )}
-                  </ul>
-                </div>
-              )}
+            {(dialog.host?.reviewReadiness?.blockerCount ?? 0) > 0 && (
+              <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
+                {dialog.host?.reviewReadiness?.blockerCount} blocker(s) remaining.
+              </div>
+            )}
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogAction onClick={() => setDialog(DEFAULT_DIALOG)}>

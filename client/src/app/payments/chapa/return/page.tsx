@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
@@ -24,7 +24,7 @@ function formatMoney(amount: number, currency: string) {
   }).format(amount);
 }
 
-export default function ChapaReturnPage() {
+function ChapaReturnPageInner() {
   const searchParams = useSearchParams();
   const bookingId = searchParams.get("bookingId");
   const txRef = searchParams.get("tx_ref") || searchParams.get("trx_ref");
@@ -238,5 +238,13 @@ export default function ChapaReturnPage() {
         </section>
       </div>
     </main>
+  );
+}
+
+export default function ChapaReturnPage() {
+  return (
+    <Suspense fallback={null}>
+      <ChapaReturnPageInner />
+    </Suspense>
   );
 }

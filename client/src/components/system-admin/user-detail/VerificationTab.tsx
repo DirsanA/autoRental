@@ -63,7 +63,7 @@ function countByStatus(user: UserFullDetail, status: string) {
   return user.verifications.filter((item) => item.status === status).length;
 }
 
-function getStatusColor(status: string) {
+function getStatusColor(status?: string | null) {
   switch (status?.toLowerCase()) {
     case "approved":
       return "bg-emerald-100 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300";
@@ -612,7 +612,7 @@ export function VerificationTab({ user }: VerificationTabProps) {
 
   const handleVerificationAction = async (action: VerificationAction) => {
     try {
-      if (action.action.includes("promote")) {
+      if (action.action === "promote_id" || action.action === "promote_license") {
         // Handle promotion actions
         const updatedUser = await promoteUserVerificationLevel(
           user.id,

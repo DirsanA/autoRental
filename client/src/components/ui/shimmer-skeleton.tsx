@@ -1,13 +1,15 @@
 "use client";
 
 import { cn } from "@/lib/utils";
+import type { CSSProperties, ReactNode } from "react";
 
 interface ShimmerSkeletonProps {
   className?: string;
   circle?: boolean;
+  style?: CSSProperties;
 }
 
-export function ShimmerSkeleton({ className, circle }: ShimmerSkeletonProps) {
+export function ShimmerSkeleton({ className, circle, style }: ShimmerSkeletonProps) {
   return (
     <div
       className={cn(
@@ -15,6 +17,7 @@ export function ShimmerSkeleton({ className, circle }: ShimmerSkeletonProps) {
         circle ? "rounded-full" : "rounded-md",
         className
       )}
+      style={style}
     >
       {/* Shimmer overlay - light mode uses dark shimmer, dark mode uses light shimmer */}
       <div
@@ -37,7 +40,7 @@ export function ShimmerSkeleton({ className, circle }: ShimmerSkeletonProps) {
 }
 
 interface ShimmerCardProps {
-  children: React.ReactNode;
+  children: ReactNode;
   className?: string;
 }
 
