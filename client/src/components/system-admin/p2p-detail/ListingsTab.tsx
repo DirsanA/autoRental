@@ -236,31 +236,22 @@ export function ListingsTab({
                     <DropdownMenuItem onClick={() => onViewVehicle(listing.id)}>
                       <Eye className="mr-2 h-4 w-4" /> View full details
                     </DropdownMenuItem>
-                    {listing.status === "pending" && (
-                      <>
-                        <DropdownMenuItem
-                          className="text-green-600"
-                          onClick={() => onApproveVehicle(listing.id, listing.title)}
-                        >
-                          <CheckCircle2 className="mr-2 h-4 w-4" />
-                          Approve Vehicle
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          className="text-red-600"
-                          onClick={() => onRejectVehicle(listing.id, listing.title)}
-                        >
-                          <XCircle className="mr-2 h-4 w-4" />
-                          Reject Vehicle
-                        </DropdownMenuItem>
-                      </>
+                    {listing.status !== "approved" && (
+                      <DropdownMenuItem
+                        className="text-green-600"
+                        onClick={() => onApproveVehicle(listing.id, listing.title)}
+                      >
+                        <CheckCircle2 className="mr-2 h-4 w-4" />
+                        Approve Vehicle
+                      </DropdownMenuItem>
                     )}
-                    {listing.status === "approved" && (
+                    {listing.status !== "rejected" && (
                       <DropdownMenuItem
                         className="text-red-600"
-                        onClick={() => onDelist(listing.id, listing.title)}
+                        onClick={() => onRejectVehicle(listing.id, listing.title)}
                       >
-                        <Ban className="mr-2 h-4 w-4" />
-                        Force Delist
+                        <XCircle className="mr-2 h-4 w-4" />
+                        Reject Vehicle
                       </DropdownMenuItem>
                     )}
                   </DropdownMenuContent>
@@ -280,8 +271,8 @@ export function ListingsTab({
           <div className="relative flex justify-center bg-muted/40 rounded-md overflow-hidden p-4 border max-h-[65vh]">
             <img src={viewerSrc || ""} alt={viewerTitle} className="object-contain w-full h-full" />
           </div>
-          {viewerListing?.status === "pending" && (
-            <div className="flex justify-end gap-3 mt-4">
+          <div className="flex justify-end gap-3 mt-4">
+            {viewerListing?.status !== "rejected" && (
               <Button
                 variant="outline"
                 className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
@@ -292,6 +283,8 @@ export function ListingsTab({
               >
                 <XCircle className="w-4 h-4 mr-2" /> Reject Vehicle
               </Button>
+            )}
+            {viewerListing?.status !== "approved" && (
               <Button
                 className="bg-green-600 hover:bg-green-700 text-white"
                 onClick={() => {
@@ -301,8 +294,8 @@ export function ListingsTab({
               >
                 <CheckCircle2 className="w-4 h-4 mr-2" /> Approve Vehicle
               </Button>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>
