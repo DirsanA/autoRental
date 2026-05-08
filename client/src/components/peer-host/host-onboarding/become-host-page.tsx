@@ -66,7 +66,22 @@ const suggestedFeatures = [
   "Premium Sound",
 ];
 
-export function PeerHostBecomeHostPage() {
+export function PeerHostBecomeHostPage({
+  mode = "become-host",
+}: {
+  mode?: "become-host" | "add-vehicle";
+}) {
+  const isAddVehicleMode = mode === "add-vehicle";
+  const pageTitle = isAddVehicleMode ? "Add a Vehicle" : "Become a Host";
+  const pageSubtitle = isAddVehicleMode
+    ? "List another vehicle to your fleet in 4 simple steps"
+    : "List your car and start earning in 4 simple steps";
+  const successTitle = isAddVehicleMode
+    ? "Vehicle Submitted"
+    : "Application Under Review";
+  const successDescription = isAddVehicleMode
+    ? "Your vehicle has been submitted for review. Our admin team will verify it shortly."
+    : "Your documents are being verified by our admin team. This usually takes 24-48 hours.";
   const apiBaseUrl = resolveApiBaseUrl();
   const [step, setStep] = useState<HostStep>("car");
   const [isSubmitted, setIsSubmitted] = useState(false);
@@ -153,11 +168,10 @@ export function PeerHostBecomeHostPage() {
               </div>
 
               <h2 className="mb-2 font-bold dark:text-white text-xl sm:text-2xl">
-                Application Under Review
+                {successTitle}
               </h2>
               <p className="mb-4 sm:mb-6 text-muted-foreground dark:text-slate-400 text-sm sm:text-base">
-                Your documents are being verified by our admin team. This
-                usually takes 24-48 hours.
+                {successDescription}
               </p>
 
               <div className="bg-slate-50 dark:bg-slate-800 mb-4 sm:mb-6 p-4 sm:p-6 rounded-xl text-left">
@@ -198,22 +212,7 @@ export function PeerHostBecomeHostPage() {
                   )}
                 </div>
               </div>
-
-              <div className="flex sm:flex-row flex-col justify-center gap-3">
-                <Button
-                  variant="outline"
-                  className="gap-2 dark:hover:bg-slate-800 dark:border-slate-700 w-full sm:w-auto dark:text-slate-200"
-                >
-                  <Eye className="w-4 h-4" />
-                  View Application
-                </Button>
-                <Button className="gap-2 bg-black hover:bg-gray-800 dark:bg-white dark:hover:bg-gray-200 w-full sm:w-auto text-white dark:text-black">
-                  <Bell className="w-4 h-4" />
-                  Notify Me
-                </Button>
-              </div>
-
-              <p className="mt-4 sm:mt-6 text-muted-foreground dark:text-slate-400 text-xs">
+              <p className=" font-semibold mt-4 sm:mt-6 text-muted-foreground dark:text-slate-400 text-base">
                 You&apos;ll receive an email once your verification is complete
               </p>
             </CardContent>
@@ -455,11 +454,11 @@ export function PeerHostBecomeHostPage() {
                   <Car className="w-4 sm:w-5 h-4 sm:h-5 text-white" />
                 </div>
                 <h1 className="bg-clip-text bg-gradient-to-r from-slate-900 dark:from-slate-100 to-slate-600 dark:to-slate-400 font-bold text-transparent text-xl sm:text-3xl">
-                  Become a Host
+                  {pageTitle}
                 </h1>
               </div>
               <p className="text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">
-                List your car and start earning in 4 simple steps
+                {pageSubtitle}
               </p>
             </div>
 
@@ -1004,7 +1003,10 @@ export function PeerHostBecomeHostPage() {
                       placeholder="e.g. Bole, Addis Ababa"
                       value={formData.pickupAddress}
                       onChange={(e) =>
-                        setFormData({ ...formData, pickupAddress: e.target.value })
+                        setFormData({
+                          ...formData,
+                          pickupAddress: e.target.value,
+                        })
                       }
                       className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                     />
@@ -1034,7 +1036,10 @@ export function PeerHostBecomeHostPage() {
                       disabled={formData.sameReturnAsPickup}
                       value={formData.returnAddress}
                       onChange={(e) =>
-                        setFormData({ ...formData, returnAddress: e.target.value })
+                        setFormData({
+                          ...formData,
+                          returnAddress: e.target.value,
+                        })
                       }
                       className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm disabled:opacity-60"
                     />

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Home, User, AlertCircle } from "lucide-react";
+import { BookOpen, Car, Home, User, AlertCircle } from "lucide-react";
 
 import {
   Sidebar,
@@ -17,10 +17,17 @@ import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 import { cn } from "@/lib/utils";
 import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 import { SidebarFooter } from "@/components/ui/sidebar";
+import { readCachedAuthSession } from "@/lib/auth-api";
 
 export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state: sidebarState } = useSidebar();
   const isCollapsed = sidebarState === "collapsed";
+
+  const cachedSession = readCachedAuthSession();
+  const verificationLevel = cachedSession?.user?.verificationLevel || "NONE";
+  const showBecomeHost =
+    verificationLevel === "ID_VERIFIED" ||
+    verificationLevel === "LICENSE_VERIFIED";
 
   if (isLoading) {
     return (
@@ -113,6 +120,28 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
               </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
+
+          {showBecomeHost && (
+            <SidebarMenuItem>
+              <SidebarMenuButton tooltip="Become a Host" asChild>
+                <Link
+                  href="/renter/become-host"
+                  prefetch={true}
+                  className={cn(
+                    "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
+                    isCollapsed && "justify-center",
+                  )}
+                >
+                  <Car className="size-4" />
+                  {!isCollapsed && (
+                    <span className="ml-2 text-sm font-medium">
+                      Become a Host
+                    </span>
+                  )}
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          )}
         </SidebarMenu>
       </SidebarContent>
 

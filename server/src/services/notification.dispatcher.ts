@@ -13,7 +13,9 @@ export type AdminNotificationAction =
   // PeerHost (P2P) Verifications
   | "VERIFICATION_APPROVED"
   | "VERIFICATION_REJECTED"
-  | "P2P_STATUS_CHANGED"
+  | "P2P_APPROVED"
+  | "P2P_REJECTED"
+  | "P2P_SUSPENDED"
   // Company
   | "COMPANY_APPROVED"
   | "COMPANY_REJECTED"
@@ -61,9 +63,17 @@ const ACTION_DESCRIPTIONS: Record<
     title: "Verification Rejected",
     description: "verification has been rejected",
   },
-  P2P_STATUS_CHANGED: {
-    title: "Host Status Changed",
-    description: "host status has been updated",
+  P2P_APPROVED: {
+    title: "PeerHost Application Approved",
+    description: "peerhost application has been approved",
+  },
+  P2P_REJECTED: {
+    title: "PeerHost Application Rejected",
+    description: "peerhost application has been rejected",
+  },
+  P2P_SUSPENDED: {
+    title: "PeerHost Account Suspended",
+    description: "peerhost account has been suspended",
   },
   COMPANY_APPROVED: {
     title: "Company Approved",

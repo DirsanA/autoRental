@@ -815,8 +815,8 @@ export class P2PAdminService {
     }
 
     // Send notification for host approval/rejection
-    const action =
-      data.status === "approved" ? "P2P_STATUS_CHANGED" : "P2P_STATUS_CHANGED";
+    const action: "P2P_APPROVED" | "P2P_REJECTED" =
+      data.status === "approved" ? "P2P_APPROVED" : "P2P_REJECTED";
     await notificationDispatcher.sendAdminActionNotification({
       recipientId: refreshedUser._id,
       recipientEmail: refreshedUser.email,

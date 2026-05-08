@@ -868,8 +868,17 @@ export class UserService {
     }
 
     // Send notification based on status change
+    const isPeerHost =
+      updated.verificationLevel === "PEER_HOST" ||
+      (updated.roles as any[])?.some((r) => r.name === "peerhost");
+      
     const action =
-      data.status === "SUSPENDED" ? "ACCOUNT_SUSPENDED" : "ACCOUNT_ACTIVATED";
+      data.status === "SUSPENDED"
+        ? isPeerHost
+          ? "P2P_SUSPENDED"
+          : "ACCOUNT_SUSPENDED"
+        : "ACCOUNT_ACTIVATED";
+
     await notificationDispatcher.sendAdminActionNotification({
       recipientId: updated._id,
       recipientEmail: updated.email,
@@ -877,7 +886,7 @@ export class UserService {
       action,
       ...((data as any).reason && { reason: (data as any).reason }),
       entityId: updated._id,
-      entityType: "User",
+      entityType: isPeerHost ? "PeerHost" : "User",
       adminId: caller.id,
     });
 

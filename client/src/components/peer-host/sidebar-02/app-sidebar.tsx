@@ -18,13 +18,7 @@ import {
   Car,
   DollarSign,
   Home,
-  Settings,
-  Calendar,
   Star,
-  MessageSquare,
-  LogOut,
-  Users,
-  Shield,
   ClipboardCheck,
   ArrowLeftRight,
   Plus,
@@ -99,13 +93,13 @@ const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
       id: "add-vehicle",
       title: "Add Vehicle",
       icon: <Plus className="size-4" />,
-      link: "/peerhost/become-host",
+      link: "/peerhost/add-vehicle",
     }
     : {
       id: "become-a-host",
-      title: "Become a Host",
-      icon: <MessageSquare className="size-4" />,
-      link: "/peerhost/become-host",
+      title: "Add Vehicle",
+      icon: <Plus className="size-4" />,
+      link: "/peerhost/add-vehicle",
     },
 ];
 
