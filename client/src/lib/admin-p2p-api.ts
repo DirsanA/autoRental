@@ -43,6 +43,7 @@ export type P2PHostSummary = {
     pendingVerificationCount: number;
     pendingVehicleCount: number;
   };
+  accountStatus: "PENDING" | "ACTIVE" | "SUSPENDED";
 };
 
 /**

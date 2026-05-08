@@ -33,6 +33,8 @@ interface HostSidebarProps {
   blockers: string[];
   onApprove: () => void;
   onReject: () => void;
+  onSuspend?: () => void;
+  onReactivate?: () => void;
 }
 
 const statusConfig: Record<
@@ -69,6 +71,8 @@ export function HostSidebar({
   blockers,
   onApprove,
   onReject,
+  onSuspend,
+  onReactivate,
 }: HostSidebarProps) {
   const status = statusConfig[host.status];
   const StatusIcon = status.icon;
@@ -82,7 +86,9 @@ export function HostSidebar({
 
   const isPending = host.status === "pending";
   const isApproved = host.status === "active";
-  const showActions = !isApproved;
+  const isRejected = host.status === "rejected";
+  const isSuspended = host.status === "suspended";
+  const showActions = isPending || isApproved || isSuspended;
 
   return (
     <Card className="shadow-sm sticky top-24 overflow-hidden border-t-4 border-t-primary">
@@ -133,23 +139,47 @@ export function HostSidebar({
             {/* Action Buttons */}
             <div className="flex flex-col gap-2 w-full">
               {isPending && (
+                <>
+                  <Button
+                    onClick={onApprove}
+                    disabled={!canPromote}
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    <ThumbsUp className="h-4 w-4" />
+                    Promote to Peer Host
+                  </Button>
+                  <Button
+                    onClick={onReject}
+                    variant="outline"
+                    className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
+                  >
+                    <ThumbsDown className="h-4 w-4" />
+                    Reject Application
+                  </Button>
+                </>
+              )}
+              
+              {isApproved && onSuspend && (
                 <Button
-                  onClick={onApprove}
-                  disabled={!canPromote}
-                  className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                  onClick={onSuspend}
+                  variant="outline"
+                  className="w-full gap-2 text-orange-600 hover:text-orange-700 hover:bg-orange-50 border-orange-200"
                 >
-                  <ThumbsUp className="h-4 w-4" />
-                  Promote to Peer Host
+                  <Ban className="h-4 w-4" />
+                  Suspend Peer Host
                 </Button>
               )}
-              <Button
-                onClick={onReject}
-                variant="outline"
-                className="w-full gap-2 text-red-600 hover:text-red-700 hover:bg-red-50"
-              >
-                <ThumbsDown className="h-4 w-4" />
-                Reject Application
-              </Button>
+              
+              {isSuspended && onReactivate && (
+                <Button
+                  onClick={onReactivate}
+                  variant="outline"
+                  className="w-full gap-2 text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200"
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  Reactivate Peer Host
+                </Button>
+              )}
             </div>
 
             {isPending && blockers.length > 0 && (

@@ -53,6 +53,7 @@ import {
   ThumbsDown,
   ThumbsUp,
   XCircle,
+  Ban,
 } from "lucide-react";
 import { ExportButton } from "@/components/system-admin/export/ExportButton";
 import { exportP2PHostsToExcel } from "@/components/system-admin/export/export-utils";
@@ -64,6 +65,7 @@ import {
   type P2PHostStatus,
   type P2PHostSummary,
 } from "@/lib/admin-p2p-api";
+import { updateAdminUserStatus } from "@/lib/admin-users-api";
 
 const PAGE_SIZE = 20;
 
@@ -93,8 +95,15 @@ const p2pStatusConfig: Record<
   },
 };
 
-function P2PStatusBadge({ status }: { status: P2PHostStatus }) {
-  const { label, icon: Icon, cls } = p2pStatusConfig[status];
+function P2PStatusBadge({ host }: { host: P2PHostSummary }) {
+  if (host.accountStatus === "SUSPENDED") {
+    return (
+      <Badge variant="outline" className="gap-1 border-0 font-normal bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+        <Ban className="h-3.5 w-3.5" /> Suspended
+      </Badge>
+    );
+  }
+  const { label, icon: Icon, cls } = p2pStatusConfig[host.status];
   return (
     <Badge variant="outline" className={cn("gap-1 border-0 font-normal", cls)}>
       <Icon className="h-3.5 w-3.5" /> {label}
@@ -191,7 +200,7 @@ const EMPTY_RESULT: P2PHostListResult = {
   },
 };
 
-type DialogType = "approve" | "reject" | "blockers" | null;
+type DialogType = "approve" | "reject" | "blockers" | "suspend" | "reactivate" | null;
 
 interface DialogState {
   type: DialogType;
@@ -300,6 +309,14 @@ export function P2PApprovalPageClient() {
     setDialog({ type: "reject", host, reason: "" });
   };
 
+  const openSuspendDialog = (host: P2PHostSummary) => {
+    setDialog({ type: "suspend", host, reason: "" });
+  };
+
+  const openReactivateDialog = (host: P2PHostSummary) => {
+    setDialog({ type: "reactivate", host, reason: "" });
+  };
+
   const executeApprove = async () => {
     if (!dialog.host) return;
     setActionInProgress(dialog.host.id);
@@ -328,6 +345,38 @@ export function P2PApprovalPageClient() {
     } catch (cause) {
       setError(
         cause instanceof Error ? cause.message : "Failed to reject host",
+      );
+    } finally {
+      setActionInProgress(null);
+      setDialog(DEFAULT_DIALOG);
+    }
+  };
+
+  const executeSuspend = async () => {
+    if (!dialog.host) return;
+    setActionInProgress(dialog.host.id);
+    try {
+      await updateAdminUserStatus(dialog.host.userId, "SUSPENDED");
+      await loadHosts();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Failed to suspend host",
+      );
+    } finally {
+      setActionInProgress(null);
+      setDialog(DEFAULT_DIALOG);
+    }
+  };
+
+  const executeReactivate = async () => {
+    if (!dialog.host) return;
+    setActionInProgress(dialog.host.id);
+    try {
+      await updateAdminUserStatus(dialog.host.userId, "ACTIVE");
+      await loadHosts();
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Failed to reactivate host",
       );
     } finally {
       setActionInProgress(null);
@@ -550,7 +599,7 @@ export function P2PApprovalPageClient() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <P2PStatusBadge status={host.status} />
+                        <P2PStatusBadge host={host} />
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {fmtDate(host.submittedAt)}
@@ -585,13 +634,31 @@ export function P2PApprovalPageClient() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            {host.status !== "rejected" && (
+                            {host.status !== "approved" && host.status !== "rejected" && (
                               <DropdownMenuItem
                                 onClick={() => openRejectDialog(host)}
                                 className="text-red-600 focus:text-red-600"
                                 disabled={actionInProgress === host.id}
                               >
                                 <ThumbsDown className="mr-2 h-4 w-4" /> Reject
+                              </DropdownMenuItem>
+                            )}
+                            {host.status === "approved" && host.accountStatus !== "SUSPENDED" && (
+                              <DropdownMenuItem
+                                onClick={() => openSuspendDialog(host)}
+                                className="text-orange-600 focus:text-orange-600"
+                                disabled={actionInProgress === host.id}
+                              >
+                                <AlertTriangle className="mr-2 h-4 w-4" /> Suspend
+                              </DropdownMenuItem>
+                            )}
+                            {host.accountStatus === "SUSPENDED" && (
+                              <DropdownMenuItem
+                                onClick={() => openReactivateDialog(host)}
+                                className="text-green-600 focus:text-green-600"
+                                disabled={actionInProgress === host.id}
+                              >
+                                <CheckCircle2 className="mr-2 h-4 w-4" /> Reactivate
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>
@@ -707,6 +774,79 @@ export function P2PApprovalPageClient() {
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Reject
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Suspend Confirmation Dialog */}
+      <AlertDialog
+        open={dialog.type === "suspend"}
+        onOpenChange={(open) => !open && setDialog(DEFAULT_DIALOG)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Suspend P2P Host</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialog.host &&
+                `Are you sure you want to suspend ${dialog.host.name}'s account? This will prevent them from accessing the platform.`}
+            </AlertDialogDescription>
+            <div className="mt-4">
+              <label className="text-sm font-medium">Reason (optional)</label>
+              <Input
+                value={dialog.reason}
+                onChange={(e) =>
+                  setDialog({ ...dialog, reason: e.target.value })
+                }
+                placeholder="Enter suspension reason..."
+                className="mt-1"
+              />
+            </div>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDialog(DEFAULT_DIALOG)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeSuspend}
+              disabled={actionInProgress !== null}
+              className="bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              {actionInProgress !== null && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Suspend
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Reactivate Confirmation Dialog */}
+      <AlertDialog
+        open={dialog.type === "reactivate"}
+        onOpenChange={(open) => !open && setDialog(DEFAULT_DIALOG)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Reactivate P2P Host</AlertDialogTitle>
+            <AlertDialogDescription>
+              {dialog.host &&
+                `Are you sure you want to reactivate ${dialog.host.name}'s account? This will restore their access to the platform.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDialog(DEFAULT_DIALOG)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={executeReactivate}
+              disabled={actionInProgress !== null}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
+              {actionInProgress !== null && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Reactivate
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

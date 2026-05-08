@@ -145,6 +145,7 @@ export type P2PHostSummary = {
     pendingVerificationCount: number;
     pendingVehicleCount: number;
   };
+  accountStatus: "PENDING" | "ACTIVE" | "SUSPENDED";
 };
 
 /**
@@ -489,6 +490,7 @@ export class P2PAdminService {
           pendingVerificationCount: readiness.pendingVerificationCount,
           pendingVehicleCount: readiness.pendingVehicleCount,
         },
+        accountStatus: user.status as any,
       };
     });
 
@@ -856,10 +858,6 @@ export class P2PAdminService {
       throw ApiError.notFound("Vehicle not found");
     }
 
-    if (vehicle.status !== "PENDING_APPROVAL") {
-      throw ApiError.unprocessable("Vehicle has already been reviewed");
-    }
-
     if (vehicle.ownerType === "User") {
       const owner = await User.findById(vehicle.ownerId)
         .select("verificationLevel")
@@ -869,7 +867,10 @@ export class P2PAdminService {
         throw ApiError.notFound("Vehicle owner not found");
       }
 
-      if (owner.verificationLevel !== VerificationLevel.PEER_HOST) {
+      if (
+        data.status === "APPROVED" &&
+        owner.verificationLevel !== VerificationLevel.PEER_HOST
+      ) {
         throw ApiError.unprocessable(
           "Promote this applicant to peer host before approving vehicle listings.",
         );

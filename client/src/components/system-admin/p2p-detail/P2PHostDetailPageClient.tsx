@@ -33,6 +33,7 @@ import {
   reviewVerification,
   reviewVehicle,
 } from "@/lib/admin-p2p-api";
+import { updateAdminUserStatus } from "@/lib/admin-users-api";
 
 interface P2PHostDetailPageProps {
   hostId: string;
@@ -180,6 +181,57 @@ export default function P2PHostDetailPageClient({
     });
   };
 
+  const handleSuspendHost = () => {
+    setRejectReason("");
+    setModalConfig({
+      title: "Suspend P2P Host",
+      description: `Are you sure you want to suspend ${hostData.user.name}'s account? This will prevent them from accessing the platform.`,
+      confirmLabel: "Suspend",
+      variant: "destructive",
+      showReasonInput: true,
+      reasonValue: rejectReason,
+      onReasonChange: setRejectReason,
+      onConfirm: async () => {
+        await wait();
+        try {
+          await updateAdminUserStatus(hostData.user.id, "SUSPENDED");
+          await loadHost();
+          showSuccess("Host Suspended", "Host account has been suspended.");
+          setRejectReason("");
+        } catch (cause) {
+          addToast(
+            "error",
+            "Error",
+            cause instanceof Error ? cause.message : "Failed to suspend host",
+          );
+        }
+      },
+    });
+  };
+
+  const handleReactivateHost = () => {
+    setModalConfig({
+      title: "Reactivate P2P Host",
+      description: `Are you sure you want to reactivate ${hostData.user.name}'s account? This will restore their access to the platform.`,
+      confirmLabel: "Reactivate",
+      variant: "default",
+      onConfirm: async () => {
+        await wait();
+        try {
+          await updateAdminUserStatus(hostData.user.id, "ACTIVE");
+          await loadHost();
+          showSuccess("Host Reactivated", "Host account has been restored.");
+        } catch (cause) {
+          addToast(
+            "error",
+            "Error",
+            cause instanceof Error ? cause.message : "Failed to reactivate host",
+          );
+        }
+      },
+    });
+  };
+
   const handleApproveDoc = async (doc: DocumentItem) => {
     setModalConfig({
       title: "Approve Document",
@@ -320,12 +372,12 @@ export default function P2PHostDetailPageClient({
   };
 
   const hostStatus: HostStatus =
-    hostData.applicationStatus === "approved"
-      ? "active"
-      : hostData.applicationStatus === "rejected"
-        ? "rejected"
-        : hostData.user.status === "SUSPENDED"
-          ? "suspended"
+    hostData.user.status === "SUSPENDED"
+      ? "suspended"
+      : hostData.applicationStatus === "approved"
+        ? "active"
+        : hostData.applicationStatus === "rejected"
+          ? "rejected"
           : "pending";
 
   const resolveKycStatus = (documentType: string): KYCStatus => {
@@ -480,6 +532,8 @@ export default function P2PHostDetailPageClient({
                 blockers={hostData.reviewReadiness.blockers}
                 onApprove={handleApproveHost}
                 onReject={handleRejectHost}
+                onSuspend={handleSuspendHost}
+                onReactivate={handleReactivateHost}
               />
 
               <div className="min-w-0 flex-1">
