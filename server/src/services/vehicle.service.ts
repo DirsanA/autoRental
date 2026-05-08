@@ -121,7 +121,7 @@ export class VehicleService {
   async listPublic(filter?: "available" | "rented" | "maintenance") {
     const query = filter
       ? { status: VEHICLE_FILTER_STATUS[filter] }
-      : { status: { $ne: "SUSPENDED" } };
+      : { status: "AVAILABLE" };
     const vehicles = await Vehicle.find(query).sort({ createdAt: -1 }).lean();
 
     if (vehicles.length === 0) return [];
@@ -133,7 +133,10 @@ export class VehicleService {
    * Returns a public vehicle by id, enriched with owner summary.
    */
   async getPublicById(id: string) {
-    const vehicle = await Vehicle.findById(id).lean();
+    const vehicle = await Vehicle.findOne({
+      _id: id,
+      status: { $in: ["AVAILABLE", "BOOKED", "MAINTENANCE"] },
+    }).lean();
     if (!vehicle) return null;
 
     const [enriched] = await this.enrichWithOwners([vehicle]);
@@ -161,6 +164,8 @@ export class VehicleService {
     if (userOwnerIds.size > 0) {
       const users = await User.find({
         _id: { $in: Array.from(userOwnerIds) },
+        status: "ACTIVE",
+        verificationLevel: VerificationLevel.PEER_HOST,
       })
         .select("firstName lastName name image")
         .lean();
@@ -187,6 +192,7 @@ export class VehicleService {
     if (companyOwnerIds.size > 0) {
       const companies = await Company.find({
         _id: { $in: Array.from(companyOwnerIds) },
+        status: "ACTIVE",
       })
         .select("name logoUrl contactInfo.address location")
         .lean();
@@ -200,7 +206,7 @@ export class VehicleService {
         });
 
         const coords = Array.isArray(c.location?.coordinates)
-          ? c.location.coordinates
+          ? c?.location?.coordinates 
           : null;
         const lng =
           typeof coords?.[0] === "number" ? (coords?.[0] as number) : null;
@@ -225,30 +231,28 @@ export class VehicleService {
       }
     }
 
-    // Attach owner summaries back to lean vehicle objects
-    return vehicles.map((v) => {
-      const ownerIdStr = v.ownerId.toString();
-      const ownerSummary =
-        v.ownerType === "User"
-          ? userOwnersMap.get(ownerIdStr) || {
-              name: "Peer Host",
-              type: "peerhost",
-            }
-          : companyOwnersMap.get(ownerIdStr) || {
-              name: "Rental Company",
-              type: "company",
-            };
+    // Attach owner summaries back to lean vehicle objects and filter out those with inactive owners
+    return vehicles
+      .map((v) => {
+        const ownerIdStr = v.ownerId.toString();
+        const ownerSummary =
+          v.ownerType === "User"
+            ? userOwnersMap.get(ownerIdStr)
+            : companyOwnersMap.get(ownerIdStr);
 
-      return {
-        ...v,
-        id: v._id?.toString() || v.id,
-        owner: ownerSummary,
-        companyLocation:
-          v.ownerType === "Company"
-            ? companyLocationsMap.get(ownerIdStr) || undefined
-            : undefined,
-      };
-    });
+        if (!ownerSummary) return null;
+
+        return {
+          ...v,
+          id: v._id?.toString() || v.id,
+          owner: ownerSummary,
+          companyLocation:
+            v.ownerType === "Company"
+              ? companyLocationsMap.get(ownerIdStr) || undefined
+              : undefined,
+        };
+      })
+      .filter((v): v is any => v !== null);
   }
 
   /**
