@@ -77,8 +77,6 @@ export interface ConfirmationConfig {
   description: string;
   confirmLabel: string;
   variant: "destructive" | "default";
-  onConfirm: () => Promise<void>;
+  onConfirm: (reason?: string) => Promise<void>;
   showReasonInput?: boolean;
-  onReasonChange?: (reason: string) => void;
-  reasonValue?: string;
 }

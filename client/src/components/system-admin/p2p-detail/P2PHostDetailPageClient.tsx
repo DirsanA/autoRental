@@ -50,7 +50,6 @@ export default function P2PHostDetailPageClient({
   const [modalConfig, setModalConfig] = useState<ConfirmationConfig | null>(
     null,
   );
-  const [rejectReason, setRejectReason] = useState("");
 
   const loadHost = useCallback(async () => {
     setLoading(true);
@@ -151,25 +150,21 @@ export default function P2PHostDetailPageClient({
   };
 
   const handleRejectHost = () => {
-    setRejectReason("");
     setModalConfig({
       title: "Reject P2P Host",
       description: `Reject ${hostData.user.name}'s host application? Their pending vehicles will be marked rejected.`,
       confirmLabel: "Reject",
       variant: "destructive",
       showReasonInput: true,
-      reasonValue: rejectReason,
-      onReasonChange: setRejectReason,
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         await wait();
         try {
           await reviewP2PHost(hostId, {
             status: "rejected",
-            adminComment: rejectReason || undefined,
+            adminComment: reason || undefined,
           });
           await loadHost();
           showSuccess("Host Rejected", "Application has been rejected.");
-          setRejectReason("");
         } catch (cause) {
           addToast(
             "error",
@@ -182,22 +177,18 @@ export default function P2PHostDetailPageClient({
   };
 
   const handleSuspendHost = () => {
-    setRejectReason("");
     setModalConfig({
       title: "Suspend P2P Host",
       description: `Are you sure you want to suspend ${hostData.user.name}'s account? This will prevent them from accessing the platform.`,
       confirmLabel: "Suspend",
       variant: "destructive",
       showReasonInput: true,
-      reasonValue: rejectReason,
-      onReasonChange: setRejectReason,
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         await wait();
         try {
           await updateAdminUserStatus(hostData.user.id, "SUSPENDED");
           await loadHost();
           showSuccess("Host Suspended", "Host account has been suspended.");
-          setRejectReason("");
         } catch (cause) {
           addToast(
             "error",
@@ -258,25 +249,21 @@ export default function P2PHostDetailPageClient({
   };
 
   const handleRejectDoc = (doc: DocumentItem) => {
-    setRejectReason("");
     setModalConfig({
       title: "Reject Document",
       description: `Reject ${doc.title} for ${hostData.user.name}?`,
       confirmLabel: "Reject",
       variant: "destructive",
       showReasonInput: true,
-      reasonValue: rejectReason,
-      onReasonChange: setRejectReason,
-      onConfirm: async () => {
+      onConfirm: async (reason) => {
         await wait();
         try {
           await reviewVerification(doc.id, {
             status: "REJECTED",
-            adminComment: rejectReason || undefined,
+            adminComment: reason || undefined,
           });
           await loadHost();
           showSuccess("Document Rejected", `${doc.title} was rejected.`);
-          setRejectReason("");
         } catch (cause) {
           addToast(
             "error",
@@ -327,19 +314,14 @@ export default function P2PHostDetailPageClient({
     });
   };
 
-  const handleRejectVehicle = async (
-    vehicleId: string,
-    vehicleTitle: string,
-  ) => {
-    const reason = prompt("Enter rejection reason (optional):");
-    if (reason === null) return;
-
+  const handleRejectVehicle = (vehicleId: string, vehicleTitle: string) => {
     setModalConfig({
       title: "Reject Vehicle",
       description: `Reject ${vehicleTitle}? It will be removed from the pending queue.`,
       confirmLabel: "Reject",
       variant: "destructive",
-      onConfirm: async () => {
+      showReasonInput: true,
+      onConfirm: async (reason) => {
         await wait();
         try {
           await reviewVehicle(vehicleId, {
@@ -527,6 +509,7 @@ export default function P2PHostDetailPageClient({
                   status: hostStatus,
                   verificationLevel: hostData.user.verificationLevel,
                   accountStatus: hostData.user.status,
+                  image: hostData.user.image,
                 }}
                 canPromote={hostData.reviewReadiness.canPromote}
                 blockers={hostData.reviewReadiness.blockers}
