@@ -9,122 +9,235 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Clock, CheckCircle2 } from "lucide-react";
-import type { EarningTransaction } from "./types";
+import { 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  Wallet, 
+  Clock, 
+  CheckCircle2,
+  AlertCircle,
+  Banknote,
+  History
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function EarningsTab({ earnings }: { earnings: EarningTransaction[] }) {
-  const totalPaid = earnings
-    .filter((e) => e.payoutStatus === "paid")
-    .reduce((s, e) => s + e.amount, 0);
-  const totalPending = earnings
-    .filter((e) => e.payoutStatus === "processing")
-    .reduce((s, e) => s + e.amount, 0);
+interface WalletData {
+  availableBalance: number;
+  pendingBalance: number;
+  lifetimeEarned: number;
+  currency: string;
+}
+
+interface LedgerEntry {
+  id: string;
+  entryType: string;
+  amount: number;
+  balanceField: string;
+  before: number;
+  after: number;
+  createdAt: string;
+  metadata?: any;
+}
+
+export function WalletTab({ 
+  wallet, 
+  ledger 
+}: { 
+  wallet: WalletData | null;
+  ledger: LedgerEntry[];
+}) {
+  const formatMoney = (amount: number, currency: string = "ETB") => {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currency === "USD" ? "USD" : "ETB",
+    }).format(amount);
+  };
+
+  const getEntryTypeIcon = (type: string) => {
+    switch (type) {
+      case "ESCROW_HOLD":
+        return <Clock className="h-4 w-4 text-blue-500" />;
+      case "ESCROW_RELEASE":
+        return <ArrowUpRight className="h-4 w-4 text-green-500" />;
+      case "PAYOUT_DEBIT":
+        return <ArrowDownLeft className="h-4 w-4 text-red-500" />;
+      case "REFUND_DEBIT":
+        return <AlertCircle className="h-4 w-4 text-orange-500" />;
+      default:
+        return <Banknote className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
+
+  const getEntryTypeLabel = (type: string) => {
+    return type.replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (l) => l.toUpperCase());
+  };
+
+  const getDescription = (entry: LedgerEntry) => {
+    const meta = entry.metadata || {};
+    switch (entry.entryType) {
+      case "ESCROW_HOLD":
+        return meta.listingName ? `Hold: ${meta.listingName}` : "Booking payment held";
+      case "ESCROW_RELEASE":
+        return meta.listingName ? `Earned: ${meta.listingName}` : "Booking earnings released";
+      case "PAYOUT_DEBIT":
+        return meta.bankName ? `Withdrawal: ${meta.bankName}` : "Funds withdrawn to bank";
+      case "REFUND_DEBIT":
+        return "Refunded to customer";
+      case "COMMISSION_DEBIT":
+        return "Platform fee deduction";
+      default:
+        return getEntryTypeLabel(entry.entryType);
+    }
+  };
+
+  if (!wallet) {
+    return (
+      <div className="flex flex-col items-center justify-center py-20 bg-muted/20 rounded-xl border-2 border-dashed border-border">
+        <Wallet className="h-12 w-12 text-muted-foreground mb-4 opacity-20" />
+        <h3 className="text-lg font-semibold text-muted-foreground">No Wallet Found</h3>
+        <p className="text-sm text-muted-foreground/60 max-w-xs text-center">
+          This host hasn't performed any financial transactions yet.
+        </p>
+      </div>
+    );
+  }
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <Card className="shadow-sm border-l-4 border-l-green-500">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                Total Paid
-              </p>
-              <h3 className="text-2xl font-bold">
-                ${totalPaid.toLocaleString()}
-              </h3>
+    <div className="flex flex-col gap-8">
+      {/* Financial Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <Card className="shadow-sm border-t-4 border-t-primary rounded-xl overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-bold text-primary uppercase tracking-wider mb-1">
+                  Available Balance
+                </p>
+                <h3 className="text-3xl font-black text-foreground">
+                  {formatMoney(wallet.availableBalance, wallet.currency)}
+                </h3>
+              </div>
+              <div className="h-12 w-12 bg-primary/10 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="h-6 w-6 text-primary" />
+              </div>
             </div>
-            <div className="h-10 w-10 bg-green-100 dark:bg-green-900/30 rounded-full flex items-center justify-center">
-              <CheckCircle2 className="h-5 w-5 text-green-600 dark:text-green-400" />
-            </div>
+            <p className="mt-4 text-[10px] uppercase font-bold text-muted-foreground/60">
+              Immediate Withdrawal Available
+            </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm border-l-4 border-l-yellow-500">
-          <CardContent className="p-5 flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-muted-foreground mb-1">
-                Processing
-              </p>
-              <h3 className="text-2xl font-bold">
-                ${totalPending.toLocaleString()}
-              </h3>
+
+        <Card className="shadow-sm border-t-4 border-t-blue-500 rounded-xl overflow-hidden">
+          <CardContent className="p-6">
+            <div className="flex items-start justify-between">
+              <div>
+                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-1">
+                  Pending (Escrow)
+                </p>
+                <h3 className="text-3xl font-black text-foreground">
+                  {formatMoney(wallet.pendingBalance, wallet.currency)}
+                </h3>
+              </div>
+              <div className="h-12 w-12 bg-blue-50 rounded-full flex items-center justify-center">
+                <Clock className="h-6 w-6 text-blue-500" />
+              </div>
             </div>
-            <div className="h-10 w-10 bg-yellow-100 dark:bg-yellow-900/30 rounded-full flex items-center justify-center">
-              <Clock className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
-            </div>
+            <p className="mt-4 text-[10px] uppercase font-bold text-muted-foreground/60">
+              Awaiting Booking Completion
+            </p>
           </CardContent>
         </Card>
       </div>
 
-      <div className="rounded-xl border bg-card overflow-hidden shadow-sm">
-        <CardHeader className="py-4 border-b bg-muted/20">
-          <CardTitle className="text-base font-semibold">
-            Payout History
-          </CardTitle>
-        </CardHeader>
-        <Table>
-          <TableHeader className="bg-muted/50 hidden sm:table-header-group">
-            <TableRow className="hover:bg-transparent">
-              <TableHead>Date</TableHead>
-              <TableHead>Source</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="text-right">Amount</TableHead>
-              <TableHead className="w-[100px] text-right">Action</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {earnings.length === 0 ? (
-              <TableRow>
-                <TableCell
-                  colSpan={5}
-                  className="text-center py-12 text-muted-foreground"
-                >
-                  No earnings data available yet.
-                </TableCell>
+      {/* Transaction Ledger */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-primary/10 rounded-md">
+              <History className="h-5 w-5 text-primary" />
+            </div>
+            <h2 className="text-lg font-bold tracking-tight">Recent Transactions</h2>
+          </div>
+          <Badge variant="outline" className="font-bold text-[10px] uppercase tracking-wider px-2 py-0.5">
+            Full Ledger
+          </Badge>
+        </div>
+
+        <Card className="shadow-sm border rounded-xl overflow-hidden bg-card">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow className="hover:bg-transparent border-b">
+                <TableHead className="font-bold text-foreground h-12">Date</TableHead>
+                <TableHead className="font-bold text-foreground h-12">Activity</TableHead>
+                <TableHead className="font-bold text-foreground h-12">Wallet</TableHead>
+                <TableHead className="text-right font-bold text-foreground h-12">Amount</TableHead>
               </TableRow>
-            ) : (
-              earnings.map((e) => (
-                <TableRow key={e.id} className="hover:bg-muted/50 group">
-                  <TableCell className="font-medium text-sm whitespace-nowrap">
-                    {new Date(e.date).toLocaleDateString()}
-                  </TableCell>
-                  <TableCell className="text-sm text-muted-foreground truncate max-w-[200px]">
-                    {e.listingName}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "font-normal border-0 capitalize",
-                        e.payoutStatus === "paid"
-                          ? "bg-green-100 text-green-800"
-                          : e.payoutStatus === "processing"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-red-100 text-red-800",
-                      )}
-                    >
-                      {e.payoutStatus}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right font-semibold tabular-nums text-sm">
-                    ${e.amount.toFixed(2)}
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="hidden group-hover:inline-flex h-8 px-2 text-xs"
-                    >
-                      Receipt
-                    </Button>
+            </TableHeader>
+            <TableBody>
+              {ledger.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={4}
+                    className="text-center py-12 text-muted-foreground font-medium"
+                  >
+                    No transaction history found.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
+              ) : (
+                ledger.map((entry) => {
+                  const isDebit = ["PAYOUT_DEBIT", "REFUND_DEBIT", "COMMISSION_DEBIT"].includes(entry.entryType);
+                  return (
+                    <TableRow key={entry.id} className="hover:bg-muted/30 border-b last:border-0">
+                      <TableCell className="font-medium whitespace-nowrap text-sm">
+                        {new Date(entry.createdAt).toLocaleDateString(undefined, {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex items-center gap-3">
+                          <div className="shrink-0 p-1.5 bg-background rounded-full border shadow-sm">
+                            {getEntryTypeIcon(entry.entryType)}
+                          </div>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-bold text-sm truncate">
+                              {getDescription(entry)}
+                            </span>
+                            <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                              {getEntryTypeLabel(entry.entryType)}
+                            </span>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                         <Badge 
+                          variant="secondary" 
+                          className={cn(
+                            "rounded-md px-1.5 py-0 text-[10px] font-bold uppercase",
+                            entry.balanceField === "pendingBalance" 
+                              ? "bg-blue-100 text-blue-700" 
+                              : "bg-green-100 text-green-700"
+                          )}
+                        >
+                          {entry.balanceField.replace("Balance", "")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className={cn(
+                        "text-right font-bold tabular-nums text-sm",
+                        isDebit ? "text-red-600" : "text-green-600"
+                      )}>
+                        {isDebit ? "-" : "+"}{formatMoney(entry.amount, wallet.currency)}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </Card>
       </div>
     </div>
   );

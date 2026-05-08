@@ -15,7 +15,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { HostSidebar } from "./HostSidebar";
 import { VerificationTab } from "./VerificationTab";
 import { ListingsTab } from "./ListingsTab";
-import { EarningsTab } from "./EarningsTab";
+import { WalletTab } from "./EarningsTab";
 import { ToastContainer } from "./ToastContainer";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useToast } from "./useToast";
@@ -533,9 +533,9 @@ export default function P2PHostDetailPageClient({
                         {listings.length}
                       </span>
                     </TabsTrigger>
-                    <TabsTrigger value="earnings" className="gap-2">
+                    <TabsTrigger value="wallet" className="gap-2">
                       <DollarSign className="hidden h-4 w-4 sm:block" />
-                      Earnings
+                      Wallet
                     </TabsTrigger>
                   </TabsList>
 
@@ -564,11 +564,11 @@ export default function P2PHostDetailPageClient({
                     />
                   </TabsContent>
 
-                  <TabsContent
-                    value="earnings"
-                    className="mt-0 focus-visible:ring-0"
-                  >
-                    <EarningsTab earnings={[]} />
+                  <TabsContent value="wallet" className="space-y-6">
+                    <WalletTab
+                      wallet={hostData.wallet}
+                      ledger={hostData.ledger}
+                    />
                   </TabsContent>
                 </Tabs>
               </div>

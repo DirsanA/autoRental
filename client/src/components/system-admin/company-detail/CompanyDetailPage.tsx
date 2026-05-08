@@ -48,6 +48,7 @@ import {
   rejectPendingCompany,
 } from "@/lib/admin-companies-api";
 import { CompanyFleetTab } from "./CompanyFleetTab";
+import { WalletTab } from "../p2p-detail/EarningsTab";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -421,6 +422,7 @@ export default function CompanyDetailPage({
                   <TabsTrigger value="overview">Overview</TabsTrigger>
                   <TabsTrigger value="documents">Documents</TabsTrigger>
                   <TabsTrigger value="fleet">Fleet</TabsTrigger>
+                  <TabsTrigger value="wallet">Wallet</TabsTrigger>
                 </TabsList>
 
                 {/* OVERVIEW TAB */}
@@ -454,7 +456,9 @@ export default function CompanyDetailPage({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="text-lg font-semibold">
-                        {formatMoney(company.walletBalance)}
+                        {company.wallet 
+                          ? formatMoney(company.wallet.availableBalance)
+                          : formatMoney(company.walletBalance)}
                       </CardContent>
                     </Card>
                     <Card>
@@ -1060,6 +1064,14 @@ export default function CompanyDetailPage({
                 {/* FLEET TAB */}
                 <TabsContent value="fleet">
                   <CompanyFleetTab companyId={company.id} />
+                </TabsContent>
+
+                {/* WALLET TAB */}
+                <TabsContent value="wallet" className="space-y-6">
+                  <WalletTab 
+                    wallet={company.wallet}
+                    ledger={company.ledger}
+                  />
                 </TabsContent>
               </Tabs>
             ) : null}

@@ -46,8 +46,7 @@
 }
 
 :root {
-  --font-geist-sans:
-    "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-geist-sans: "Segoe UI", "Helvetica Neue", Helvetica, Arial, sans-serif;
   --font-geist-mono:
     "Cascadia Code", "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   --radius: 0.625rem;
