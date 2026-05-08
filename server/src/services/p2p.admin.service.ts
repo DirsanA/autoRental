@@ -5,8 +5,7 @@ import { Vehicle } from "../models/Vehicle.js";
 import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
-import { userPersistenceService } from "./user.persistence.service.js";
-import { notificationDispatcher } from "./notification.dispatcher.js";
+import { walletService } from "./wallet.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type {
   AdminP2PListQueryInput,
@@ -210,6 +209,22 @@ export type P2PHostDetail = {
     rejectedVehicles: number;
     totalVerifications: number;
   };
+  wallet: {
+    availableBalance: number;
+    pendingBalance: number;
+    lifetimeEarned: number;
+    currency: string;
+  } | null;
+  ledger: Array<{
+    id: string;
+    entryType: string;
+    amount: number;
+    balanceField: string;
+    before: number;
+    after: number;
+    createdAt: Date;
+    metadata?: any;
+  }>;
 };
 
 function deriveApplicationStatus(input: {
@@ -536,11 +551,13 @@ export class P2PAdminService {
       throw ApiError.notFound("User not found");
     }
 
-    const [verifications, vehicles] = await Promise.all([
+    const [verifications, vehicles, wallet, ledger] = await Promise.all([
       Verification.find({ userId: user._id }).sort({ createdAt: -1 }).lean(),
       Vehicle.find({ ownerId: user._id, ownerType: "User" })
         .sort({ createdAt: -1 })
         .lean(),
+      walletService.getWalletByOwner(user._id, "User"),
+      walletService.getLedgerByOwner(user._id, "User"),
     ]);
 
     if (verifications.length === 0 && vehicles.length === 0) {
@@ -629,6 +646,24 @@ export class P2PAdminService {
         rejectedVehicles,
         totalVerifications: verifications.length,
       },
+      wallet: wallet
+        ? {
+            availableBalance: wallet.availableBalance,
+            pendingBalance: wallet.pendingBalance,
+            lifetimeEarned: wallet.lifetimeEarned,
+            currency: wallet.currency,
+          }
+        : null,
+      ledger: ledger.map((entry) => ({
+        id: entry._id.toString(),
+        entryType: entry.entryType,
+        amount: entry.amount,
+        balanceField: entry.balanceField,
+        before: entry.before,
+        after: entry.after,
+        createdAt: entry.createdAt!,
+        metadata: entry.metadata,
+      })),
     };
   }
 

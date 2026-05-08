@@ -118,6 +118,22 @@ export type P2PHostDetail = {
     rejectedVehicles: number;
     totalVerifications: number;
   };
+  wallet: {
+    availableBalance: number;
+    pendingBalance: number;
+    lifetimeEarned: number;
+    currency: string;
+  } | null;
+  ledger: Array<{
+    id: string;
+    entryType: string;
+    amount: number;
+    balanceField: string;
+    before: number;
+    after: number;
+    createdAt: string;
+    metadata?: any;
+  }>;
 };
 
 /**

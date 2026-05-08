@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { companyService } from "../services/company.service.js";
+import { walletService } from "../services/wallet.service.js";
 import { notificationDispatcher } from "../services/notification.dispatcher.js";
 import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
@@ -182,17 +183,22 @@ export const companyController = {
 
     // 3. Fetch verification docs for the owner/company
     const authUserObjectId = authAccount?._id ?? null;
-    const verificationDocs = authUserObjectId
-      ? await Verification.find({
-          $or: [{ userId: authUserObjectId }, { companyId: company._id }],
-          documentType: { $in: ["NATIONAL_ID", "DRIVER_LICENSE", "PASSPORT"] },
-        })
-          .select(
-            "documentType documentFrontUrl documentBackUrl status createdAt updatedAt",
-          )
-          .sort({ createdAt: -1 })
-          .lean()
-      : [];
+    const [verificationDocs, wallet, ledger] = await Promise.all([
+      Verification.find({
+        $or: [
+          ...(authUserObjectId ? [{ userId: authUserObjectId }] : []),
+          { companyId: company._id },
+        ],
+        documentType: { $in: ["NATIONAL_ID", "DRIVER_LICENSE", "PASSPORT"] },
+      })
+        .select(
+          "documentType documentFrontUrl documentBackUrl status createdAt updatedAt",
+        )
+        .sort({ createdAt: -1 })
+        .lean(),
+      walletService.getWalletByOwner(company._id, "Company"),
+      walletService.getLedgerByOwner(company._id, "Company"),
+    ]);
 
     res.json({
       success: true,
@@ -222,6 +228,24 @@ export const companyController = {
               updatedAt: doc.updatedAt ?? null,
             })),
           },
+          wallet: wallet
+            ? {
+                availableBalance: wallet.availableBalance,
+                pendingBalance: wallet.pendingBalance,
+                lifetimeEarned: wallet.lifetimeEarned,
+                currency: wallet.currency,
+              }
+            : null,
+          ledger: ledger.map((entry) => ({
+            id: entry._id.toString(),
+            entryType: entry.entryType,
+            amount: entry.amount,
+            balanceField: entry.balanceField,
+            before: entry.before,
+            after: entry.after,
+            createdAt: entry.createdAt!,
+            metadata: entry.metadata,
+          })),
         },
       },
     });

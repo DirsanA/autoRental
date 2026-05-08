@@ -71,6 +71,22 @@ export type AdminCompanyDetail = AdminCompanySummary & {
   } | null;
   pendingChanges: Record<string, any> | null;
   pendingChangesRequestedAt: string | null;
+  wallet: {
+    availableBalance: number;
+    pendingBalance: number;
+    lifetimeEarned: number;
+    currency: string;
+  } | null;
+  ledger: Array<{
+    id: string;
+    entryType: string;
+    amount: number;
+    balanceField: string;
+    before: number;
+    after: number;
+    createdAt: string;
+    metadata?: any;
+  }>;
 };
 
 export type AdminCompaniesPagination = {
@@ -254,6 +270,8 @@ function mapApiCompanyToDetail(company: ApiCompany): AdminCompanyDetail {
       : null,
     pendingChanges: company.pendingChanges || null,
     pendingChangesRequestedAt: company.pendingChangesRequestedAt || null,
+    wallet: (company as any).wallet || null,
+    ledger: (company as any).ledger || [],
   };
 }
 
