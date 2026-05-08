@@ -28,6 +28,7 @@ interface HostSidebarProps {
     status: HostStatus;
     verificationLevel: string;
     accountStatus: string;
+    image: string | null;
   };
   canPromote: boolean;
   blockers: string[];
@@ -94,8 +95,18 @@ export function HostSidebar({
     <Card className="shadow-sm sticky top-24 overflow-hidden border-t-4 border-t-primary">
       <CardContent className="pt-8 pb-6 flex flex-col items-center text-center">
         {/* Avatar */}
-        <div className="h-24 w-24 rounded-full bg-gradient-to-tr from-primary/80 to-primary/40 flex items-center justify-center shadow-lg mb-4 text-white text-3xl font-semibold">
-          {initials}
+        <div className="h-24 w-24 rounded-full overflow-hidden flex items-center justify-center shadow-lg mb-4 border-2 border-white dark:border-gray-700 bg-muted">
+          {host.image ? (
+            <img
+              src={host.image}
+              alt={host.name}
+              className="h-full w-full object-cover"
+            />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center bg-gradient-to-tr from-primary/80 to-primary/40 text-white text-3xl font-semibold">
+              {initials}
+            </div>
+          )}
         </div>
 
         {/* Identity */}
