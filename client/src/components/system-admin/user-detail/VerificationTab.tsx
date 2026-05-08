@@ -612,7 +612,10 @@ export function VerificationTab({ user }: VerificationTabProps) {
 
   const handleVerificationAction = async (action: VerificationAction) => {
     try {
-      if (action.action === "promote_id" || action.action === "promote_license") {
+      if (
+        action.action === "promote_id" ||
+        action.action === "promote_license"
+      ) {
         // Handle promotion actions
         const updatedUser = await promoteUserVerificationLevel(
           user.id,
@@ -830,7 +833,7 @@ export function VerificationTab({ user }: VerificationTabProps) {
           </CardContent>
         </Card>
 
-        <Card className="border-none shadow-sm ring-1 ring-border">
+        <Card className="border-none shadow-sm ring-1 ring-border overflow-hidden">
           <CardHeader>
             <CardTitle>Submission History</CardTitle>
             <CardDescription>

@@ -5,6 +5,16 @@ import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Loader2, RefreshCcw, ShieldCheck, UserCog, Users } from "lucide-react";
 import { ExportButton } from "@/components/system-admin/export/ExportButton";
@@ -74,6 +84,7 @@ export default function UserManagementPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [pendingUserId, setPendingUserId] = useState<string | null>(null);
+  const [deleteDialogUser, setDeleteDialogUser] = useState<User | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -161,14 +172,6 @@ export default function UserManagementPage() {
   const handleActivate = (user: User) =>
     applyStatusUpdate(user, "ACTIVE", "User updated", "{name} is now active.");
 
-  const handleMarkPending = (user: User) =>
-    applyStatusUpdate(
-      user,
-      "PENDING",
-      "User updated",
-      "{name} has been moved back to pending.",
-    );
-
   const handleSuspend = (user: User) =>
     applyStatusUpdate(
       user,
@@ -177,18 +180,20 @@ export default function UserManagementPage() {
       "{name} is now suspended.",
     );
 
-  const handleDelete = async (user: User) => {
-    if (!window.confirm(`Delete ${user.name}? This action cannot be undone.`)) {
-      return;
-    }
+  const handleDeleteClick = (user: User) => {
+    setDeleteDialogUser(user);
+  };
 
-    setPendingUserId(user.id);
+  const handleDeleteConfirm = async () => {
+    if (!deleteDialogUser) return;
+
+    setPendingUserId(deleteDialogUser.id);
 
     try {
-      await deleteAdminUser(user.id);
+      await deleteAdminUser(deleteDialogUser.id);
       toast({
         title: "User deleted",
-        description: `${user.name} removed successfully.`,
+        description: `${deleteDialogUser.name} removed successfully.`,
       });
 
       if (users.length === 1 && page > 1) {
@@ -205,6 +210,7 @@ export default function UserManagementPage() {
       });
     } finally {
       setPendingUserId(null);
+      setDeleteDialogUser(null);
     }
   };
 
@@ -319,9 +325,8 @@ export default function UserManagementPage() {
                 pendingUserId={pendingUserId}
                 onView={handleView}
                 onActivate={handleActivate}
-                onMarkPending={handleMarkPending}
                 onSuspend={handleSuspend}
-                onDelete={handleDelete}
+                onDelete={handleDeleteClick}
               />
 
               <div className="flex items-center justify-between">
@@ -359,6 +364,32 @@ export default function UserManagementPage() {
           )}
         </Main>
       </div>
+
+      <AlertDialog
+        open={!!deleteDialogUser}
+        onOpenChange={(open) => !open && setDeleteDialogUser(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete User</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {deleteDialogUser?.name}? This
+              action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setDeleteDialogUser(null)}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDeleteConfirm}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

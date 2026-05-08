@@ -14,12 +14,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import {
-  CarFront,
-  CreditCard,
-  MessageSquareText,
-  NotebookPen,
-} from "lucide-react";
+import { CarFront, CreditCard, NotebookPen } from "lucide-react";
 import type { UserFullDetail } from "./types";
 import { formatDateTime, formatLabel, formatMoney } from "./formatters";
 
@@ -67,11 +62,10 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
   const bookings = user.recentBookings.slice(0, 3);
   const transactions = user.recentTransactions.slice(0, 3);
   const reviews = user.recentReviews.slice(0, 2);
-  const disputes = user.recentDisputes.slice(0, 2);
 
   return (
     <div className="grid gap-6">
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-3">
         <SummaryCard
           title="Owned Vehicles"
           value={user.metrics.vehiclesOwned}
@@ -83,11 +77,6 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
           icon={NotebookPen}
         />
         <SummaryCard
-          title="Disputes"
-          value={user.metrics.disputesRaised + user.metrics.disputesAgainst}
-          icon={MessageSquareText}
-        />
-        <SummaryCard
           title="Total Received"
           value={formatMoney(user.metrics.totalReceived)}
           icon={CreditCard}
@@ -97,7 +86,7 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
       <Accordion
         type="multiple"
         defaultValue={["vehicles", "bookings"]}
-        className="grid gap-4"
+        className="grid gap-4 overflow-hidden"
       >
         <AccordionItem
           value="vehicles"
@@ -189,7 +178,8 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
             <div className="text-left">
               <div className="text-lg font-semibold">Recent Bookings</div>
               <div className="text-sm text-muted-foreground">
-                The latest booking activity where this user is directly involved.
+                The latest booking activity where this user is directly
+                involved.
               </div>
             </div>
           </AccordionTrigger>
@@ -232,75 +222,39 @@ export function RelatedRecordsTab({ user }: RelatedRecordsTabProps) {
         >
           <AccordionTrigger className="py-5 hover:no-underline">
             <div className="text-left">
-              <div className="text-lg font-semibold">Trust Signals</div>
+              <div className="text-lg font-semibold">Reviews</div>
               <div className="text-sm text-muted-foreground">
-                Recent reviews and dispute activity that could affect admin decisions.
+                Recent reviews from user activity.
               </div>
             </div>
           </AccordionTrigger>
           <AccordionContent className="pb-5">
-            <div className="grid gap-6 lg:grid-cols-2">
-              <div className="grid gap-3">
-                <div className="text-sm font-semibold text-muted-foreground">
-                  Reviews
-                </div>
-                {reviews.length === 0 ? (
-                  <EmptyState message="No linked reviews were found." />
-                ) : (
-                  reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-2xl border bg-muted/10 p-4"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="font-normal">
-                          {formatLabel(review.relation)}
-                        </Badge>
-                        <Badge variant="outline" className="font-normal">
-                          {formatLabel(review.targetType)}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 text-sm font-medium">
-                        Rating: {review.rating ?? "N/A"}
-                      </div>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        {review.comment || "No review comment provided."}
-                      </div>
+            <div className="grid gap-3">
+              {reviews.length === 0 ? (
+                <EmptyState message="No linked reviews were found." />
+              ) : (
+                reviews.map((review) => (
+                  <div
+                    key={review.id}
+                    className="rounded-2xl border bg-muted/10 p-4"
+                  >
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="secondary" className="font-normal">
+                        {formatLabel(review.relation)}
+                      </Badge>
+                      <Badge variant="outline" className="font-normal">
+                        {formatLabel(review.targetType)}
+                      </Badge>
                     </div>
-                  ))
-                )}
-              </div>
-
-              <div className="grid gap-3">
-                <div className="text-sm font-semibold text-muted-foreground">
-                  Disputes
-                </div>
-                {disputes.length === 0 ? (
-                  <EmptyState message="No linked disputes were found." />
-                ) : (
-                  disputes.map((dispute) => (
-                    <div
-                      key={dispute.id}
-                      className="rounded-2xl border bg-muted/10 p-4"
-                    >
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Badge variant="secondary" className="font-normal">
-                          {formatLabel(dispute.relation)}
-                        </Badge>
-                        <Badge variant="outline" className="font-normal">
-                          {formatLabel(dispute.status)}
-                        </Badge>
-                      </div>
-                      <div className="mt-3 font-medium">
-                        {formatLabel(dispute.issueCategory)}
-                      </div>
-                      <div className="mt-2 text-sm text-muted-foreground">
-                        {formatDateTime(dispute.createdAt)}
-                      </div>
+                    <div className="mt-3 text-sm font-medium">
+                      Rating: {review.rating ?? "N/A"}
                     </div>
-                  ))
-                )}
-              </div>
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {review.comment || "No review comment provided."}
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </AccordionContent>
         </AccordionItem>

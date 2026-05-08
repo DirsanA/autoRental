@@ -23,7 +23,6 @@ import {
   Eye,
   Loader2,
   MoreHorizontal,
-  RotateCcw,
   Trash2,
 } from "lucide-react";
 import { StatusBadge } from "./StatusBadge";
@@ -35,7 +34,6 @@ interface UserTableProps {
   pendingUserId?: string | null;
   onView: (user: User) => void;
   onActivate: (user: User) => void;
-  onMarkPending: (user: User) => void;
   onSuspend: (user: User) => void;
   onDelete: (user: User) => void;
 }
@@ -48,7 +46,6 @@ export function UserTable({
   pendingUserId,
   onView,
   onActivate,
-  onMarkPending,
   onSuspend,
   onDelete,
 }: UserTableProps) {
@@ -82,12 +79,20 @@ export function UserTable({
     return colors[name.charCodeAt(0) % colors.length];
   };
 
-  const getAccountTypeLabel = (user: User) =>
-    user.accountType === "ADMIN"
-      ? "Admin"
-      : user.accountType === "USER"
-        ? "User"
-        : "Unknown";
+  const getRoleLabel = (role: string) => {
+    switch (role?.toUpperCase()) {
+      case "ADMIN":
+        return "ADMIN";
+      case "USER":
+        return "RENTER";
+      case "PEER_HOST":
+        return "PEERHOST";
+      case "COMPANY":
+        return "COMPANY";
+      default:
+        return role?.toUpperCase() || "UNKNOWN";
+    }
+  };
   console.log("Rendering UserTable with users:", users);
   return (
     <div className="rounded-xl border bg-card shadow-sm">
@@ -96,7 +101,6 @@ export function UserTable({
           <TableRow className="hover:bg-transparent">
             <TableHead className="w-[280px]">User</TableHead>
             <TableHead>Role</TableHead>
-            <TableHead>Account Type</TableHead>
             <TableHead>Status</TableHead>
             <TableHead>Joined</TableHead>
             <TableHead className="w-[72px] text-right">Actions</TableHead>
@@ -107,7 +111,7 @@ export function UserTable({
           {users.length === 0 ? (
             <TableRow>
               <TableCell
-                colSpan={6}
+                colSpan={5}
                 className="py-14 text-center text-muted-foreground"
               >
                 No users found for the current filters.
@@ -137,10 +141,8 @@ export function UserTable({
 
                       <div className="min-w-0">
                         <div className="font-medium">{user.name}</div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <span>@{user.username}</span>
-                          <span>/</span>
-                          <span className="truncate">{user.email}</span>
+                        <div className="text-sm text-muted-foreground truncate">
+                          {user.email}
                         </div>
                       </div>
                     </div>
@@ -148,14 +150,8 @@ export function UserTable({
 
                   <TableCell>
                     <div className="inline-block rounded-md bg-muted/50 px-2 py-1 font-mono text-sm">
-                      {user.role}
+                      {getRoleLabel(user.role)}
                     </div>
-                  </TableCell>
-
-                  <TableCell>
-                    <Badge variant="secondary" className="font-normal">
-                      {getAccountTypeLabel(user)}
-                    </Badge>
                   </TableCell>
 
                   <TableCell>
@@ -197,16 +193,6 @@ export function UserTable({
                               Mark active
                             </DropdownMenuItem>
                           )}
-
-                          {user.status !== "inactive" &&
-                            user.status !== "invited" && (
-                              <DropdownMenuItem
-                                onClick={() => onMarkPending(user)}
-                              >
-                                <RotateCcw className="mr-2 h-4 w-4" />
-                                Move to pending
-                              </DropdownMenuItem>
-                            )}
 
                           {user.status !== "suspended" && (
                             <DropdownMenuItem onClick={() => onSuspend(user)}>

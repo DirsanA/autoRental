@@ -3,8 +3,8 @@ import {
   fetchAdminUserDetail,
   mapUiStatusToApi,
   updateAdminUserStatus,
-  updateAdminUserVerification,
   updateAdminUserVerificationLevel,
+  updateAdminUserVerification,
 } from "@/lib/admin-users-api";
 import type {
   UserStatus,
@@ -31,11 +31,13 @@ export async function updateVerificationStatus(
   action: "approve" | "reject",
   comment?: string,
 ): Promise<UserVerificationRecord> {
+  // Always force=true to allow reversing decisions (approve -> reject or reject -> approve)
   return updateAdminUserVerification(
     userId,
     verificationId,
     action === "approve" ? "APPROVED" : "REJECTED",
     comment,
+    true,
   );
 }
 

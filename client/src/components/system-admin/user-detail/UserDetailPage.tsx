@@ -12,7 +12,6 @@ import {
   Ban,
   CheckCircle2,
   FileText,
-  RotateCcw,
   ShieldCheck,
   Trash2,
 } from "lucide-react";
@@ -72,28 +71,22 @@ export function UserDetailPage({ userId }: { userId: string }) {
   }, [userId]);
 
   const handleStatusChange = (nextStatus: UserStatus) => {
-    const isDestructive =
-      nextStatus === "suspended" || nextStatus === "inactive";
+    const isDestructive = nextStatus === "suspended";
 
     setModalConfig({
-      title:
-        nextStatus === "active"
-          ? "Activate User"
-          : nextStatus === "suspended"
-            ? "Suspend User"
-            : "Mark User as Pending",
+      title: nextStatus === "active" ? "Activate User" : "Suspend User",
       description:
         nextStatus === "active"
           ? "Restore this user account and allow access again?"
-          : nextStatus === "suspended"
-            ? "Suspend this user and remove platform access immediately?"
-            : "Move this account back to the pending state?",
+          : "Suspend this user and remove platform access immediately?",
       confirmLabel: "Confirm",
       variant: isDestructive ? "destructive" : "default",
       onConfirm: async () => {
         try {
           const updated = await updateAdminUserDetailStatus(userId, nextStatus);
-          setUser((current) => (current ? { ...current, ...updated } : current));
+          setUser((current) =>
+            current ? { ...current, ...updated } : current,
+          );
           toast({
             title: "User updated",
             description: `User is now ${updated.status}.`,
@@ -141,7 +134,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
 
         <Main className="overflow-y-auto p-6 md:p-8">
           <div className="mx-auto w-full max-w-6xl">
-            <div className="mb-6 flex items-center justify-between gap-4">
+            <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <button
                 onClick={() => router.push("/sysadmin/users")}
                 className="inline-flex items-center gap-1.5 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
@@ -160,17 +153,6 @@ export function UserDetailPage({ userId }: { userId: string }) {
                   >
                     <CheckCircle2 className="h-4 w-4" />
                     Activate
-                  </Button>
-                ) : null}
-                {user?.status !== "inactive" && user?.status !== "invited" ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="gap-2"
-                    onClick={() => handleStatusChange("inactive")}
-                  >
-                    <RotateCcw className="h-4 w-4" />
-                    Move To Pending
                   </Button>
                 ) : null}
                 {user?.status !== "suspended" ? (
@@ -205,7 +187,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
                 {loadError}
               </div>
             ) : user ? (
-              <div className="grid grid-cols-1 items-start gap-8 md:grid-cols-[300px_1fr] lg:grid-cols-[320px_1fr]">
+              <div className="grid grid-cols-1 items-start gap-8 lg:grid-cols-[300px_1fr]">
                 <UserSidebar
                   user={user}
                   onStatusChange={handleStatusChange}
@@ -243,7 +225,10 @@ export function UserDetailPage({ userId }: { userId: string }) {
                       <VerificationTab user={user} />
                     </TabsContent>
 
-                    <TabsContent value="records" className="mt-6 focus-visible:ring-0">
+                    <TabsContent
+                      value="records"
+                      className="mt-6 focus-visible:ring-0"
+                    >
                       <RelatedRecordsTab user={user} />
                     </TabsContent>
                   </Tabs>

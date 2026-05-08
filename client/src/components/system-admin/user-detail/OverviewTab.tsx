@@ -88,7 +88,7 @@ export function OverviewTab({ user }: OverviewTabProps) {
   return (
     <div className="grid gap-6">
       {/* Key Metrics */}
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         <MetricCard
           label="Active Bookings"
           value={user.metrics.activeBookingsAsRenter}
@@ -103,11 +103,6 @@ export function OverviewTab({ user }: OverviewTabProps) {
           label="Wallet Balance"
           value={formatMoney(user.walletBalance)}
           icon={Wallet}
-        />
-        <MetricCard
-          label="Total Reviews"
-          value={user.metrics.reviewsReceived}
-          icon={ShieldCheck}
         />
       </div>
 
@@ -207,7 +202,7 @@ export function OverviewTab({ user }: OverviewTabProps) {
         </CardContent>
       </Card>
 
-      <div className="grid gap-6 xl:grid-cols-[0.95fr_1.05fr]">
+      <div className="grid gap-6 xl:grid-cols-2">
         {/* Company Information */}
         <Card className="border-none shadow-sm ring-1 ring-border">
           <CardHeader>
@@ -235,16 +230,16 @@ export function OverviewTab({ user }: OverviewTabProps) {
                     </div>
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
+                <div className="grid gap-4 grid-cols-1 sm:grid-cols-2">
+                  <div className="min-w-0">
                     <div className="text-sm text-muted-foreground">
                       Contact Email
                     </div>
-                    <div className="mt-1 font-medium">
+                    <div className="mt-1 font-medium break-words">
                       {user.company.contactEmail || "Not provided"}
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm text-muted-foreground">
                       Contact Phone
                     </div>
@@ -252,16 +247,31 @@ export function OverviewTab({ user }: OverviewTabProps) {
                       {user.company.contactPhone || "Not provided"}
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm text-muted-foreground">TIN</div>
                     <div className="mt-1 font-medium">
                       {user.company.tinNumber || "Not provided"}
                     </div>
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="text-sm text-muted-foreground">Website</div>
-                    <div className="mt-1 font-medium">
-                      {user.company.website || "Not provided"}
+                    <div className="mt-1 font-medium break-words">
+                      {user.company.website ? (
+                        <a
+                          href={
+                            user.company.website.startsWith("http")
+                              ? user.company.website
+                              : `https://${user.company.website}`
+                          }
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-primary hover:underline"
+                        >
+                          {user.company.website}
+                        </a>
+                      ) : (
+                        "Not provided"
+                      )}
                     </div>
                   </div>
                 </div>
@@ -297,12 +307,6 @@ export function OverviewTab({ user }: OverviewTabProps) {
               </div>
               <div className="mt-1 text-xl font-semibold">
                 {user.metrics.reviewsWritten}
-              </div>
-            </div>
-            <div className="rounded-2xl bg-muted/20 p-4">
-              <div className="text-sm text-muted-foreground">Disputes</div>
-              <div className="mt-1 text-xl font-semibold">
-                {user.metrics.disputesRaised + user.metrics.disputesAgainst}
               </div>
             </div>
             <div className="rounded-2xl bg-muted/20 p-4">

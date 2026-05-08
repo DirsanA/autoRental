@@ -744,6 +744,7 @@ export async function updateAdminUserVerification(
   verificationId: string,
   status: "APPROVED" | "REJECTED",
   adminComment?: string,
+  force?: boolean,
 ): Promise<AdminUserVerificationRecord> {
   const response = await fetch(
     `${API_BASE_URL}/verifications/${encodeURIComponent(verificationId)}`,
@@ -755,6 +756,7 @@ export async function updateAdminUserVerification(
       body: JSON.stringify({
         status,
         adminComment: adminComment || undefined,
+        force: force ?? true,
       }),
     }),
   );
