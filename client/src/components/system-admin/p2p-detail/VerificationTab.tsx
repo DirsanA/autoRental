@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { downloadFile, isPdfUrl, isImageUrl, fetchAuthenticatedBlob } from "@/lib/download-utils";
+import { Loader2 } from "lucide-react";
 
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +15,7 @@ import {
   Eye,
   HelpCircle,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import {
   Dialog,
@@ -85,6 +88,29 @@ export function VerificationTab({
   const [viewerSrc, setViewerSrc] = useState<string | null>(null);
   const [viewerTitle, setViewerTitle] = useState("");
   const [viewerDoc, setViewerDoc] = useState<DocumentItem | null>(null);
+  const [viewerBlobUrl, setViewerBlobUrl] = useState<string | null>(null);
+  const [viewerLoading, setViewerLoading] = useState(false);
+
+  useEffect(() => {
+    if (viewerSrc) {
+      setViewerLoading(true);
+      fetchAuthenticatedBlob(viewerSrc)
+        .then((url) => {
+          setViewerBlobUrl(url);
+        })
+        .catch((err) => {
+          console.error("Failed to load viewer document:", err);
+        })
+        .finally(() => {
+          setViewerLoading(false);
+        });
+    } else {
+      if (viewerBlobUrl) {
+        window.URL.revokeObjectURL(viewerBlobUrl);
+      }
+      setViewerBlobUrl(null);
+    }
+  }, [viewerSrc]);
 
   const getVerificationByDoc = (doc: DocumentItem) => {
     return verifications.find((v) => v.id === doc.id);
@@ -266,32 +292,81 @@ export function VerificationTab({
             <DialogTitle>{viewerTitle}</DialogTitle>
             <DialogDescription>Review KYC document.</DialogDescription>
           </DialogHeader>
-          <div className="relative flex justify-center bg-muted/40 rounded-md overflow-hidden p-4 border max-h-[65vh]">
-            <img src={viewerSrc || ""} alt={viewerTitle} className="object-contain w-full h-full" />
+          <div className="relative flex justify-center bg-muted/40 rounded-md overflow-hidden border h-[65vh]">
+            {viewerLoading ? (
+              <div className="flex flex-col items-center justify-center gap-2">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <p className="text-sm text-muted-foreground">Loading document...</p>
+              </div>
+            ) : isPdfUrl(viewerSrc!) ? (
+              <iframe
+                src={viewerBlobUrl || ""}
+                className="w-full h-full rounded-md border-0"
+                title={viewerTitle}
+              />
+            ) : isImageUrl(viewerSrc!) ? (
+              <img
+                src={viewerBlobUrl || viewerSrc || ""}
+                alt={viewerTitle}
+                className="object-contain w-full h-full"
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center p-12 text-center">
+                <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
+                  <ExternalLink className="w-8 h-8" />
+                </div>
+                <h3 className="text-lg font-semibold mb-2">
+                  Preview not available
+                </h3>
+                <p className="text-sm text-muted-foreground mb-6">
+                  This file type cannot be previewed directly. Please download
+                  it to view the contents.
+                </p>
+                <Button
+                  onClick={() => downloadFile(viewerSrc!, viewerTitle)}
+                  className="gap-2"
+                >
+                  <Download className="w-4 h-4" /> Download File
+                </Button>
+              </div>
+            )}
           </div>
-          {viewerDoc?.status === "pending" && (
-            <div className="flex justify-end gap-3 mt-4">
-              <Button
-                variant="outline"
-                className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
-                onClick={() => {
-                  onRejectDoc(viewerDoc);
-                  setViewerSrc(null);
-                }}
-              >
-                <XCircle className="w-4 h-4 mr-2" /> Reject Document
-              </Button>
-              <Button
-                className="bg-green-600 hover:bg-green-700 text-white"
-                onClick={() => {
-                  onApproveDoc(viewerDoc);
-                  setViewerSrc(null);
-                }}
-              >
-                <CheckCircle2 className="w-4 h-4 mr-2" /> Approve Document
-              </Button>
+          <div className="flex justify-between items-center mt-4">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2"
+              onClick={() => downloadFile(viewerSrc!, viewerTitle)}
+            >
+              <Download className="h-4 w-4" /> Download Original
+            </Button>
+
+            <div className="flex gap-3">
+              {viewerDoc?.status === "pending" && (
+                <>
+                  <Button
+                    variant="outline"
+                    className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200"
+                    onClick={() => {
+                      onRejectDoc(viewerDoc);
+                      setViewerSrc(null);
+                    }}
+                  >
+                    <XCircle className="w-4 h-4 mr-2" /> Reject
+                  </Button>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                    onClick={() => {
+                      onApproveDoc(viewerDoc);
+                      setViewerSrc(null);
+                    }}
+                  >
+                    <CheckCircle2 className="w-4 h-4 mr-2" /> Approve
+                  </Button>
+                </>
+              )}
             </div>
-          )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

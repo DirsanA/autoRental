@@ -26,6 +26,9 @@ export function createP2PAdminRoutes(
   router.use(authenticate);
   // router.use(authorize("manage", "all"));
 
+  // Proxy file for CORS-safe viewing/downloading
+  router.get("/proxy-file", controller.proxyFile);
+
   // List P2P host applicants
   router.get(
     "/",

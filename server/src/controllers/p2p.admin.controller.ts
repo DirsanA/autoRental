@@ -3,6 +3,15 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { p2PAdminService } from "../services/p2p.admin.service.js";
 import { requireRequestUser } from "../utils/requestContext.js";
 import type { AdminP2PDecisionInput } from "../validators/p2p.admin.validator.js";
+import { v2 as cloudinary } from "cloudinary";
+import { ENV } from "../config/env.js";
+
+// Configure Cloudinary
+cloudinary.config({
+  cloud_name: ENV.CLOUDINARY_CLOUD_NAME,
+  api_key: ENV.CLOUDINARY_API_KEY,
+  api_secret: ENV.CLOUDINARY_API_SECRET,
+});
 
 /**
  * Creates P2P admin route handlers.
@@ -109,6 +118,73 @@ export function createP2PAdminController() {
         success: true,
         data,
       });
+    }),
+
+    /**
+     * GET /api/admin/p2p/proxy-file
+     * Proxies a file to avoid CORS issues and force correct content headers.
+     */
+    proxyFile: asyncHandler(async (req: Request, res: Response) => {
+      const url = req.query.url as string;
+      const download = req.query.download === "true";
+      const filename = (req.query.filename as string) || "file";
+
+      if (!url) {
+        throw new Error("URL is required");
+      }
+
+      let fetchUrl = url;
+
+      // If it's a cloudinary URL, we generate a signed URL to bypass "Unauthorized" errors for private assets
+      if (url.includes("cloudinary.com")) {
+        try {
+          const parts = url.split("/upload/");
+          if (parts.length > 1) {
+            const pathParts = parts[1].split("/");
+            // Remove version if present (v12345678)
+            if (pathParts[0].startsWith("v") && /^\d+$/.test(pathParts[0].substring(1))) {
+              pathParts.shift();
+            }
+            // Join back and remove extension
+            const fullPath = pathParts.join("/");
+            const dotIndex = fullPath.lastIndexOf(".");
+            const publicId = dotIndex > -1 ? fullPath.substring(0, dotIndex) : fullPath;
+            const extension = dotIndex > -1 ? fullPath.substring(dotIndex + 1) : "pdf";
+            
+            // Generate signed URL
+            fetchUrl = cloudinary.utils.private_download_url(publicId, extension, {
+              resource_type: "image", // PDFs are usually in the image category in Cloudinary
+              type: "upload",
+              attachment: download,
+            });
+          }
+        } catch (err) {
+          console.error("Error signing Cloudinary URL:", err);
+          // Fallback to original URL
+        }
+      }
+
+      const response = await fetch(fetchUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch file: ${response.statusText} (${response.status})`);
+      }
+
+      const contentType = response.headers.get("content-type");
+      if (contentType) {
+        res.setHeader("Content-Type", contentType);
+      }
+
+      if (download) {
+        res.setHeader(
+          "Content-Disposition",
+          `attachment; filename="${filename}"`,
+        );
+      } else {
+        res.setHeader("Content-Disposition", "inline");
+      }
+
+      const buffer = Buffer.from(await response.arrayBuffer());
+      res.send(buffer);
     }),
   };
 }
