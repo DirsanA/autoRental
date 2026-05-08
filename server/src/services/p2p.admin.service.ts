@@ -6,6 +6,7 @@ import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
 import { userPersistenceService } from "./user.persistence.service.js";
+import { notificationDispatcher } from "./notification.dispatcher.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type {
   AdminP2PListQueryInput,
@@ -806,13 +807,26 @@ export class P2PAdminService {
       );
     }
 
-    const refreshedUser = await User.findById(userId)
-      .populate({ path: "roles", select: "name" })
-      .lean();
-
+    const refreshedUser = await userPersistenceService.findByMongoId(
+      new mongoose.Types.ObjectId(userId),
+    );
     if (!refreshedUser) {
       throw ApiError.notFound("User not found after update");
     }
+
+    // Send notification for host approval/rejection
+    const action =
+      data.status === "approved" ? "P2P_STATUS_CHANGED" : "P2P_STATUS_CHANGED";
+    await notificationDispatcher.sendAdminActionNotification({
+      recipientId: refreshedUser._id,
+      recipientEmail: refreshedUser.email,
+      recipientName: getDisplayName(refreshedUser),
+      action,
+      ...(data.adminComment && { reason: data.adminComment }),
+      entityId: refreshedUser._id,
+      entityType: "PeerHost",
+      adminId: caller.id,
+    });
 
     return {
       user: {

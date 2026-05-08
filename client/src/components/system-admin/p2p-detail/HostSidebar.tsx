@@ -81,6 +81,8 @@ export function HostSidebar({
     .toUpperCase();
 
   const isPending = host.status === "pending";
+  const isApproved = host.status === "active";
+  const showActions = !isApproved;
 
   return (
     <Card className="shadow-sm sticky top-24 overflow-hidden border-t-4 border-t-primary">
@@ -124,20 +126,22 @@ export function HostSidebar({
           </div>
         </div>
 
-        {isPending && (
+        {showActions && (
           <>
             <div className="w-full border-t border-muted my-6" />
 
             {/* Action Buttons */}
             <div className="flex flex-col gap-2 w-full">
-              <Button
-                onClick={onApprove}
-                disabled={!canPromote}
-                className="w-full gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <ThumbsUp className="h-4 w-4" />
-                Promote to Peer Host
-              </Button>
+              {isPending && (
+                <Button
+                  onClick={onApprove}
+                  disabled={!canPromote}
+                  className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                >
+                  <ThumbsUp className="h-4 w-4" />
+                  Promote to Peer Host
+                </Button>
+              )}
               <Button
                 onClick={onReject}
                 variant="outline"
@@ -148,7 +152,7 @@ export function HostSidebar({
               </Button>
             </div>
 
-            {blockers.length > 0 && (
+            {isPending && blockers.length > 0 && (
               <div className="mt-4 w-full rounded-lg border border-amber-200 bg-amber-50 p-3 text-left text-xs text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-300">
                 <p className="font-semibold">Promotion blockers</p>
                 <div className="mt-2 space-y-1">

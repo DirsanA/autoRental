@@ -6,6 +6,7 @@ import {
 import { VerificationLevel } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 import { userPersistenceService } from "./user.persistence.service.js";
+import { notificationDispatcher } from "./notification.dispatcher.js";
 import type {
   ReviewVerificationInput,
   SubmitPeerhostVerificationInput,
@@ -120,7 +121,9 @@ export class VerificationService {
   /**
    * Returns every verification owned by the current user.
    */
-  async getMyVerifications(authUserId: string): Promise<MyVerificationOverview> {
+  async getMyVerifications(
+    authUserId: string,
+  ): Promise<MyVerificationOverview> {
     const user = await this.findUserByAuthIdOrThrow(authUserId);
     const verifications = await Verification.find({ userId: user._id }).sort({
       createdAt: -1,
@@ -149,7 +152,9 @@ export class VerificationService {
     data: ReviewVerificationInput,
   ): Promise<{
     verification: VerificationDocument;
-    user: NonNullable<Awaited<ReturnType<typeof userPersistenceService.findByMongoId>>>;
+    user: NonNullable<
+      Awaited<ReturnType<typeof userPersistenceService.findByMongoId>>
+    >;
   }> {
     const verification = await Verification.findById(verificationId);
     if (!verification) {
@@ -160,7 +165,9 @@ export class VerificationService {
       throw ApiError.unprocessable("Verification has already been reviewed");
     }
 
-    const user = await userPersistenceService.findByMongoId(verification.userId);
+    const user = await userPersistenceService.findByMongoId(
+      verification.userId,
+    );
     if (!user) {
       throw ApiError.notFound("User not found");
     }
@@ -172,10 +179,25 @@ export class VerificationService {
       verification.verifiedAt = undefined;
       await verification.save();
 
+      // Send rejection notification
+      await notificationDispatcher.sendVerificationNotification({
+        recipientId: user._id,
+        recipientEmail: user.email || "",
+        recipientName: user.name || "User",
+        action: "VERIFICATION_REJECTED",
+        reason: data.adminComment,
+        entityId: verification._id,
+        entityType: "User",
+        documentType: verification.documentType,
+        adminId: adminUserId,
+      });
+
       return { verification, user };
     }
 
-    const metadata = verification.extractedData as VerificationMetadata | undefined;
+    const metadata = verification.extractedData as
+      | VerificationMetadata
+      | undefined;
     const approvedLevel = this.resolveApprovedVerificationLevel(
       verification.documentType,
       metadata,
@@ -204,6 +226,19 @@ export class VerificationService {
     await user.save();
     await verification.save();
 
+    // Send approval notification
+    await notificationDispatcher.sendVerificationNotification({
+      recipientId: user._id,
+      recipientEmail: user.email || "",
+      recipientName: user.name || "User",
+      action: "VERIFICATION_APPROVED",
+      reason: data.adminComment,
+      entityId: verification._id,
+      entityType: "User",
+      documentType: verification.documentType,
+      adminId: adminUserId,
+    });
+
     const refreshedUser = await userPersistenceService.findByMongoId(user._id);
 
     return { verification, user: refreshedUser ?? user };
@@ -225,12 +260,16 @@ export class VerificationService {
    * Builds the metadata stored alongside a verification submission.
    */
   private buildVerificationMetadata(
-    data: SubmitRenterIdVerificationInput | SubmitRenterLicenseVerificationInput | SubmitPeerhostVerificationInput,
+    data:
+      | SubmitRenterIdVerificationInput
+      | SubmitRenterLicenseVerificationInput
+      | SubmitPeerhostVerificationInput,
     submission: VerificationSubmission,
   ): VerificationMetadata {
     return {
       targetVerificationLevel: submission.targetVerificationLevel,
-      documentNumber: "documentNumber" in data ? data.documentNumber : data.licenseNumber,
+      documentNumber:
+        "documentNumber" in data ? data.documentNumber : data.licenseNumber,
       dateOfBirth: data.dateOfBirth,
       documentExpiry: "licenseExpiry" in data ? data.licenseExpiry : "",
       address: "address" in data ? data.address : undefined,
@@ -242,7 +281,10 @@ export class VerificationService {
    */
   private async submitVerification(
     authUserId: string,
-    data: SubmitRenterIdVerificationInput | SubmitRenterLicenseVerificationInput | SubmitPeerhostVerificationInput,
+    data:
+      | SubmitRenterIdVerificationInput
+      | SubmitRenterLicenseVerificationInput
+      | SubmitPeerhostVerificationInput,
     submission: VerificationSubmission,
   ): Promise<VerificationDocument> {
     const user = await this.findUserByAuthIdOrThrow(authUserId);

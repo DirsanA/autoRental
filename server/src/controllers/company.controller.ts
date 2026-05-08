@@ -1,11 +1,11 @@
 import type { Request, Response } from "express";
 import { asyncHandler } from "../utils/asyncHandler.js";
 import { companyService } from "../services/company.service.js";
+import { notificationDispatcher } from "../services/notification.dispatcher.js";
 import { ApiError } from "../utils/ApiError.js";
-import { uploadToCloudinary } from "../utils/cloudinary.js";
+import { User } from "../models/User.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { requireRequestUser } from "../utils/requestContext.js";
-import { User } from "../models/User.js";
 import { Verification } from "../models/Verification.js";
 import { Company } from "../models/Company.js";
 
@@ -59,9 +59,15 @@ export const companyController = {
     const contactInfo = {
       email: readString(body, "contactInfo[email]", "email", "contactEmail"),
       phoneNumber: normalizePhoneNumber(
-        readString(body, "contactInfo[phoneNumber]", "phoneNumber", "phone") || "",
+        readString(body, "contactInfo[phoneNumber]", "phoneNumber", "phone") ||
+          "",
       ),
-      address: readString(body, "contactInfo[address]", "address", "companyAddress"),
+      address: readString(
+        body,
+        "contactInfo[address]",
+        "address",
+        "companyAddress",
+      ),
     };
 
     if (!contactInfo.email || !contactInfo.phoneNumber) {
@@ -158,7 +164,9 @@ export const companyController = {
   getByIdAdmin: asyncHandler(async (req: Request, res: Response) => {
     // 1. Fetch company with specific fields needed for detail page
     const company = await Company.findById(req.params.id as string)
-      .select("name tinNumber website bio logoUrl licenseDocumentUrl contactInfo socialLinks location isVerified verifiedAt status rejectionReason walletBalance createdAt updatedAt authUserId pendingChanges pendingChangesRequestedAt")
+      .select(
+        "name tinNumber website bio logoUrl licenseDocumentUrl contactInfo socialLinks location isVerified verifiedAt status rejectionReason walletBalance createdAt updatedAt authUserId pendingChanges pendingChangesRequestedAt",
+      )
       .lean();
 
     if (!company) {
@@ -176,13 +184,12 @@ export const companyController = {
     const authUserObjectId = authAccount?._id ?? null;
     const verificationDocs = authUserObjectId
       ? await Verification.find({
-          $or: [
-            { userId: authUserObjectId },
-            { companyId: company._id },
-          ],
+          $or: [{ userId: authUserObjectId }, { companyId: company._id }],
           documentType: { $in: ["NATIONAL_ID", "DRIVER_LICENSE", "PASSPORT"] },
         })
-          .select("documentType documentFrontUrl documentBackUrl status createdAt updatedAt")
+          .select(
+            "documentType documentFrontUrl documentBackUrl status createdAt updatedAt",
+          )
           .sort({ createdAt: -1 })
           .lean()
       : [];
@@ -227,7 +234,9 @@ export const companyController = {
   update: asyncHandler(async (req: Request, res: Response) => {
     const user = requireRequestUser(req);
 
-    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const files = req.files as
+      | Record<string, Express.Multer.File[]>
+      | undefined;
     const body: Record<string, unknown> = { ...req.body };
 
     if (files?.logo?.[0]) {
@@ -274,7 +283,26 @@ export const companyController = {
    * Approves a pending company.
    */
   approve: asyncHandler(async (req: Request, res: Response) => {
+    const caller = requireRequestUser(req);
     const company = await companyService.approve(req.params.id as string);
+
+    // Send notification to auth account email (not company contact email)
+    if (company.authUserId) {
+      const authUser = await User.findById(company.authUserId)
+        .select("email name")
+        .lean();
+      if (authUser?.email) {
+        await notificationDispatcher.sendAdminActionNotification({
+          recipientId: company.authUserId,
+          recipientEmail: authUser.email,
+          recipientName: authUser.name || company.name,
+          action: "COMPANY_APPROVED",
+          entityId: company._id,
+          entityType: "Company",
+          adminId: caller.id,
+        });
+      }
+    }
 
     res.json({
       success: true,
@@ -290,13 +318,36 @@ export const companyController = {
    * Suspends a company with a required reason.
    */
   suspend: asyncHandler(async (req: Request, res: Response) => {
+    const caller = requireRequestUser(req);
     const { reason } = req.body;
 
     if (!reason || typeof reason !== "string") {
       throw ApiError.badRequest("Suspension reason is required");
     }
 
-    const company = await companyService.suspend(req.params.id as string, reason);
+    const company = await companyService.suspend(
+      req.params.id as string,
+      reason,
+    );
+
+    // Send notification to auth account email (not company contact email)
+    if (company.authUserId) {
+      const authUser = await User.findById(company.authUserId)
+        .select("email name")
+        .lean();
+      if (authUser?.email) {
+        await notificationDispatcher.sendAdminActionNotification({
+          recipientId: company.authUserId,
+          recipientEmail: authUser.email,
+          recipientName: authUser.name || company.name,
+          action: "COMPANY_SUSPENDED",
+          reason,
+          entityId: company._id,
+          entityType: "Company",
+          adminId: caller.id,
+        });
+      }
+    }
 
     res.json({
       success: true,

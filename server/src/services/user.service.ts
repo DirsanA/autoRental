@@ -13,6 +13,7 @@ import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
 import { uploadToCloudinary, resolveUploadValue } from "../utils/cloudinary.js";
 import { userPersistenceService } from "./user.persistence.service.js";
+import { notificationDispatcher } from "./notification.dispatcher.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type { UpdateProfileInput } from "../validators/user.validator.js";
 import type {
@@ -78,8 +79,8 @@ function formatJoinedDate(value: unknown): string {
 function extractRoleNames(user: UserViewSource): string[] {
   return Array.isArray(user.roles)
     ? user.roles
-      .map((role: { name?: string }) => role?.name)
-      .filter((name): name is string => Boolean(name))
+        .map((role: { name?: string }) => role?.name)
+        .filter((name): name is string => Boolean(name))
     : [];
 }
 
@@ -133,7 +134,7 @@ function buildAuthUserIdentifiers(
  * User service for profile and admin user-management workflows.
  */
 export class UserService {
-  constructor(private readonly auth: Auth) { }
+  constructor(private readonly auth: Auth) {}
 
   /**
    * Loads the peer host role id when admin promotion requires it.
@@ -231,8 +232,8 @@ export class UserService {
     const updatedUser = await User.findByIdAndUpdate(
       user.id,
       { $set: updateData },
-      { new: true, runValidators: true },
-    ).lean();
+      { new: true },
+    );
 
     if (!updatedUser) {
       throw ApiError.notFound("User not found");
@@ -241,9 +242,6 @@ export class UserService {
     return { user: updatedUser };
   }
 
-  /**
-   * Lists users for the admin experience.
-   */
   async listUsers(query: AdminUserListQueryInput) {
     const { filter, page, limit, skip } = this.buildListQuery(query);
 
@@ -352,13 +350,13 @@ export class UserService {
     const transactionFeedFilter = {
       $or: company?._id
         ? [
-          { payerId: mongoUserId },
-          { receiverId: company._id, receiverModel: "Company" },
-        ]
+            { payerId: mongoUserId },
+            { receiverId: company._id, receiverModel: "Company" },
+          ]
         : [
-          { payerId: mongoUserId },
-          { receiverId: mongoUserId, receiverModel: "User" },
-        ],
+            { payerId: mongoUserId },
+            { receiverId: mongoUserId, receiverModel: "User" },
+          ],
     } as Record<string, unknown>;
 
     const [
@@ -484,17 +482,17 @@ export class UserService {
       },
       company: company
         ? {
-          id: company._id?.toString?.() ?? String(company._id),
-          name: company.name,
-          status: company.status,
-          isVerified: company.isVerified,
-          verifiedAt: company.verifiedAt,
-          contactEmail: company.contactInfo?.email ?? null,
-          contactPhone: company.contactInfo?.phoneNumber ?? null,
-          website: company.website ?? null,
-          tinNumber: company.tinNumber,
-          createdAt: company.createdAt ?? null,
-        }
+            id: company._id?.toString?.() ?? String(company._id),
+            name: company.name,
+            status: company.status,
+            isVerified: company.isVerified,
+            verifiedAt: company.verifiedAt,
+            contactEmail: company.contactInfo?.email ?? null,
+            contactPhone: company.contactInfo?.phoneNumber ?? null,
+            website: company.website ?? null,
+            tinNumber: company.tinNumber,
+            createdAt: company.createdAt ?? null,
+          }
         : null,
       metrics: {
         bookingsAsRenter: bookingMetrics[0],
@@ -643,7 +641,7 @@ export class UserService {
     const vehicleIds = userVehicles.map((vehicle) => vehicle._id);
 
     const activeListings = userVehicles.filter(
-      (v) => v.status === "AVAILABLE"
+      (v) => v.status === "AVAILABLE",
     ).length;
 
     if (vehicleIds.length === 0) {
@@ -660,7 +658,20 @@ export class UserService {
             bookings: 0,
           })),
           monthly: Array.from({ length: 12 }, (_, index) => ({
-            name: ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][index],
+            name: [
+              "Jan",
+              "Feb",
+              "Mar",
+              "Apr",
+              "May",
+              "Jun",
+              "Jul",
+              "Aug",
+              "Sep",
+              "Oct",
+              "Nov",
+              "Dec",
+            ][index],
             total: 0,
           })),
         },
@@ -681,37 +692,38 @@ export class UserService {
       });
     }
 
-    const [pendingBookings, earningsResult, avgRatingResult] = await Promise.all([
-      Booking.countDocuments({
-        vehicleId: { $in: vehicleIds },
-        status: "PENDING",
-      }),
-      Booking.aggregate([
-        {
-          $match: {
-            vehicleId: { $in: vehicleIds },
-            "payment.status": "PAID",
+    const [pendingBookings, earningsResult, avgRatingResult] =
+      await Promise.all([
+        Booking.countDocuments({
+          vehicleId: { $in: vehicleIds },
+          status: "PENDING",
+        }),
+        Booking.aggregate([
+          {
+            $match: {
+              vehicleId: { $in: vehicleIds },
+              "payment.status": "PAID",
+            },
           },
-        },
-        {
-          $group: {
-            _id: null,
-            total: { $sum: "$priceSnapshot.totalAmount" },
+          {
+            $group: {
+              _id: null,
+              total: { $sum: "$priceSnapshot.totalAmount" },
+            },
           },
-        },
-      ]),
-      Review.aggregate([
-        {
-          $match: { $or: reviewMatchFilters },
-        },
-        {
-          $group: {
-            _id: null,
-            avg: { $avg: "$rating" },
+        ]),
+        Review.aggregate([
+          {
+            $match: { $or: reviewMatchFilters },
           },
-        },
-      ]),
-    ]);
+          {
+            $group: {
+              _id: null,
+              avg: { $avg: "$rating" },
+            },
+          },
+        ]),
+      ]);
 
     const earnings = earningsResult?.[0]?.total ?? 0;
     const averageRating = avgRatingResult?.[0]?.avg ?? 0;
@@ -724,17 +736,20 @@ export class UserService {
 
     const yearStart = new Date(currentYear, 0, 1);
 
-    const recentBookingsRaw = await Booking.find({
+    const recentBookingsRaw = (await Booking.find({
       vehicleId: { $in: vehicleIds },
     })
       .sort({ createdAt: -1 })
       .limit(5)
       .populate({ path: "renterId", select: "name email firstName lastName" })
       .select("bookingId renterId priceSnapshot status payment createdAt")
-      .lean();
+      .lean()) as any[];
 
     const recentBookings = recentBookingsRaw.map((booking: any) => {
-      const name = booking.renterId?.name || `${booking.renterId?.firstName || ""} ${booking.renterId?.lastName || ""}`.trim() || "Guest";
+      const name =
+        booking.renterId?.name ||
+        `${booking.renterId?.firstName || ""} ${booking.renterId?.lastName || ""}`.trim() ||
+        "Guest";
       return {
         id: booking._id?.toString() ?? String(booking._id),
         bookingId: booking.bookingId,
@@ -757,7 +772,7 @@ export class UserService {
     const monthMap = new Map<number, { revenue: number; bookings: number }>();
 
     allYearBookings.forEach((booking) => {
-      const createdAt = new Date(booking.createdAt);
+      const createdAt = booking.createdAt ? new Date(booking.createdAt) : new Date();
       const dateKey = createdAt.toISOString().slice(0, 10);
       const revenue = booking.priceSnapshot?.totalAmount ?? 0;
 
@@ -769,7 +784,10 @@ export class UserService {
       }
 
       const monthIndex = createdAt.getMonth();
-      const existingMonth = monthMap.get(monthIndex) ?? { revenue: 0, bookings: 0 };
+      const existingMonth = monthMap.get(monthIndex) ?? {
+        revenue: 0,
+        bookings: 0,
+      };
       existingMonth.revenue += revenue;
       existingMonth.bookings += 1;
       monthMap.set(monthIndex, existingMonth);
@@ -788,7 +806,20 @@ export class UserService {
       };
     });
 
-    const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ];
     const monthly = Array.from({ length: 12 }, (_, index) => {
       const stats = monthMap.get(index) ?? { revenue: 0, bookings: 0 };
       return {
@@ -836,6 +867,20 @@ export class UserService {
       throw ApiError.notFound("User not found");
     }
 
+    // Send notification based on status change
+    const action =
+      data.status === "SUSPENDED" ? "ACCOUNT_SUSPENDED" : "ACCOUNT_ACTIVATED";
+    await notificationDispatcher.sendAdminActionNotification({
+      recipientId: updated._id,
+      recipientEmail: updated.email,
+      recipientName: updated.name,
+      action,
+      ...((data as any).reason && { reason: (data as any).reason }),
+      entityId: updated._id,
+      entityType: "User",
+      adminId: caller.id,
+    });
+
     return {
       user: toAdminUserSummary(updated as UserViewSource),
     };
@@ -856,7 +901,10 @@ export class UserService {
       .lean();
 
     const vehicleMap = new Map(
-      userVehicles.map((v) => [v._id.toString(), `${v.year} ${v.make} ${v.model}`])
+      userVehicles.map((v) => [
+        v._id.toString(),
+        `${v.year} ${v.make} ${v.model}`,
+      ]),
     );
 
     const vehicleIds = userVehicles.map((vehicle) => vehicle._id);
@@ -891,18 +939,22 @@ export class UserService {
       count: reviews.filter((r) => r.rating === star).length,
     }));
 
-    const averageRating = totalReviews > 0
-      ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
-      : 0;
+    const averageRating =
+      totalReviews > 0
+        ? reviews.reduce((sum, r) => sum + r.rating, 0) / totalReviews
+        : 0;
 
     const formattedReviews = reviews.map((review: any) => {
-      const reviewerName = review.reviewerId?.name ||
+      const reviewerName =
+        review.reviewerId?.name ||
         `${review.reviewerId?.firstName || ""} ${review.reviewerId?.lastName || ""}`.trim() ||
         "Guest";
 
       // Get vehicle name from booking if available, otherwise unknown
       const vehicleId = review.bookingId?.vehicleId?.toString();
-      const vehicleName = vehicleId ? vehicleMap.get(vehicleId) || "Unknown Vehicle" : "Unknown Vehicle";
+      const vehicleName = vehicleId
+        ? vehicleMap.get(vehicleId) || "Unknown Vehicle"
+        : "Unknown Vehicle";
 
       return {
         id: review._id?.toString() ?? String(review._id),
@@ -1011,11 +1063,22 @@ export class UserService {
     }
 
     const existing = await User.findById(userId)
-      .select("email")
-      .lean<{ email?: string }>();
+      .select("email name")
+      .lean<{ email?: string; name?: string }>();
     if (!existing) {
       throw ApiError.notFound("User not found");
     }
+
+    // Send deletion notification before cleanup
+    await notificationDispatcher.sendAdminActionNotification({
+      recipientId: userId,
+      recipientEmail: existing.email || "",
+      recipientName: existing.name || "User",
+      action: "ACCOUNT_DELETED",
+      entityId: userId,
+      entityType: "User",
+      adminId: caller.id,
+    });
 
     await userPersistenceService.cleanupAuthArtifacts(userId, existing.email);
 
