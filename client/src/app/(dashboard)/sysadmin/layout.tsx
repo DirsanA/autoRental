@@ -5,6 +5,8 @@ import { useEffect, useState } from "react";
 import { DashboardSidebar } from "@/components/dashboard/sidebar-02/app-sidebar";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
+import { NotificationProvider } from "@/components/providers/notification-provider";
+import { useAuth } from "@/hooks/use_auth";
 
 export default function SysAdminLayout({
   children,
@@ -12,6 +14,7 @@ export default function SysAdminLayout({
   children: React.ReactNode;
 }) {
   const [isSidebarLoading, setIsSidebarLoading] = useState(true);
+  const { user } = useAuth();
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -23,12 +26,14 @@ export default function SysAdminLayout({
 
   return (
     <ProtectedRoute allowedRoles={["admin"]}>
-      <SidebarProvider suppressHydrationWarning>
-        <div className="relative flex h-dvh w-full">
-          <DashboardSidebar isLoading={isSidebarLoading} />
-          <SidebarInset className="flex flex-col">{children}</SidebarInset>
-        </div>
-      </SidebarProvider>
+      <NotificationProvider adminId={user?.id}>
+        <SidebarProvider suppressHydrationWarning>
+          <div className="relative flex h-dvh w-full">
+            <DashboardSidebar isLoading={isSidebarLoading} />
+            <SidebarInset className="flex flex-col">{children}</SidebarInset>
+          </div>
+        </SidebarProvider>
+      </NotificationProvider>
     </ProtectedRoute>
   );
 }

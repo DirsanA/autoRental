@@ -20,6 +20,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
+import { useDetailViewTracking } from "@/hooks/use-action-badges";
 import {
   ArrowLeft,
   Ban,
@@ -133,6 +134,9 @@ export default function CompanyDetailPage({
 }) {
   const router = useRouter();
   const { toast } = useToast();
+
+  // Mark company as viewed when detail page loads
+  useDetailViewTracking("COMPANY", companyId);
 
   const [company, setCompany] = useState<AdminCompanyDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -456,7 +460,7 @@ export default function CompanyDetailPage({
                         </CardTitle>
                       </CardHeader>
                       <CardContent className="text-lg font-semibold">
-                        {company.wallet 
+                        {company.wallet
                           ? formatMoney(company.wallet.availableBalance)
                           : formatMoney(company.walletBalance)}
                       </CardContent>
@@ -1068,10 +1072,7 @@ export default function CompanyDetailPage({
 
                 {/* WALLET TAB */}
                 <TabsContent value="wallet" className="space-y-6">
-                  <WalletTab 
-                    wallet={company.wallet}
-                    ledger={company.ledger}
-                  />
+                  <WalletTab wallet={company.wallet} ledger={company.ledger} />
                 </TabsContent>
               </Tabs>
             ) : null}
