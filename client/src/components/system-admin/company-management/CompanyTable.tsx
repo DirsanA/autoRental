@@ -25,6 +25,8 @@ import {
 } from "lucide-react";
 import { CompanyStatusBadge } from "./CompanyStatusBadge";
 import type { Company } from "./data";
+import { RecordBadge } from "@/components/action-badges/record-badge";
+import { useActionBadgesStore } from "@/stores/action-badges-store";
 
 interface CompanyTableProps {
   companies: Company[];
@@ -32,6 +34,7 @@ interface CompanyTableProps {
   onView: (company: Company) => void;
   onApprove: (company: Company) => void;
   onSuspend: (company: Company) => void;
+  showActionBadges?: boolean;
 }
 
 function CompanyAvatar({ name }: { name: string }) {
@@ -58,7 +61,9 @@ export function CompanyTable({
   onView,
   onApprove,
   onSuspend,
+  showActionBadges = false,
 }: CompanyTableProps) {
+  const isViewed = useActionBadgesStore((state) => state.isViewed);
   const formatDate = (value: string | null) =>
     value
       ? new Date(value).toLocaleDateString("en-US", {
@@ -108,7 +113,14 @@ export function CompanyTable({
                     <div className="flex items-center gap-3">
                       <CompanyAvatar name={company.name} />
                       <div className="min-w-0">
-                        <div className="font-medium">{company.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">{company.name}</div>
+                          {showActionBadges &&
+                            company.statusValue === "PENDING_APPROVAL" &&
+                            !isViewed("COMPANY", company.id) && (
+                              <RecordBadge show={true} variant="signal" />
+                            )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span className="truncate">
                             {company.contactEmail || "No contact email"}
@@ -147,7 +159,9 @@ export function CompanyTable({
                   </TableCell>
 
                   <TableCell>
-                    <CompanyStatusBadge status={company.status} />
+                    <div className="flex items-center gap-2">
+                      <CompanyStatusBadge status={company.status} />
+                    </div>
                   </TableCell>
 
                   <TableCell className="text-sm text-muted-foreground">

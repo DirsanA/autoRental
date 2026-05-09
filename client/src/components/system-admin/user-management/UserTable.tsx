@@ -28,6 +28,8 @@ import {
 import { StatusBadge } from "./StatusBadge";
 import type { User } from "./data";
 import { cn } from "@/lib/utils";
+import { RecordBadge } from "@/components/action-badges/record-badge";
+import { useActionBadgesStore } from "@/stores/action-badges-store";
 
 interface UserTableProps {
   users: User[];
@@ -36,6 +38,7 @@ interface UserTableProps {
   onActivate: (user: User) => void;
   onSuspend: (user: User) => void;
   onDelete: (user: User) => void;
+  showActionBadges?: boolean;
 }
 
 /**
@@ -48,7 +51,9 @@ export function UserTable({
   onActivate,
   onSuspend,
   onDelete,
+  showActionBadges = false,
 }: UserTableProps) {
+  const isViewed = useActionBadgesStore((state) => state.isViewed);
   const formatDate = (dateString: string) =>
     dateString
       ? new Date(dateString).toLocaleDateString("en-US", {
@@ -140,7 +145,15 @@ export function UserTable({
                       </Avatar>
 
                       <div className="min-w-0">
-                        <div className="font-medium">{user.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="font-medium">{user.name}</div>
+                          {showActionBadges &&
+                            (user.status === "inactive" ||
+                              user.status === "invited") &&
+                            !isViewed("USER", user.id) && (
+                              <RecordBadge show={true} variant="signal" />
+                            )}
+                        </div>
                         <div className="text-sm text-muted-foreground truncate">
                           {user.email}
                         </div>
@@ -155,7 +168,9 @@ export function UserTable({
                   </TableCell>
 
                   <TableCell>
-                    <StatusBadge status={user.status} />
+                    <div className="flex items-center gap-2">
+                      <StatusBadge status={user.status} />
+                    </div>
                   </TableCell>
 
                   <TableCell className="text-sm text-muted-foreground">

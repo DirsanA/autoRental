@@ -38,6 +38,8 @@ import {
   Download,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { RecordBadge } from "@/components/action-badges/record-badge";
+import { useActionBadgesStore } from "@/stores/action-badges-store";
 
 interface HostListing {
   id: string;
@@ -77,6 +79,7 @@ export function ListingsTab({
   onRejectVehicle,
   onDelist,
 }: ListingsTabProps) {
+  const isViewed = useActionBadgesStore((state) => state.isViewed);
   const [viewerSrc, setViewerSrc] = useState<string | null>(null);
   const [viewerTitle, setViewerTitle] = useState("");
   const [viewerListing, setViewerListing] = useState<any | null>(null);
@@ -153,7 +156,15 @@ export function ListingsTab({
                     </div>
                   )}
                   <div>
-                    <div className="text-sm font-semibold">{listing.title}</div>
+                    <div className="flex items-center gap-2">
+                      <div className="text-sm font-semibold">
+                        {listing.title}
+                      </div>
+                      {listing.status === "pending" &&
+                        !isViewed("VEHICLE", listing.id) && (
+                          <RecordBadge show={true} variant="signal" />
+                        )}
+                    </div>
                     <div className="text-xs text-muted-foreground">
                       {listing.category}
                     </div>

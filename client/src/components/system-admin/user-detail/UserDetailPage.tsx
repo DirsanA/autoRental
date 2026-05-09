@@ -22,6 +22,7 @@ import { VerificationTab } from "./VerificationTab";
 import { RelatedRecordsTab } from "./RelatedRecordsTab";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useToast } from "@/hooks/use-toast";
+import { useDetailViewTracking } from "@/hooks/use-action-badges";
 import type { ConfirmationConfig, UserFullDetail, UserStatus } from "./types";
 import {
   deleteAdminUserDetail,
@@ -35,6 +36,9 @@ import {
 export function UserDetailPage({ userId }: { userId: string }) {
   const router = useRouter();
   const { toast } = useToast();
+
+  // Mark user as viewed when detail page loads
+  useDetailViewTracking("USER", userId);
 
   const [user, setUser] = useState<UserFullDetail | null>(null);
   const [loading, setLoading] = useState(true);

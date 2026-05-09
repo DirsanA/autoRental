@@ -26,6 +26,8 @@ import {
 } from "@/components/ui/dialog";
 import type { VerificationData, KYCStatus, DocumentItem } from "./types";
 import { cn } from "@/lib/utils";
+import { RecordBadge } from "@/components/action-badges/record-badge";
+import { useActionBadgesStore } from "@/stores/action-badges-store";
 
 const statusMap: Record<
   KYCStatus,
@@ -85,6 +87,7 @@ export function VerificationTab({
   onApproveDoc,
   onRejectDoc,
 }: VerificationTabProps) {
+  const isViewed = useActionBadgesStore((state) => state.isViewed);
   const [viewerSrc, setViewerSrc] = useState<string | null>(null);
   const [viewerTitle, setViewerTitle] = useState("");
   const [viewerDoc, setViewerDoc] = useState<DocumentItem | null>(null);
@@ -198,9 +201,15 @@ export function VerificationTab({
               <CardContent className="p-4 flex flex-col flex-1 gap-2">
                 <div className="flex justify-between items-start">
                   <div>
-                    <h4 className="font-semibold text-sm leading-tight">
-                      {doc.title}
-                    </h4>
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-sm leading-tight">
+                        {doc.title}
+                      </h4>
+                      {doc.status === "pending" &&
+                        !isViewed("VERIFICATION", doc.id) && (
+                          <RecordBadge show={true} variant="signal" />
+                        )}
+                    </div>
                     <p className="text-xs text-muted-foreground uppercase">
                       {doc.type}
                     </p>

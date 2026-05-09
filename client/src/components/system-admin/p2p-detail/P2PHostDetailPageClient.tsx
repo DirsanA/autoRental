@@ -19,6 +19,8 @@ import { WalletTab } from "./EarningsTab";
 import { ToastContainer } from "./ToastContainer";
 import { ConfirmationModal } from "./ConfirmationModal";
 import { useToast } from "./useToast";
+import { useDetailViewTracking } from "@/hooks/use-action-badges";
+import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
 import type {
   ConfirmationConfig,
   DocumentItem,
@@ -44,6 +46,9 @@ export default function P2PHostDetailPageClient({
 }: P2PHostDetailPageProps) {
   const router = useRouter();
   const { toasts, addToast, removeToast } = useToast();
+
+  // Mark P2P host as viewed when detail page loads
+  useDetailViewTracking("P2P_HOST", hostId);
   const [hostData, setHostData] = useState<P2PHostDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -67,6 +72,9 @@ export default function P2PHostDetailPageClient({
       setLoading(false);
     }
   }, [hostId]);
+
+  // Subscribe to real-time refreshes
+  useRealTimeRefresh(loadHost, ["P2P_HOST", "VEHICLE", "VERIFICATION"]);
 
   useEffect(() => {
     void loadHost();
@@ -216,7 +224,9 @@ export default function P2PHostDetailPageClient({
           addToast(
             "error",
             "Error",
-            cause instanceof Error ? cause.message : "Failed to reactivate host",
+            cause instanceof Error
+              ? cause.message
+              : "Failed to reactivate host",
           );
         }
       },
