@@ -14,6 +14,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { uploadToCloudinary, resolveUploadValue } from "../utils/cloudinary.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { notificationDispatcher } from "./notification.dispatcher.js";
+import { notificationEmitter } from "./notification-emitter.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type { UpdateProfileInput } from "../validators/user.validator.js";
 import type {
@@ -229,7 +230,7 @@ export class UserService {
       );
     }
 
-    const updatedUser = await User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
       user.id,
       { $set: updateData },
       { new: true },

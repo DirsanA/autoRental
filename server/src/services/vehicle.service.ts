@@ -18,6 +18,7 @@ import { companyService } from "./company.service.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import { geocodingService } from "./geocoding.service.js";
+import { notificationEmitter } from "./notification-emitter.service.js";
 
 const VEHICLE_FILTER_STATUS: Record<
   "available" | "rented" | "maintenance",
@@ -522,7 +523,7 @@ export class VehicleService {
         ? await geocodingService.geocode(returnAddress)
         : null;
 
-    return Vehicle.create({
+    const vehicle = await Vehicle.create({
       ownerId,
       ownerType,
       make: data.make,
@@ -550,6 +551,21 @@ export class VehicleService {
       documents: assets.documents,
       status: initialStatus,
     });
+
+    // ✅ Emit real-time notification to admins for PEERHOST vehicles ONLY
+    if (vehicle.ownerType === "User") {
+      await notificationEmitter.emitNewActionRequired({
+        entityType: "VEHICLE",
+        entityId: vehicle._id.toString(),
+        activityType: "PEERHOST_VEHICLE_ADD",
+        metadata: {
+          vehicleName: `${vehicle.make} ${vehicle.model}`,
+          vehiclePlate: vehicle.plate,
+        }
+      });
+    }
+
+    return vehicle;
   }
 }
 

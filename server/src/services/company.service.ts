@@ -4,6 +4,7 @@ import { User } from "../models/User.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Booking } from "../models/Booking.js";
 import { ApiError } from "../utils/ApiError.js";
+import { notificationEmitter } from "./notification-emitter.service.js";
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
@@ -103,7 +104,7 @@ export class CompanyService {
 
   const tempAddress = data.fullAddress;
 
-  return Company.create({
+  const company = await Company.create({
     authUserId,
     name: data.name,
     tinNumber: data.tinNumber,
@@ -119,6 +120,19 @@ export class CompanyService {
 
     socialLinks: data.socialLinks,
   });
+
+  // ✅ Emit real-time notification to admins when company registers
+  await notificationEmitter.emitNewActionRequired({
+    entityType: "COMPANY",
+    entityId: company._id.toString(),
+    activityType: "COMPANY_REGISTRATION",
+    metadata: {
+      companyName: company.name,
+      tinNumber: company.tinNumber,
+    }
+  });
+
+  return company;
 }
 
 
@@ -365,6 +379,18 @@ export class CompanyService {
       company.pendingChanges = pending;
       company.pendingChangesRequestedAt = new Date();
       await company.save();
+
+      // ✅ Emit real-time notification to admins when company profile change is requested
+      await notificationEmitter.emitNewActionRequired({
+        entityType: "COMPANY",
+        entityId: company._id.toString(),
+        activityType: "COMPANY_PROFILE_CHANGE",
+        metadata: {
+          companyName: company.name,
+          tinNumber: company.tinNumber,
+        }
+      });
+
       return company;
     }
 
@@ -401,6 +427,7 @@ export class CompanyService {
     }
 
     await company.save();
+
     return company;
   }
 

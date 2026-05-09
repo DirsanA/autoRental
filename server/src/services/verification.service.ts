@@ -7,6 +7,7 @@ import { VerificationLevel } from "../models/User.js";
 import { ApiError } from "../utils/ApiError.js";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { notificationDispatcher } from "./notification.dispatcher.js";
+import { notificationEmitter } from "./notification-emitter.service.js";
 import type {
   ReviewVerificationInput,
   SubmitPeerhostVerificationInput,
@@ -301,7 +302,7 @@ export class VerificationService {
       );
     }
 
-    return Verification.create({
+    const verification = await Verification.create({
       userId: user._id,
       documentType: submission.documentType,
       documentFrontUrl: data.documentFrontUrl,
@@ -309,6 +310,24 @@ export class VerificationService {
       extractedData: this.buildVerificationMetadata(data, submission),
       status: "PENDING",
     });
+
+    // ✅ Emit real-time notification to all admins for major activity
+    const activityType = submission.targetVerificationLevel === VerificationLevel.LICENSE_VERIFIED 
+      ? "PEERHOST_APPLICATION" 
+      : "RENTER_VERIFICATION";
+
+    await notificationEmitter.emitNewActionRequired({
+      entityType: "VERIFICATION",
+      entityId: verification._id.toString(),
+      activityType,
+      metadata: {
+        userId: user._id.toString(),
+        userName: user.name,
+        documentType: submission.documentType,
+      }
+    });
+
+    return verification;
   }
 
   /**
