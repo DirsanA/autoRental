@@ -255,6 +255,50 @@ export class VehicleService {
       })
       .filter((v): v is any => v !== null);
   }
+async listInspired(options: { query?: string }) {
+  const queryText = options.query?.trim();
+
+  let vehicles = [];
+
+  // 1️⃣ Find seed cars
+  if (queryText) {
+    const seedCars = await Vehicle.find({
+      status: "AVAILABLE",
+      $or: [
+        { car_name: { $regex: queryText, $options: "i" } },
+        { make: { $regex: queryText, $options: "i" } },
+        { model: { $regex: queryText, $options: "i" } },
+        { type: { $regex: queryText, $options: "i" } },
+      ],
+    }).lean();
+
+    // 2️⃣ Extract similarity signals
+    const makes = seedCars.map(c => c.make);
+    const types = seedCars.map(c => c.type);
+
+    // 3️⃣ Expand recommendation
+    vehicles = await Vehicle.find({
+      status: "AVAILABLE",
+      $or: [
+        { make: { $in: makes } },
+        { type: { $in: types } },
+      ],
+    })
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(12)
+      .lean();
+  }
+
+  // 4️⃣ fallback (no query or no matches)
+  if (vehicles.length === 0) {
+    vehicles = await Vehicle.find({ status: "AVAILABLE" })
+      .sort({ rating: -1, createdAt: -1 })
+      .limit(12)
+      .lean();
+  }
+
+  return this.enrichWithOwners(vehicles);
+}
 
   /**
    * Lists vehicles belonging to the authenticated requester.
