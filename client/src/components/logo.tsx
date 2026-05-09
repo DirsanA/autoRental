@@ -1,11 +1,22 @@
-import React from "react";
+import type { SVGProps } from "react";
+import { cn } from "@/lib/utils";
 
-export const Logo = () => (
+type LogoProps = SVGProps<SVGSVGElement> & {
+  textWeight?: number | string;
+};
+
+export const Logo = ({
+  className,
+  textWeight = "bold",
+  ...props
+}: LogoProps) => (
   <svg
-    width="120"
-    height="50"
     viewBox="0 0 120 50"
     xmlns="http://www.w3.org/2000/svg"
+    className={cn("h-10 w-[120px] shrink-0", className)}
+    aria-label="Auto Rent Ethiopia"
+    role="img"
+    {...props}
   >
     {/* Car body */}
     <path
@@ -27,8 +38,8 @@ export const Logo = () => (
       y="45"
       fill="#1D4ED8"
       fontFamily="Arial, sans-serif"
-      fontSize="10"
-      fontWeight="bold"
+      fontSize="10.5"
+      fontWeight={textWeight}
       textAnchor="middle"
     >
       Auto Rent Ethiopia
