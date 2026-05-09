@@ -56,11 +56,13 @@ export const vehicleController = {
 listInspired: asyncHandler(async (req: Request, res: Response) => {
   const query = req.query.query as string | undefined;
 
-  const vehicles = await vehicleService.listInspired({ query });
+  const data = await vehicleService.listInspired({
+    query,
+  });
 
   res.json({
     success: true,
-    data: { vehicles },
+    data,
   });
 }),
   /**

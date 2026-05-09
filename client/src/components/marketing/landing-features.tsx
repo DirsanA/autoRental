@@ -33,6 +33,9 @@ type CarCardData = {
   discount: number;
   isOfficial: boolean;
   location: string;
+  transmission?: string;
+  fuel?: string;
+  seats?: number;
 };
 
 type ApiVehicle = {
@@ -48,10 +51,15 @@ type ApiVehicle = {
   ownerType?: "User" | "Company";
   weeklyDiscount?: number;
   monthlyDiscount?: number;
+  transmission?: string;
+  fuel?: string;
+  seats?: number;
   photos?: {
     front?: string;
     gallery?: string[];
   };
+  createdAt?: string;
+  updatedAt?: string;
 };
 
 type CompanySection = {
@@ -59,18 +67,14 @@ type CompanySection = {
   title: string;
   subtitle: string;
   badge: string;
+  icon?: string;
   cars: CarCardData[];
 };
 
-function createPlaceholders(
-  prefix: string,
-  count: number,
-  base: Omit<CarCardData, "id">,
-): CarCardData[] {
-  return Array.from({ length: count }, (_, idx) => ({
-    ...base,
-    id: `${prefix}-${idx + 1}`,
-  }));
+const FALLBACK_IMAGES = [carImage, car2, car3, car4, car5];
+
+function getRandomFallbackImage(index: number): StaticImageData {
+  return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 }
 
 function normalizeVehiclesEndpoint(baseUrl: string) {
@@ -89,7 +93,7 @@ function parseVehiclesPayload(payload: unknown): ApiVehicle[] {
 
   const maybeWithData = payload as { data?: { vehicles?: ApiVehicle[] } };
   if (Array.isArray(maybeWithData.data?.vehicles)) {
-    return maybeWithData?.data?.vehicles || [];
+    return maybeWithData.data?.vehicles || [];
   }
 
   const maybeWithVehicles = payload as { vehicles?: ApiVehicle[] };
@@ -133,109 +137,74 @@ function toCarCard(
     discount,
     isOfficial: vehicle.ownerType === "Company",
     location: vehicle.delivery || vehicle.availability || "Addis Ababa",
+    transmission: vehicle.transmission,
+    fuel: vehicle.fuel,
+    seats: vehicle.seats,
   };
 }
 
-function isAirportCar(car: ApiVehicle) {
-  const text = `${car.delivery || ""} ${car.availability || ""}`.toLowerCase();
-  return text.includes("airport");
+function isNewVehicle(vehicle: ApiVehicle): boolean {
+  if (!vehicle.createdAt) return false;
+  const createdDate = new Date(vehicle.createdAt);
+  const now = new Date();
+  const daysDiff = (now.getTime() - createdDate.getTime()) / (1000 * 3600 * 24);
+  return daysDiff <= 30; // New in last 30 days
 }
 
-function isLuxuryCar(car: ApiVehicle) {
-  return typeof car.price === "number" && car.price >= 4000;
+function isRecentlyUpdated(vehicle: ApiVehicle): boolean {
+  if (!vehicle.updatedAt) return false;
+  const updatedDate = new Date(vehicle.updatedAt);
+  const now = new Date();
+  const daysDiff = (now.getTime() - updatedDate.getTime()) / (1000 * 3600 * 24);
+  return daysDiff <= 7; // Updated in last 7 days
 }
 
-function isSuvCar(car: ApiVehicle) {
-  const text = `${car.make || ""} ${car.model || ""}`.toLowerCase();
-  return (
-    text.includes("suv") ||
-    text.includes("explorer") ||
-    text.includes("land cruiser")
-  );
+// Helper to determine vehicle category based on features, transmission, fuel, etc.
+function getVehicleCategory(vehicle: ApiVehicle): string {
+  const make = vehicle.make?.toLowerCase() || "";
+  const model = vehicle.model?.toLowerCase() || "";
+  const transmission = vehicle.transmission?.toLowerCase() || "";
+  const fuel = vehicle.fuel?.toLowerCase() || "";
+  const price = vehicle.price || 0;
+  
+  // Luxury vehicles (premium brands or high price)
+  const luxuryBrands = ["bmw", "mercedes", "audi", "lexus", "porsche", "jaguar", "land rover", "volvo"];
+  if (luxuryBrands.some(brand => make.includes(brand)) || price >= 4000) {
+    return "Luxury";
+  }
+  
+  // SUVs & Crossovers
+  const suvKeywords = ["suv", "crossover", "explorer", "escape", "cr-v", "rav4", "tucson", "santa fe"];
+  if (suvKeywords.some(keyword => model.includes(keyword) || make.includes(keyword))) {
+    return "SUV";
+  }
+  
+  // Electric & Hybrid
+  if (fuel === "electric" || fuel === "hybrid") {
+    return "Electric";
+  }
+  
+  // Vans & Minivans
+  const vanKeywords = ["van", "minivan", "odyssey", "sienna", "pacifica"];
+  if (vanKeywords.some(keyword => model.includes(keyword))) {
+    return "Van";
+  }
+  
+  // Trucks
+  const truckKeywords = ["truck", "pickup", "f-150", "silverado", "ram", "tacoma"];
+  if (truckKeywords.some(keyword => model.includes(keyword))) {
+    return "Truck";
+  }
+  
+  // Sports Cars
+  const sportsKeywords = ["sports", "convertible", "coupe", "mustang", "camaro", "corvette"];
+  if (sportsKeywords.some(keyword => model.includes(keyword))) {
+    return "Sports";
+  }
+  
+  // Default to Sedan/Economy
+  return "Sedan";
 }
-
-const COMPANY_SECTIONS: CompanySection[] = [
-  {
-    id: "newly-added",
-    title: "Monthly Newly Added Cars",
-    subtitle: "Fresh arrivals from Auto Rent Ethiopia's official fleet.",
-    badge: "Official",
-    cars: createPlaceholders("placeholder-new", 6, {
-      image: car2,
-      vechile_name: "Toyota Camry",
-      year: 2024,
-      rating: 4.9,
-      price: 3400,
-      discount: 340,
-      isOfficial: true,
-      location: "Addis Ababa",
-    }),
-  },
-  {
-    id: "user-hosted",
-    title: "Community Hosted Vehicles",
-    subtitle: "Rent directly from trusted local owners in Addis.",
-    badge: "User Post",
-    cars: createPlaceholders("placeholder-user", 6, {
-      image: car3,
-      vechile_name: "Hyundai Tucson",
-      year: 2021,
-      rating: 4.5,
-      price: 2800,
-      discount: 150,
-      isOfficial: false,
-      location: "Addis Ababa",
-    }),
-  },
-  {
-    id: "airport",
-    title: "Airport Transfers",
-    subtitle: "Convenient car rentals for arrivals and departures.",
-    badge: "Airport",
-    cars: createPlaceholders("placeholder-airport", 6, {
-      image: car4,
-      vechile_name: "Mercedes-Benz E-Class",
-      year: 2023,
-      rating: 4.8,
-      price: 4200,
-      discount: 200,
-      isOfficial: true,
-      location: "Addis Ababa",
-    }),
-  },
-  {
-    id: "luxury",
-    title: "Luxury Fleet",
-    subtitle: "Experience the finest in Ethiopian car rentals.",
-    badge: "Luxury",
-    cars: createPlaceholders("placeholder-luxury", 6, {
-      image: car5,
-      vechile_name: "BMW 5 Series",
-      year: 2023,
-      rating: 4.9,
-      price: 5500,
-      discount: 300,
-      isOfficial: true,
-      location: "Addis Ababa",
-    }),
-  },
-  {
-    id: "suv",
-    title: "SUVs & Vans",
-    subtitle: "Perfect for families and group travel.",
-    badge: "SUV",
-    cars: createPlaceholders("placeholder-suv", 6, {
-      image: carImage,
-      vechile_name: "Ford Explorer",
-      year: 2022,
-      rating: 4.7,
-      price: 3800,
-      discount: 250,
-      isOfficial: true,
-      location: "Addis Ababa",
-    }),
-  },
-];
 
 export function LandingFeatures() {
   const [sections, setSections] = useState<CompanySection[]>([]);
@@ -277,35 +246,111 @@ export function LandingFeatures() {
           return;
         }
 
-        const sectionCars: Record<string, ApiVehicle[]> = {
-          "newly-added": allCars.slice(0, 6),
-          "user-hosted": allCars
-            .filter((car) => car.ownerType === "User")
-            .slice(0, 6),
-          airport: allCars.filter(isAirportCar).slice(0, 6),
-          luxury: allCars.filter(isLuxuryCar).slice(0, 6),
-          suv: allCars.filter(isSuvCar).slice(0, 6),
+        const dynamicSections: CompanySection[] = [];
+
+        // Section 1: Official Company Fleet
+        const companyCars = allCars.filter(
+          (car) => car.ownerType === "Company" && car.status === "AVAILABLE"
+        );
+        if (companyCars.length > 0) {
+          dynamicSections.push({
+            id: "official-fleet",
+            title: "Official Rental Fleet",
+            subtitle: "Professional car rentals from verified companies",
+            badge: "Official",
+            cars: companyCars.slice(0, 6).map((car, idx) =>
+              toCarCard(car, getRandomFallbackImage(idx), idx)
+            ),
+          });
+        }
+
+        // Section 2: New Arrivals (last 30 days)
+        const newArrivals = allCars.filter(isNewVehicle);
+        if (newArrivals.length > 0) {
+          dynamicSections.push({
+            id: "new-arrivals",
+            title: "New Arrivals This Month",
+            subtitle: "Fresh vehicles just added to our collection",
+            badge: "Just Added",
+            cars: newArrivals.slice(0, 6).map((car, idx) =>
+              toCarCard(car, getRandomFallbackImage(idx), idx)
+            ),
+          });
+        }
+
+        // Section 3: Peer Host Community
+        const peerHostCars = allCars.filter(
+          (car) => car.ownerType === "User" && car.status === "AVAILABLE"
+        );
+        if (peerHostCars.length > 0) {
+          dynamicSections.push({
+            id: "peer-host",
+            title: "Peer Host Vehicles",
+            subtitle: "Rent directly from trusted local owners",
+            badge: "Peer Host",
+            cars: peerHostCars.slice(0, 6).map((car, idx) =>
+              toCarCard(car, getRandomFallbackImage(idx), idx)
+            ),
+          });
+        }
+
+        // Section 4: Recently Updated Listings
+        const recentlyUpdated = allCars.filter(isRecentlyUpdated);
+        if (recentlyUpdated.length > 0 && recentlyUpdated.length !== allCars.length) {
+          dynamicSections.push({
+            id: "recently-updated",
+            title: "Recently Updated",
+            subtitle: "Freshly updated listings with new details",
+            badge: "Updated",
+            cars: recentlyUpdated.slice(0, 6).map((car, idx) =>
+              toCarCard(car, getRandomFallbackImage(idx), idx)
+            ),
+          });
+        }
+
+        // Section 5: Category-based sections (SUV, Luxury, Electric, etc.)
+        const vehiclesByCategory = new Map<string, ApiVehicle[]>();
+        
+        allCars.forEach((car) => {
+          const category = getVehicleCategory(car);
+          if (!vehiclesByCategory.has(category)) {
+            vehiclesByCategory.set(category, []);
+          }
+          vehiclesByCategory.get(category)!.push(car);
+        });
+
+        const categoryConfigs: Record<string, { title: string; badge: string; icon?: string }> = {
+          "SUV": { title: "SUVs & Crossovers", badge: "SUV", icon: "🚙" },
+          "Luxury": { title: "Luxury & Premium", badge: "Luxury", icon: "✨" },
+          "Sedan": { title: "Sedans & Economy", badge: "Sedan", icon: "🚗" },
+          "Electric": { title: "Electric & Hybrid", badge: "Eco-Friendly", icon: "⚡" },
+          "Van": { title: "Vans & Minivans", badge: "Family", icon: "🚐" },
+          "Truck": { title: "Trucks & Pickups", badge: "Heavy Duty", icon: "🛻" },
+          "Sports": { title: "Sports & Performance", badge: "Performance", icon: "🏎️" },
         };
 
-        const mapped = COMPANY_SECTIONS.map((section) => {
-          const fallback = section.cars[0];
-          const imageFallback =
-            typeof fallback.image === "string" ? car2 : fallback.image;
-          const fromApi = (sectionCars[section.id] || []).map((car, idx) =>
-            toCarCard(car, imageFallback, idx),
-          );
-
-          return {
-            ...section,
-            cars: fromApi,
-          };
-        }).filter((section) => section.cars.length > 0);
+        for (const [category, cars] of vehiclesByCategory.entries()) {
+          const config = categoryConfigs[category];
+          if (config && cars.length >= 3) {
+            dynamicSections.push({
+              id: `category-${category.toLowerCase()}`,
+              title: config.title,
+              subtitle: `Browse our ${category.toLowerCase()} collection`,
+              badge: config.badge,
+              icon: config.icon,
+              cars: cars.slice(0, 6).map((car, idx) =>
+                toCarCard(car, getRandomFallbackImage(idx), idx)
+              ),
+            });
+          }
+        }
 
         if (!isCancelled) {
-          setSections(mapped);
+          setSections(dynamicSections);
           setIsLoading(false);
         }
-      } catch {
+      } catch (error) {
+        console.error("Failed to load cars:", error);
         if (!isCancelled) {
           setSections([]);
           setIsLoading(false);
@@ -326,8 +371,12 @@ export function LandingFeatures() {
           message="Discovering top rentals..."
           className="py-24"
         />
-      ) : (
+      ) : sections.length > 0 ? (
         sections.map((section) => <CarRow key={section.id} section={section} />)
+      ) : (
+        <div className="text-center py-24">
+          <p className="text-muted-foreground">No vehicles available at the moment.</p>
+        </div>
       )}
     </SectionContainer>
   );
@@ -350,11 +399,12 @@ function CarRow({ section }: { section: CompanySection }) {
   }, [hoverDirection]);
 
   return (
-    <div className="mx-auto max-w-7xl px-4">
-      <div className="mb-1 flex items-end justify-between border-b pb-4">
+    <div className="mx-auto max-w-7xl px-4 mb-12">
+      <div className="mb-6 flex items-end justify-between border-b pb-4">
         <div>
           <div className="flex items-center gap-2 mb-1">
-            <span className="bg-primary/10 text-primary dark:bg-primary/30 dark:text-primary/80 text-[10px] font-bold uppercase px-2 py-0.5 rounded">
+            <span className="bg-primary/10 text-primary dark:bg-primary/30 dark:text-primary/80 text-[10px] font-bold uppercase px-2 py-0.5 rounded flex items-center gap-1">
+              {section.icon && <span>{section.icon}</span>}
               {section.badge}
             </span>
             <span className="text-muted-foreground dark:text-gray-400 text-xs">
@@ -375,6 +425,7 @@ function CarRow({ section }: { section: CompanySection }) {
               scrollRef.current?.scrollBy({ left: -380, behavior: "smooth" })
             }
             className="p-2 border rounded-full hover:bg-accent dark:hover:bg-accent/20 transition-colors"
+            aria-label="Scroll left"
           >
             <ChevronLeft size={20} />
           </button>
@@ -383,6 +434,7 @@ function CarRow({ section }: { section: CompanySection }) {
               scrollRef.current?.scrollBy({ left: 380, behavior: "smooth" })
             }
             className="p-2 border rounded-full hover:bg-accent dark:hover:bg-accent/20 transition-colors"
+            aria-label="Scroll right"
           >
             <ChevronRight size={20} />
           </button>
@@ -408,15 +460,15 @@ function CarRow({ section }: { section: CompanySection }) {
         >
           {section.cars.map((car, idx) => (
             <Link
-              href={`/cars/${car.id || idx + 1}`}
-              key={car.id || idx + 1}
+              href={`/cars/${car.id}`}
+              key={car.id}
               className="block w-[250px] md:w-[calc((100%_-_2.5rem)/3)] md:min-w-[calc((100%_-_2.5rem)/3)] md:max-w-[calc((100%_-_2.5rem)/3)] shrink-0 snap-start"
             >
               <Card className="w-full overflow-hidden border-none shadow-none bg-transparent dark:bg-gray-800 hover:bg-accent/5 dark:hover:bg-accent/20 transition-colors p-2">
                 <div className="relative aspect-[16/10] w-full rounded-2xl overflow-hidden mb-3 shadow-sm">
                   <Image
                     src={car.image}
-                    alt="car"
+                    alt={car.vechile_name}
                     fill
                     className="object-cover"
                     unoptimized={typeof car.image === "string"}
@@ -450,6 +502,12 @@ function CarRow({ section }: { section: CompanySection }) {
                     <span className="flex items-center gap-1">
                       <MapPin size={12} /> {car.location}
                     </span>
+                    {car.transmission && (
+                      <span className="flex items-center gap-1 capitalize">
+                        {car.transmission === "automatic" ? "Auto" : 
+                         car.transmission === "manual" ? "Manual" : "CVT"}
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -466,8 +524,7 @@ function CarRow({ section }: { section: CompanySection }) {
                         ${car.price + car.discount}
                       </span>
                       <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900 px-1 rounded">
-                        -
-                        {Math.round(
+                        -{Math.round(
                           (car.discount / (car.price + car.discount)) * 100,
                         )}
                         % Off

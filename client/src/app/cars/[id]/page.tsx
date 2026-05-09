@@ -330,7 +330,7 @@ const Index = () => {
           </div>
 
           {/* Favorite Heart */}
-          <button
+          {/* <button
             onClick={() => setIsFavorite(!isFavorite)}
             className="absolute top-4 right-4 p-3 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white transition-colors"
           >
@@ -341,7 +341,7 @@ const Index = () => {
                   : "text-gray-700 hover:text-red-500"
               }`}
             />
-          </button>
+          </button> */}
 
           {/* View Photos Button */}
           <Button
@@ -614,13 +614,15 @@ const Index = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {similarCars.map((sc, index) => {
+                const id = sc.id || sc._id;
+
                 const image =
                   sc.imageUrl ||
                   sc.galleryImages?.[0] ||
                   FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 
                 return (
-                  <Link href={`/cars/${sc.id}`} key={sc.id}>
+                  <Link href={`/cars/${id}`} key={id}>
                     <div className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800">
                       {/* IMAGE */}
                       <div className="relative aspect-[4/3] overflow-hidden">
@@ -633,14 +635,14 @@ const Index = () => {
                         />
 
                         <span className="absolute right-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow">
-                          ETB {sc.price}/day
+                          ETB {sc.dailyRate || sc.price}/day
                         </span>
                       </div>
 
                       {/* CONTENT */}
                       <div className="space-y-3 p-4">
                         <div>
-                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
+                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 dark:text-white">
                             {sc.make} {sc.model}
                           </h3>
 

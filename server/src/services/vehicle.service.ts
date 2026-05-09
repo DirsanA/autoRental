@@ -250,29 +250,31 @@ export class VehicleService {
       };
     });
   }
-async listInspired(options: { query?: string }) {
+async listInspired(options: {
+  query?: string;
+  userId?: string;
+}) {
   const queryText = options.query?.trim();
 
-  let vehicles = [];
+  let inspiredCars: any[] = [];
 
-  // 1️⃣ Find seed cars
+  // =============================
+  // SEARCH-BASED RECOMMENDATION
+  // =============================
   if (queryText) {
     const seedCars = await Vehicle.find({
       status: "AVAILABLE",
       $or: [
-        { car_name: { $regex: queryText, $options: "i" } },
         { make: { $regex: queryText, $options: "i" } },
         { model: { $regex: queryText, $options: "i" } },
         { type: { $regex: queryText, $options: "i" } },
       ],
     }).lean();
 
-    // 2️⃣ Extract similarity signals
-    const makes = seedCars.map(c => c.make);
-    const types = seedCars.map(c => c.type);
+    const makes = [...new Set(seedCars.map((c) => c.make))];
+    const types = [...new Set(seedCars.map((c) => c.type))];
 
-    // 3️⃣ Expand recommendation
-    vehicles = await Vehicle.find({
+    inspiredCars = await Vehicle.find({
       status: "AVAILABLE",
       $or: [
         { make: { $in: makes } },
@@ -280,19 +282,41 @@ async listInspired(options: { query?: string }) {
       ],
     })
       .sort({ rating: -1, createdAt: -1 })
-      .limit(12)
+      .limit(6)
       .lean();
   }
 
-  // 4️⃣ fallback (no query or no matches)
-  if (vehicles.length === 0) {
-    vehicles = await Vehicle.find({ status: "AVAILABLE" })
+  // =============================
+  // FALLBACK FEATURED CARS
+  // =============================
+  if (!inspiredCars.length) {
+    inspiredCars = await Vehicle.find({
+      status: "AVAILABLE",
+    })
       .sort({ rating: -1, createdAt: -1 })
-      .limit(12)
+      .limit(6)
       .lean();
   }
 
-  return this.enrichWithOwners(vehicles);
+  // =============================
+  // GROUP BY CATEGORY
+  // =============================
+  const grouped = inspiredCars.reduce((acc: any, car: any) => {
+    const category = car.type || "Other";
+
+    if (!acc[category]) {
+      acc[category] = [];
+    }
+
+    acc[category].push(car);
+
+    return acc;
+  }, {});
+
+  return {
+    featured: inspiredCars.slice(0, 3),
+    categories: grouped,
+  };
 }
 
   /**
