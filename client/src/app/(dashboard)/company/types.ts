@@ -15,8 +15,6 @@ export type Vehicle = {
   pricePerDay: number;
   image: string;
   galleryImages?: string[];
-  lastMaintenance: string;
-  nextMaintenance: string;
   mileage?: number;
   fuel?: string;
   transmission?: string;
@@ -63,8 +61,6 @@ export const MOCK_VEHICLES: Vehicle[] = [
       "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?auto=format&fit=crop&w=1200&q=80",
     ],
-    lastMaintenance: "Mar 02, 2026",
-    nextMaintenance: "Jun 05, 2026",
     mileage: 18200,
     fuel: "hybrid",
     transmission: "automatic",
@@ -98,8 +94,6 @@ export const MOCK_VEHICLES: Vehicle[] = [
       "https://images.unsplash.com/photo-1553440569-bcc63803a83d?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80",
     ],
-    lastMaintenance: "Feb 16, 2026",
-    nextMaintenance: "May 20, 2026",
     mileage: 26400,
     fuel: "gasoline",
     transmission: "automatic",
@@ -133,8 +127,6 @@ export const MOCK_VEHICLES: Vehicle[] = [
       "https://images.unsplash.com/photo-1502877338535-766e1452684a?auto=format&fit=crop&w=1200&q=80",
       "https://images.unsplash.com/photo-1503736334956-4c8f8e92946d?auto=format&fit=crop&w=1200&q=80",
     ],
-    lastMaintenance: "Mar 10, 2026",
-    nextMaintenance: "Apr 15, 2026",
     mileage: 31900,
     fuel: "gasoline",
     transmission: "automatic",
