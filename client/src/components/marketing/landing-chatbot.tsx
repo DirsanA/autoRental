@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState, useCallback } from "react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
 import { Bot, MessageSquareText, Send, Sparkles } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -22,12 +22,18 @@ type ChatMessage = {
   isTyping?: boolean;
 };
 
-// Hook for typing animation - reveals text word by word
+type ChatApiResponse = {
+  content?: string;
+  error?: string;
+  fallback?: boolean;
+  reason?: string;
+};
+
 function useTypingAnimation(
   fullText: string,
   isTyping: boolean,
   onComplete: () => void,
-  wordsPerSecond = 8
+  wordsPerSecond = 8,
 ) {
   const [displayedText, setDisplayedText] = useState("");
   const wordsRef = useRef<string[]>([]);
@@ -35,15 +41,10 @@ function useTypingAnimation(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isTyping) {
-      setDisplayedText(fullText);
-      return;
-    }
+    if (!isTyping) return;
 
-    // Reset and start typing
-    wordsRef.current = fullText.split(/(\s+)/); // Keep whitespace as separate tokens
+    wordsRef.current = fullText.split(/(\s+)/);
     currentIndexRef.current = 0;
-    setDisplayedText("");
 
     const wordDelay = 1000 / wordsPerSecond;
 
@@ -57,12 +58,10 @@ function useTypingAnimation(
       setDisplayedText(nextWords.join(""));
       currentIndexRef.current++;
 
-      // Randomize delay slightly for natural feel
       const randomDelay = wordDelay * (0.8 + Math.random() * 0.4);
       timeoutRef.current = setTimeout(typeNext, randomDelay);
     };
 
-    // Start typing after a small delay
     timeoutRef.current = setTimeout(typeNext, 300);
 
     return () => {
@@ -72,7 +71,7 @@ function useTypingAnimation(
     };
   }, [fullText, isTyping, onComplete, wordsPerSecond]);
 
-  return displayedText;
+  return isTyping ? displayedText : fullText;
 }
 
 const STARTER_PROMPTS = [
@@ -101,7 +100,10 @@ async function fetchAssistantReply(conversation: ChatMessage[]) {
     body: JSON.stringify({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        ...conversation.map((m) => ({ role: m.role, content: m.content })),
+        ...conversation.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
       ],
     }),
   });
@@ -111,12 +113,22 @@ async function fetchAssistantReply(conversation: ChatMessage[]) {
     throw new Error(text || `Request failed with status ${res.status}`);
   }
 
-  const data = (await res.json()) as { content?: string };
-  if (!data.content) throw new Error("Empty assistant response.");
+  const data = (await res.json()) as ChatApiResponse;
+
+  if (data.fallback) {
+    throw new Error(
+      data.error ||
+        `Assistant fallback triggered${data.reason ? `: ${data.reason}` : "."}`,
+    );
+  }
+
+  if (!data.content) {
+    throw new Error("Empty assistant response.");
+  }
+
   return data.content;
 }
 
-// Component for individual chat message with typing animation
 function ChatMessageBubble({
   message,
   isCurrentlyTyping,
@@ -130,7 +142,7 @@ function ChatMessageBubble({
     message.content,
     isCurrentlyTyping,
     onTypingComplete,
-    12 // words per second - adjust for faster/slower typing
+    12,
   );
 
   return (
@@ -191,15 +203,18 @@ export function LandingChatbot() {
         { id: newMessageId, role: "assistant", content, isTyping: true },
       ]);
       setTypingMessageId(newMessageId);
-    } catch {
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "I could not reach the assistant service right now. Please try again in a moment.";
       const errorMessageId = Date.now() + 1;
       setMessages((current) => [
         ...current,
         {
           id: errorMessageId,
           role: "assistant",
-          content:
-            "Sorry — I could not reach the assistant service right now. Please try again in a moment.",
+          content: `Sorry, ${message}`,
           isTyping: true,
         },
       ]);
@@ -212,9 +227,9 @@ export function LandingChatbot() {
   const handleTypingComplete = useCallback((messageId: number) => {
     setTypingMessageId((current) => (current === messageId ? null : current));
     setMessages((current) =>
-      current.map((msg) =>
-        msg.id === messageId ? { ...msg, isTyping: false } : msg
-      )
+      current.map((message) =>
+        message.id === messageId ? { ...message, isTyping: false } : message,
+      ),
     );
   }, []);
 
@@ -343,10 +358,7 @@ export function LandingChatbot() {
               </div>
 
               <div className="bg-background px-6 py-4 border-border/60 border-t">
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex items-center gap-2"
-                >
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
                   <Input
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
