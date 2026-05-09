@@ -1,193 +1,128 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
-import { Star, Users, Loader2 } from "lucide-react";
 import { Card } from "../ui/card";
-
-type Vehicle = {
-  _id: string;
-  make: string;
-  model: string;
-  year: number;
-  price: number;
-  transmission: string;
-  fuel: string;
-  seats: number;
-  photos: {
-    front?: string;
-    back?: string;
-    side?: string;
-    interior?: string;
-    gallery?: string[];
-  };
-};
+import { Star } from "lucide-react";
+import Link from "next/link";
+import carImage from "@/assets/image.jpg";
+import car2 from "@/assets/car-1.jpg";
+import car3 from "@/assets/car-2.jpg";
+import car4 from "@/assets/car-3.jpg";
+import car5 from "@/assets/car-4.jpg";
 
 export function LandingSearch() {
-  const [cars, setCars] = useState<Vehicle[]>([]);
-  const [loading, setLoading] = useState(true);
+  const cars = [
+    {
+      id: "1",
+      car_name: "Hyundai Staria",
+      year: 2022,
+      rating: 4.8,
+      number_of_people: 12,
+      price: 85,
+      transmission: "Automatic",
+      type: "Luxury Van",
+      image: car2,
+    },
+    {
+      id: "2",
+      car_name: "Tesla Model Y",
+      year: 2023,
+      rating: 4.9,
+      number_of_people: 5,
+      price: 120,
+      transmission: "Electric",
+      type: "SUV",
+      image: car3,
+    },
+    {
+      id: "3",
+      car_name: "Toyota Corolla",
+      year: 2021,
+      rating: 4.5,
+      number_of_people: 5,
+      price: 55,
+      transmission: "Automatic",
+      type: "Sedan",
+      image: car4,
+    },
+    {
+      id: "4",
+      car_name: "Jeep Wrangler",
+      year: 2022,
+      rating: 4.7,
+      number_of_people: 4,
+      price: 95,
+      transmission: "Manual",
+      type: "Off-Road",
+      image: car5,
+    },
+    {
+      id: "5",
+      car_name: "Mercedes-Benz V-Class",
+      year: 2023,
+      rating: 4.9,
+      number_of_people: 8,
+      price: 150,
+      transmission: "Automatic",
+      type: "Premium MPV",
+      image: carImage,
+    },
+    {
+      id: "6",
+      car_name: "Ford Mustang",
+      year: 2020,
+      rating: 4.6,
+      number_of_people: 4,
+      price: 110,
+      transmission: "Automatic",
+      type: "Sport",
+      image: car2,
+    },
+  ];
 
-  const didFetch = useRef(false);
-
-  useEffect(() => {
-    // Prevent double fetch in React Strict Mode (Next.js dev)
-    if (didFetch.current) return;
-    didFetch.current = true;
-
-    const fetchCars = async () => {
-      try {
-        setLoading(true);
-
-        // ✅ Safe client-only access
-        let query: string | null = null;
-
-        if (typeof window !== "undefined") {
-          query = window.localStorage.getItem("last_search_query");
-        }
-
-        const params = new URLSearchParams();
-        if (query) params.set("query", query.trim());
-
-        const res = await fetch(
-          `http://localhost:5000/api/vehicles/inspired?${params.toString()}`,
-          {
-            cache: "no-store",
-          }
-        );
-
-        const data = await res.json();
-
-        setCars(data?.data?.vehicles ?? []);
-      } catch (err) {
-        console.error("Failed to fetch inspired cars:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchCars();
-  }, []);
-
-  // ================= LOADING =================
-  if (loading) {
-    return (
-      <section className="py-2 px-4 max-w-6xl mx-auto">
-        <div className="flex items-center gap-2 mb-6">
-          <Loader2 className="w-5 h-5 animate-spin text-primary" />
-          <p className="text-muted-foreground">
-            Finding vehicles inspired by your interests...
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {Array.from({ length: 6 }).map((_, i) => (
-            <div
-              key={i}
-              className="h-40 rounded-2xl bg-muted animate-pulse"
-            />
-          ))}
-        </div>
-      </section>
-    );
-  }
-
-  // ================= EMPTY =================
-  if (!cars.length) {
-    return (
-      <section className="py-6 px-4 max-w-6xl mx-auto">
-        <p className="text-muted-foreground">
-          No inspired vehicles found. Try searching more cars first.
-        </p>
-      </section>
-    );
-  }
-
-  // ================= MAIN UI =================
   return (
-    <section className="py-2 px-4 max-w-6xl mx-auto">
-      <div className="mb-6">
-        <h2 className="text-3xl font-bold text-foreground">
-          Inspired by your search
-        </h2>
-        <p className="text-muted-foreground mt-1">
-          Vehicles similar to what you recently explored
-        </p>
-      </div>
+    <section className="py-0 px-4 max-w-5xl mx-auto">
+      <h2 className="text-2xl font-bold mb-6 text-foreground dark:text-gray-100">
+        Inspired by your recent search
+      </h2>
 
       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-        {cars.map((car) => {
-          const image =
-            car.photos?.gallery?.[0] ||
-            car.photos?.front ||
-            "/placeholder.png";
-
-          return (
-            <Link key={car._id} href={`/cars/${car._id}`}>
-              <Card className="group overflow-hidden rounded-2xl border border-border/50 bg-background hover:shadow-xl transition-all duration-300">
-                {/* IMAGE */}
-                <div className="relative h-52 overflow-hidden">
-                  <Image
-                    src={image}
-                    alt={`${car.make} ${car.model}`}
-                    fill
-                    priority={false}
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-
-                  <div className="absolute top-3 left-3 bg-primary text-white text-xs px-3 py-1 rounded-full">
-                    Inspired Pick
+        {cars.map(
+          (car, idx) =>
+            car.car_name && (
+              <Link key={idx} href={`/cars/${car.id}`}>
+                <Card className="flex flex-row overflow-hidden p-4 gap-4 items-center border-none shadow-sm bg-gray-100 dark:bg-gray-800 hover:bg-accent/10 dark:hover:bg-accent/20 transition-colors cursor-pointer">
+                  <div className="relative h-24 w-32 flex-shrink-0 overflow-hidden rounded-lg">
+                    <Image
+                      src={car.image}
+                      alt={car.car_name}
+                      fill
+                      className="object-cover"
+                    />
                   </div>
-                </div>
 
-                {/* CONTENT */}
-                <div className="p-4">
-                  <div className="flex justify-between">
+                  <div className="flex flex-col flex-grow justify-between py-1">
                     <div>
-                      <h3 className="text-lg font-bold">
-                        {car.make} {car.model}
+                      <h3 className="font-bold text-lg leading-tight capitalize text-foreground dark:text-gray-100">
+                        {car.car_name}
                       </h3>
-                      <p className="text-sm text-muted-foreground">
-                        {car.fuel} • {car.year}
-                      </p>
-                    </div>
 
-                    <div className="flex items-center gap-1 text-sm font-medium">
-                      <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-muted-foreground text-xs">
-                        New
-                      </span>
+                      <div className="flex items-center gap-1 mt-1 text-sm text-muted-foreground dark:text-gray-400">
+                        <span>{car.year}</span>
+
+                        <span className="flex items-center gap-1">
+                          {car.rating}
+                          <Star className="w-3.5 h-4.5 fill-blue-500 dark:fill-blue-400 text-primary" />
+                        </span>
+
+                        <span>({car.number_of_people})</span>
+                      </div>
                     </div>
                   </div>
-
-                  <div className="flex items-center gap-4 mt-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Users className="w-4 h-4" />
-                      {car.seats} seats
-                    </div>
-
-                    <span>{car.transmission}</span>
-                  </div>
-
-                  <div className="flex items-end justify-between mt-5">
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Per day
-                      </p>
-                      <h4 className="text-2xl font-bold">
-                        ${car.price}
-                      </h4>
-                    </div>
-
-                    <button className="px-4 py-2 rounded-xl bg-primary text-white text-sm font-medium hover:opacity-90 transition">
-                      View Car
-                    </button>
-                  </div>
-                </div>
-              </Card>
-            </Link>
-          );
-        })}
+                </Card>
+              </Link>
+            ),
+        )}
       </div>
     </section>
   );

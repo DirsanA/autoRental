@@ -1,6 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
+import { useState } from "react";
 import {
   Building2,
   FileCheck2,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 /* ---------------- DATA ---------------- */
@@ -42,83 +44,114 @@ type Props = {
 };
 
 export default function Requirements({ onNext }: Props) {
+  const [checked, setChecked] = useState<boolean[]>(
+    Array(REQUIREMENTS.length).fill(false)
+  );
+
+  const allChecked = checked.every(Boolean);
+
+  const toggle = (i: number) => {
+    setChecked((prev) =>
+      prev.map((v, idx) => (idx === i ? !v : v))
+    );
+  };
+
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-50 via-white to-gray-100 px-4 py-12 flex items-center justify-center">
-      <div className="w-full max-w-4xl">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-gray-50 to-white px-4">
+
+      {/* CENTER CONTAINER */}
+      <div className="w-full max-w-2xl space-y-10">
+
         {/* HEADER */}
-        <div className="text-center mb-12">
-          <p className="text-sm font-semibold tracking-wide text-indigo-600 uppercase">
-            Host Registration
+        <div className="text-center space-y-2">
+          <p className="text-sm font-medium text-indigo-600">
+            Step 1 / 4
           </p>
 
-          <h1 className="mt-3 text-5xl font-bold tracking-tight text-gray-900">
+          <h1 className="text-4xl font-bold tracking-tight">
             Become a Host
           </h1>
 
-          <p className="mt-4 text-lg text-gray-500 max-w-2xl mx-auto">
-            Before continuing your registration, review the business
-            requirements below.
+          <p className="text-gray-500">
+            First, confirm your business eligibility
           </p>
         </div>
 
-        {/* REQUIREMENT GRID */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        {/* CARDS */}
+        <div className="space-y-4">
           {REQUIREMENTS.map((item, i) => {
             const Icon = item.icon;
+            const isChecked = checked[i];
 
             return (
               <motion.div
                 key={item.title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: i * 0.08 }}
+                whileHover={{ scale: 1.01 }}
+                transition={{ type: "spring", stiffness: 300 }}
                 className={cn(
-                  "group relative overflow-hidden rounded-3xl border border-gray-200 bg-white p-7 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl",
+                  "flex items-start gap-4 p-5 rounded-2xl border transition cursor-pointer",
+                  isChecked
+                    ? "border-indigo-500 bg-indigo-50 shadow-sm"
+                    : "border-gray-200 bg-white hover:border-indigo-300"
                 )}
+                onClick={() => toggle(i)}
               >
-                {/* TOP */}
-                <div className="flex items-start justify-between">
-                  <div className="p-4 rounded-2xl bg-indigo-50 text-indigo-600">
-                    <Icon size={26} />
+                {/* ICON */}
+                <div
+                  className={cn(
+                    "p-3 rounded-xl shrink-0",
+                    isChecked
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-100 text-indigo-600"
+                  )}
+                >
+                  <Icon size={20} />
+                </div>
+
+                {/* TEXT */}
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <h3 className="font-semibold text-base">
+                      {item.title}
+                    </h3>
+
+                    {isChecked && (
+                      <CheckCircle2 className="w-4 h-4 text-green-500" />
+                    )}
                   </div>
 
-                  <div className="flex items-center gap-1 rounded-full bg-green-50 px-3 py-1 text-xs font-medium text-green-600">
-                    <CheckCircle2 className="w-3.5 h-3.5" />
-                    Required
-                  </div>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {item.desc}
+                  </p>
                 </div>
 
-                {/* CONTENT */}
-                <div className="mt-6">
-                  <h3 className="text-xl font-semibold text-gray-900">
-                    {item.title}
-                  </h3>
-
-                  <p className="mt-3 text-gray-500 leading-7">{item.desc}</p>
-                </div>
-
-                {/* NUMBER */}
-                <div className="absolute top-5 right-5 text-5xl font-bold text-gray-100 select-none">
-                  0{i + 1}
-                </div>
+                {/* CHECKBOX */}
+                <Checkbox
+                  checked={isChecked}
+                  onCheckedChange={() => toggle(i)}
+                />
               </motion.div>
             );
           })}
         </div>
 
-        {/* CTA */}
-        <div className="mt-12 flex flex-col items-center">
-          <p className="text-sm text-gray-400 mb-4">
-            Please make sure all requirements are available before continuing.
+        {/* CTA SECTION */}
+        <div className="pt-2 flex flex-col items-center gap-3">
+
+          {/* progress hint */}
+          <p className="text-xs text-gray-400">
+            {checked.filter(Boolean).length} of {REQUIREMENTS.length} completed
           </p>
 
           <Button
             onClick={onNext}
-            className="h-14 px-10 rounded-2xl text-base font-semibold shadow-lg"
+            disabled={!allChecked}
+            className="w-full py-6 text-base rounded-xl"
           >
-            Continue Registration
-            <ArrowRight className="ml-2 w-5 h-5" />
+            Continue
+            <ArrowRight className="ml-2 w-4 h-4" />
           </Button>
+
         </div>
       </div>
     </div>

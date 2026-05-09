@@ -11,7 +11,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CarLoadingState } from "@/components/shared/car-loading-state";
-import { resolveApiBaseUrl } from "@/lib/api-base-url";
 
 import carMain from "@/assets/image.jpg";
 import car2 from "@/assets/car-1.jpg";
@@ -79,79 +78,6 @@ const Index = () => {
     breakdown: Record<string, number>;
   } | null>(null);
   const router = useRouter();
-  const API_BASE_URL = resolveApiBaseUrl();
-  const [similarCars, setSimilarCars] = useState<Vehicle[]>([]);
-  const [loadingSimilar, setLoadingSimilar] = useState(false);
-
-  useEffect(() => {
-    if (!vehicle?.id) return;
-
-    let cancelled = false;
-
-    async function loadSimilarCars() {
-      try {
-        setLoadingSimilar(true);
-
-        const res = await fetch(`${API_BASE_URL}/vehicles/marketplace`, {
-          cache: "no-store",
-          credentials: "include",
-        });
-
-        if (!res.ok) return;
-
-        const data = await res.json();
-        const vehicles: Vehicle[] =
-          data?.data?.vehicles || data?.vehicles || [];
-
-        const filtered = vehicles
-          .filter((v) => {
-            if (!v) return false;
-
-            // exclude current vehicle
-            if ((v.id || v._id) === (vehicle.id || vehicle._id)) return false;
-
-            // only available
-            if (v.status?.toLowerCase() !== "available") return false;
-
-            const score = [
-              v.make?.toLowerCase() === vehicle.make?.toLowerCase(),
-              v.fuel?.toLowerCase() === vehicle.fuel?.toLowerCase(),
-              v.transmission?.toLowerCase() ===
-                vehicle.transmission?.toLowerCase(),
-              v.category?.toLowerCase() === vehicle.category?.toLowerCase(),
-              Math.abs((v.dailyRate || 0) - (vehicle.dailyRate || 0)) <= 800,
-            ].filter(Boolean).length;
-
-            return score >= 2; // similarity rule
-          })
-          .sort((a, b) => {
-            const priceDiffA = Math.abs(
-              (a.dailyRate || 0) - (vehicle.dailyRate || 0),
-            );
-            const priceDiffB = Math.abs(
-              (b.dailyRate || 0) - (vehicle.dailyRate || 0),
-            );
-
-            return priceDiffA - priceDiffB;
-          })
-          .slice(0, 4);
-
-        if (!cancelled) {
-          setSimilarCars(filtered);
-        }
-      } catch (err) {
-        if (!cancelled) setSimilarCars([]);
-      } finally {
-        if (!cancelled) setLoadingSimilar(false);
-      }
-    }
-
-    loadSimilarCars();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [vehicle?.id]);
 
   useEffect(() => {
     let cancelled = false;
@@ -585,87 +511,50 @@ const Index = () => {
         </div>
 
         {/* Similar Cars */}
-        {/* Similar Cars */}
         <div className="mt-10">
           <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 mb-6" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">
+            Similar Cars You Might Like
+          </h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            {[
+              { id: "audi-a6", name: "Audi A6", price: 1650, image: car2 },
+              {
+                id: "mercedes-e-class",
+                name: "Mercedes E-Class",
+                price: 1750,
+                image: car3,
+              },
+              {
+                id: "tesla-model-s",
+                name: "Tesla Model S",
+                price: 2100,
+                image: car4,
+              },
+              { id: "lexus-es", name: "Lexus ES", price: 1600, image: car5 },
+            ].map((sc) => (
+              <Link href={`/cars/${sc.id}`} key={sc.id}>
+                <div className="group rounded-2xl overflow-hidden border dark:bg-gray-800 dark:border-gray-700 border-gray-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 active:scale-[0.98]">
+                  <div className="aspect-[4/3] overflow-hidden relative">
+                    <Image
+                      src={sc.image}
+                      alt={sc.name}
+                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
+                    />
+                    <span className="absolute top-2 right-2 bg-blue-600 dark:bg-gray-800 dark:border-gray-700 text-white px-2 py-1 rounded text-sm font-semibold shadow">
+                      ${sc.price}/mo
+                    </span>
+                  </div>
 
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Similar Cars You Might Like
-            </h2>
-
-            {similarCars.length > 0 && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {similarCars.length} available cars
-              </span>
-            )}
+                  <div className="p-3">
+                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
+                      {sc.name}
+                    </h3>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
-
-          {loadingSimilar ? (
-            <div className="flex items-center justify-center py-10">
-              <CarLoadingState message="Loading similar cars..." />
-            </div>
-          ) : similarCars.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No similar available cars found.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {similarCars.map((sc, index) => {
-                const image =
-                  sc.imageUrl ||
-                  sc.galleryImages?.[0] ||
-                  FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
-
-                return (
-                  <Link href={`/cars/${sc.id}`} key={sc.id}>
-                    <div className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800">
-                      {/* IMAGE */}
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <Image
-                          src={image}
-                          alt={`${sc.make} ${sc.model}`}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
-                          unoptimized
-                        />
-
-                        <span className="absolute right-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow">
-                          ETB {sc.price}/day
-                        </span>
-                      </div>
-
-                      {/* CONTENT */}
-                      <div className="space-y-3 p-4">
-                        <div>
-                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
-                            {sc.make} {sc.model}
-                          </h3>
-
-                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {sc.year} • {sc.location || "Addis Ababa"}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-sm font-semibold">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            {sc.ratingAvg?.toFixed(1) || "4.9"}
-                          </div>
-
-                          <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                            View details
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
         </div>
 
         {/* Browse Cars CTA */}

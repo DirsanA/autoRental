@@ -29,7 +29,6 @@ export function createVehicleRoutes(auth: Auth): Router {
     requireAccountType(AccountType.USER, AccountType.COMPANY),
     vehicleController.listMine,
   );
-  router.get("/inspired", vehicleController.listInspired);
   router.get(
     "/:id",
     validate({ params: vehicleIdParamsSchema }),

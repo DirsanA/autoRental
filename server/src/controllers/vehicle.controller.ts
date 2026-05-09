@@ -52,17 +52,7 @@ export const vehicleController = {
       data: { vehicles },
     });
   }),
-  
-listInspired: asyncHandler(async (req: Request, res: Response) => {
-  const query = req.query.query as string | undefined;
 
-  const vehicles = await vehicleService.listInspired({ query });
-
-  res.json({
-    success: true,
-    data: { vehicles },
-  });
-}),
   /**
    * Lists vehicles owned by the current authenticated user or company.
    */
