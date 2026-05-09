@@ -12,6 +12,8 @@ import { createPayoutRoutes } from "./payout.routes.js";
 import { createTransactionRoutes } from "./transaction.routes.js";
 import { createReportRoutes } from "./report.routes.js";
 import { createAdminReportsRoutes } from "./admin.reports.routes.js";
+import { createViewTrackingRoutes } from "./view-tracking.routes.js";
+import { createAdminNotificationRoutes } from "./admin-notification.routes.js";
 import type { Auth } from "../config/auth.js";
 
 /**
@@ -35,6 +37,8 @@ export function createApiRoutes(auth: Auth): Router {
   router.use("/payouts", createPayoutRoutes(auth));
   router.use("/transactions", createTransactionRoutes(auth));
   router.use("/reports", createReportRoutes(auth));
+  router.use("/view-tracking", createViewTrackingRoutes(auth));
+  router.use("/admin/notifications", createAdminNotificationRoutes(auth));
 
   return router;
 }
