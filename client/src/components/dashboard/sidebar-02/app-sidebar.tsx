@@ -20,33 +20,15 @@ import {
   Store,
   UserCheck,
   AlertCircle,
+  Bell,
 } from "lucide-react";
 import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
 import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
-
-const sampleNotifications = [
-  {
-    id: "1",
-    fallback: "OM",
-    text: "New order received.",
-    time: "10m ago",
-  },
-  {
-    id: "2",
-    fallback: "JL",
-    text: "Server upgrade completed.",
-    time: "1h ago",
-  },
-  {
-    id: "3",
-    fallback: "HH",
-    text: "New user signed up.",
-    time: "2h ago",
-  },
-];
+import { SidebarBadge } from "@/components/action-badges/sidebar-badge";
+import { NotificationBellBadge } from "@/components/action-badges/notification-bell-badge";
 
 const dashboardRoutes: Route[] = [
   {
@@ -56,10 +38,20 @@ const dashboardRoutes: Route[] = [
     link: "/sysadmin/dashboard",
   },
   {
+    id: "Notifications",
+    title: "Notifications",
+    icon: <Bell className="size-4" />,
+    link: "/sysadmin/notifications",
+    badge: <NotificationBellBadge />,
+    showNotificationBadge: true,
+  },
+  {
     id: "Users",
     title: "Users",
     icon: <UserCheck className="size-4" />,
     link: "/sysadmin/users",
+    badge: <SidebarBadge entityType="USER" />,
+    entityType: "USER",
     // subs: [
     //   {
     //     title: "Catalogue",
@@ -84,6 +76,8 @@ const dashboardRoutes: Route[] = [
     //company icon
     icon: <Building2 className="size-4" />,
     link: "/sysadmin/companies",
+    badge: <SidebarBadge entityType="COMPANY" />,
+    entityType: "COMPANY",
     // subs: [
     //   {
     //     title: "Meters",
@@ -102,6 +96,8 @@ const dashboardRoutes: Route[] = [
     title: "P2P Hosts",
     icon: <Handshake className="size-4" />,
     link: "/sysadmin/p2p",
+    badge: <SidebarBadge entityType="P2P_HOST" />,
+    entityType: "P2P_HOST",
   },
   // {
   //   id: "customers",
@@ -192,7 +188,7 @@ export function DashboardSidebar({
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <NotificationsPopover notifications={sampleNotifications} />
+          <NotificationsPopover />
           <SidebarTrigger />
         </motion.div>
       </SidebarHeader>
