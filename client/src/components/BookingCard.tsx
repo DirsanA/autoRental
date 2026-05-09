@@ -10,6 +10,7 @@ import { initializeChapaCheckout } from "@/lib/bookings-api";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { readAuthToken } from "@/lib/auth-token";
+import { fetchCurrentSession, readCachedAuthSession } from "@/lib/auth-api";
 import type { VehicleAvailabilityBlock } from "@/components/peer-host/vehicles/types";
 
 interface BookingCardProps {
@@ -28,6 +29,11 @@ interface BookingCardProps {
 }
 
 const COMMISSION_RATE = 0.08;
+const BOOKING_ENABLED_LEVELS = new Set([
+  "ID_VERIFIED",
+  "LICENSE_VERIFIED",
+  "PEER_HOST",
+]);
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-ET", {
@@ -67,6 +73,9 @@ export default function BookingCard({
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [verificationLevel, setVerificationLevel] = useState(
+    readCachedAuthSession()?.user?.verificationLevel || "NONE",
+  );
 
   // Use noon for calculations to avoid timezone edge cases
   const startDateTime = `${startDate}T12:00`;
@@ -257,9 +266,56 @@ export default function BookingCard({
     };
   }, [bookingGuard.hours, bookingGuard.valid, dailyRate]);
 
+  const isBookingVerificationReady = BOOKING_ENABLED_LEVELS.has(
+    verificationLevel || "NONE",
+  );
+
+  const verificationBlockMessage =
+    !isBookingVerificationReady && readAuthToken()
+      ? "Complete your National ID verification before booking a vehicle."
+      : null;
+
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!readAuthToken()) {
+      setVerificationLevel("NONE");
+      return;
+    }
+
+    const cachedLevel = readCachedAuthSession()?.user?.verificationLevel || "NONE";
+    setVerificationLevel(cachedLevel);
+
+    const loadSession = async () => {
+      try {
+        const session = await fetchCurrentSession();
+        if (!cancelled) {
+          setVerificationLevel(session?.user?.verificationLevel || "NONE");
+        }
+      } catch {
+        if (!cancelled) {
+          setVerificationLevel(cachedLevel);
+        }
+      }
+    };
+
+    void loadSession();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   useEffect(() => {
     setSubmissionError(null);
-  }, [endDate, startDate, availabilityBlocks, vehicleId, vehicleStatus]);
+  }, [
+    endDate,
+    startDate,
+    availabilityBlocks,
+    vehicleId,
+    vehicleStatus,
+    verificationLevel,
+  ]);
 
   async function onSubmit(event: FormEvent) {
     event.preventDefault();
@@ -275,6 +331,14 @@ export default function BookingCard({
       setSubmissionError(
         "We could not start checkout because this vehicle is missing.",
       );
+      return;
+    }
+
+    if (!isBookingVerificationReady) {
+      setSubmissionError(
+        "Complete your National ID verification before booking a vehicle.",
+      );
+      router.push("/renter/profile-verification");
       return;
     }
 
@@ -466,7 +530,7 @@ export default function BookingCard({
 
         <Button
           type="submit"
-          disabled={submitting || !termsAccepted}
+          disabled={submitting || !termsAccepted || !isBookingVerificationReady}
           className="mb-8 w-full rounded-xl bg-[#e5e5e5] px-4 py-[14px] text-base font-extrabold text-gray-800 hover:bg-[#d4d4d4] disabled:bg-[#f2f2f2] disabled:text-[#b4b4b4] disabled:opacity-100 transition-colors h-auto"
         >
           {submitting ? (
@@ -474,15 +538,31 @@ export default function BookingCard({
               <LoaderCircle className="mr-2 h-5 w-5 animate-spin" />
               Processing...
             </>
+          ) : !isBookingVerificationReady && readAuthToken() ? (
+            "Verify National ID to Book"
           ) : (
             "Continue"
           )}
         </Button>
 
-        {(submissionError || bookingGuard.message) && (
+        {(submissionError || verificationBlockMessage || bookingGuard.message) && (
           <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            <p>{submissionError || bookingGuard.message}</p>
+            <p>
+              {submissionError || verificationBlockMessage || bookingGuard.message}
+              {!submissionError && verificationBlockMessage ? (
+                <>
+                  {" "}
+                  <Link
+                    href="/renter/profile-verification"
+                    className="font-semibold underline underline-offset-2"
+                  >
+                    Go to verification
+                  </Link>
+                  .
+                </>
+              ) : null}
+            </p>
           </div>
         )}
       </form>

@@ -54,7 +54,7 @@ import {
   type RenterBookingStatus,
 } from "@/lib/bookings-api";
 import { cn } from "@/lib/utils";
-import { Skeleton } from "@/components/ui/skeleton";
+import { BookingHistoryPageSkeleton } from "@/components/shared/bookings/booking-history-skeleton";
 
 const PAGE_SIZE = 10;
 
@@ -228,24 +228,6 @@ const StatsCards = ({ bookings }: { bookings: RenterBookingListItem[] }) => {
     </div>
   );
 };
-
-// Table Skeleton
-const TableSkeleton = () => (
-  <div className="bg-card border border-border/50 rounded-xl">
-    <div className="p-4 border-border/50 border-b">
-      <Skeleton className="w-full h-8" />
-    </div>
-    {[...Array(5)].map((_, i) => (
-      <div key={i} className="p-4 border-border/50 border-b">
-        <div className="gap-4 grid grid-cols-6">
-          {[...Array(6)].map((_, j) => (
-            <Skeleton key={j} className="w-full h-6" />
-          ))}
-        </div>
-      </div>
-    ))}
-  </div>
-);
 
 // Booking Table Row
 const BookingTableRow = ({ booking }: { booking: RenterBookingListItem }) => {
@@ -598,6 +580,10 @@ export function RenterBookingHistoryPage() {
         <Header />
 
         <Main className="gap-6 p-6 md:p-8 overflow-y-auto">
+          {showSkeleton ? (
+            <BookingHistoryPageSkeleton columns={6} rows={5} statCards={4} />
+          ) : (
+            <>
           {/* Header Section */}
           <div className="space-y-2">
             <h1 className="font-bold text-foreground text-3xl md:text-4xl tracking-tight">
@@ -627,9 +613,7 @@ export function RenterBookingHistoryPage() {
 
           {/* Main Table */}
           <div className="bg-card shadow-sm border border-border/50 rounded-xl">
-            {showSkeleton ? (
-              <TableSkeleton />
-            ) : error ? (
+            {error ? (
               <div className="p-6">
                 <ErrorState error={error} onRetry={handleRefresh} />
               </div>
@@ -670,6 +654,8 @@ export function RenterBookingHistoryPage() {
               </>
             )}
           </div>
+            </>
+          )}
         </Main>
       </div>
     </div>
