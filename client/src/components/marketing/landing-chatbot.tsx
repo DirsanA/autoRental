@@ -1,7 +1,7 @@
 "use client";
 
-import { type FormEvent, useEffect, useRef, useState, useCallback } from "react";
-import { Bot, MessageSquareText, Send, Sparkles } from "lucide-react";
+import { type FormEvent, useCallback, useEffect, useRef, useState } from "react";
+import { Bot, MessageSquareText, Send, Sparkles, Square } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -22,12 +22,18 @@ type ChatMessage = {
   isTyping?: boolean;
 };
 
-// Hook for typing animation - reveals text word by word
+type ChatApiResponse = {
+  content?: string;
+  error?: string;
+  fallback?: boolean;
+  reason?: string;
+};
+
 function useTypingAnimation(
   fullText: string,
   isTyping: boolean,
   onComplete: () => void,
-  wordsPerSecond = 8
+  wordsPerSecond = 8,
 ) {
   const [displayedText, setDisplayedText] = useState("");
   const wordsRef = useRef<string[]>([]);
@@ -40,8 +46,7 @@ function useTypingAnimation(
       return;
     }
 
-    // Reset and start typing
-    wordsRef.current = fullText.split(/(\s+)/); // Keep whitespace as separate tokens
+    wordsRef.current = fullText.split(/(\s+)/);
     currentIndexRef.current = 0;
     setDisplayedText("");
 
@@ -55,14 +60,12 @@ function useTypingAnimation(
 
       const nextWords = wordsRef.current.slice(0, currentIndexRef.current + 1);
       setDisplayedText(nextWords.join(""));
-      currentIndexRef.current++;
+      currentIndexRef.current += 1;
 
-      // Randomize delay slightly for natural feel
       const randomDelay = wordDelay * (0.8 + Math.random() * 0.4);
       timeoutRef.current = setTimeout(typeNext, randomDelay);
     };
 
-    // Start typing after a small delay
     timeoutRef.current = setTimeout(typeNext, 300);
 
     return () => {
@@ -72,7 +75,7 @@ function useTypingAnimation(
     };
   }, [fullText, isTyping, onComplete, wordsPerSecond]);
 
-  return displayedText;
+  return isTyping ? displayedText : fullText;
 }
 
 const STARTER_PROMPTS = [
@@ -94,16 +97,23 @@ const INITIAL_MESSAGES: ChatMessage[] = [
 const SYSTEM_PROMPT =
   "You are AutoRent Assistant, a helpful chatbot for a car rental marketplace website. Ask brief clarifying questions when needed, suggest suitable car categories (SUV, van, budget, luxury, airport pickup), and keep answers concise and actionable.";
 
-async function fetchAssistantReply(conversation: ChatMessage[]) {
+async function fetchAssistantReply(
+  conversation: ChatMessage[],
+  signal?: AbortSignal,
+) {
   const res = await fetch("/api/chat", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
-        ...conversation.map((m) => ({ role: m.role, content: m.content })),
+        ...conversation.map((message) => ({
+          role: message.role,
+          content: message.content,
+        })),
       ],
     }),
+    signal,
   });
 
   if (!res.ok) {
@@ -111,12 +121,18 @@ async function fetchAssistantReply(conversation: ChatMessage[]) {
     throw new Error(text || `Request failed with status ${res.status}`);
   }
 
-  const data = (await res.json()) as { content?: string };
-  if (!data.content) throw new Error("Empty assistant response.");
+  const data = (await res.json()) as ChatApiResponse;
+
+  if (!data.content) {
+    throw new Error(
+      data.error ||
+        `Assistant response was empty${data.reason ? `: ${data.reason}` : "."}`,
+    );
+  }
+
   return data.content;
 }
 
-// Component for individual chat message with typing animation
 function ChatMessageBubble({
   message,
   isCurrentlyTyping,
@@ -124,13 +140,17 @@ function ChatMessageBubble({
 }: {
   message: ChatMessage;
   isCurrentlyTyping: boolean;
-  onTypingComplete: () => void;
+  onTypingComplete: (messageId: number) => void;
 }) {
+  const handleComplete = useCallback(() => {
+    onTypingComplete(message.id);
+  }, [message.id, onTypingComplete]);
+
   const displayedContent = useTypingAnimation(
     message.content,
     isCurrentlyTyping,
-    onTypingComplete,
-    12 // words per second - adjust for faster/slower typing
+    handleComplete,
+    12,
   );
 
   return (
@@ -142,7 +162,7 @@ function ChatMessageBubble({
     >
       <div
         className={cn(
-          "shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6 relative",
+          "relative shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6",
           message.role === "user"
             ? "rounded-br-md bg-slate-900 text-white dark:bg-white dark:text-slate-900"
             : "rounded-bl-md bg-muted text-foreground",
@@ -150,7 +170,7 @@ function ChatMessageBubble({
       >
         {displayedContent}
         {isCurrentlyTyping && (
-          <span className="inline-block w-2 h-4 ml-1 bg-current animate-pulse" />
+          <span className="inline-block bg-current ml-1 w-2 h-4 animate-pulse" />
         )}
       </div>
     </div>
@@ -163,65 +183,130 @@ export function LandingChatbot() {
   const [isThinking, setIsThinking] = useState(false);
   const [typingMessageId, setTypingMessageId] = useState<number | null>(null);
   const endRef = useRef<HTMLDivElement | null>(null);
+  const requestAbortRef = useRef<AbortController | null>(null);
+  const isSubmittingRef = useRef(false);
+  const nextMessageIdRef = useRef(INITIAL_MESSAGES.length + 1);
+  const typingMessageIdRef = useRef<number | null>(null);
+
+  const getNextMessageId = useCallback(() => {
+    const nextId = nextMessageIdRef.current;
+    nextMessageIdRef.current += 1;
+    return nextId;
+  }, []);
+
+  useEffect(() => {
+    typingMessageIdRef.current = typingMessageId;
+  }, [typingMessageId]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
   }, [messages, isThinking, typingMessageId]);
 
-  const submitPrompt = async (rawPrompt: string) => {
-    const prompt = rawPrompt.trim();
-    if (!prompt || isThinking) return;
-
-    const userMessage: ChatMessage = {
-      id: Date.now(),
-      role: "user",
-      content: prompt,
+  useEffect(() => {
+    return () => {
+      requestAbortRef.current?.abort();
     };
+  }, []);
 
-    const nextConversation = [...messages, userMessage];
-    setMessages(nextConversation);
-    setDraft("");
-    setIsThinking(true);
-
-    try {
-      const content = await fetchAssistantReply(nextConversation);
-      const newMessageId = Date.now() + 1;
-      setMessages((current) => [
-        ...current,
-        { id: newMessageId, role: "assistant", content, isTyping: true },
-      ]);
-      setTypingMessageId(newMessageId);
-    } catch {
-      const errorMessageId = Date.now() + 1;
-      setMessages((current) => [
-        ...current,
-        {
-          id: errorMessageId,
-          role: "assistant",
-          content:
-            "Sorry — I could not reach the assistant service right now. Please try again in a moment.",
-          isTyping: true,
-        },
-      ]);
-      setTypingMessageId(errorMessageId);
-    } finally {
-      setIsThinking(false);
-    }
-  };
-
-  const handleTypingComplete = useCallback((messageId: number) => {
+  const finishTypingMessage = useCallback((messageId: number) => {
     setTypingMessageId((current) => (current === messageId ? null : current));
     setMessages((current) =>
-      current.map((msg) =>
-        msg.id === messageId ? { ...msg, isTyping: false } : msg
-      )
+      current.map((message) =>
+        message.id === messageId ? { ...message, isTyping: false } : message,
+      ),
     );
   }, []);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
-    event.preventDefault();
-    submitPrompt(draft);
-  };
+  const stopAssistant = useCallback(() => {
+    requestAbortRef.current?.abort();
+    requestAbortRef.current = null;
+    isSubmittingRef.current = false;
+    setIsThinking(false);
+
+    const activeTypingMessageId = typingMessageIdRef.current;
+    if (activeTypingMessageId !== null) {
+      finishTypingMessage(activeTypingMessageId);
+    }
+  }, [finishTypingMessage]);
+
+  const submitPrompt = useCallback(
+    async (rawPrompt: string) => {
+      const prompt = rawPrompt.trim();
+      if (!prompt || isThinking || isSubmittingRef.current) return;
+
+      isSubmittingRef.current = true;
+
+      const userMessage: ChatMessage = {
+        id: getNextMessageId(),
+        role: "user",
+        content: prompt,
+      };
+
+      const nextConversation = [...messages, userMessage];
+      const controller = new AbortController();
+
+      requestAbortRef.current = controller;
+      setMessages(nextConversation);
+      setDraft("");
+      setIsThinking(true);
+
+      try {
+        const content = await fetchAssistantReply(
+          nextConversation,
+          controller.signal,
+        );
+
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const newMessageId = getNextMessageId();
+        setMessages((current) => [
+          ...current,
+          { id: newMessageId, role: "assistant", content, isTyping: true },
+        ]);
+        setTypingMessageId(newMessageId);
+      } catch (error) {
+        if (controller.signal.aborted) {
+          return;
+        }
+
+        const message =
+          error instanceof Error
+            ? error.message
+            : "I could not reach the assistant service right now. Please try again in a moment.";
+        const errorMessageId = getNextMessageId();
+        setMessages((current) => [
+          ...current,
+          {
+            id: errorMessageId,
+            role: "assistant",
+            content: `Sorry, ${message}`,
+            isTyping: true,
+          },
+        ]);
+        setTypingMessageId(errorMessageId);
+      } finally {
+        if (requestAbortRef.current === controller) {
+          requestAbortRef.current = null;
+        }
+
+        isSubmittingRef.current = false;
+        setIsThinking(false);
+      }
+    },
+    [getNextMessageId, isThinking, messages],
+  );
+
+  const handleSubmit = useCallback(
+    (event: FormEvent<HTMLFormElement>) => {
+      event.preventDefault();
+      void submitPrompt(draft);
+    },
+    [draft, submitPrompt],
+  );
+
+  const hasActiveResponse = isThinking || typingMessageId !== null;
 
   return (
     <div
@@ -308,7 +393,7 @@ export function LandingChatbot() {
                     key={message.id}
                     message={message}
                     isCurrentlyTyping={typingMessageId === message.id}
-                    onTypingComplete={() => handleTypingComplete(message.id)}
+                    onTypingComplete={finishTypingMessage}
                   />
                 ))}
 
@@ -329,9 +414,9 @@ export function LandingChatbot() {
                       <button
                         key={prompt}
                         type="button"
-                        disabled={isThinking}
-                        onClick={() => submitPrompt(prompt)}
-                        className="bg-background disabled:opacity-60 hover:bg-accent px-3 py-2 border border-border/70 rounded-full font-medium text-foreground text-xs transition-colors"
+                        disabled={hasActiveResponse}
+                        onClick={() => void submitPrompt(prompt)}
+                        className="bg-background hover:bg-accent disabled:opacity-60 px-3 py-2 border border-border/70 rounded-full font-medium text-foreground text-xs transition-colors"
                       >
                         {prompt}
                       </button>
@@ -343,10 +428,7 @@ export function LandingChatbot() {
               </div>
 
               <div className="bg-background px-6 py-4 border-border/60 border-t">
-                <form
-                  onSubmit={handleSubmit}
-                  className="flex items-center gap-2"
-                >
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
                   <Input
                     value={draft}
                     onChange={(event) => setDraft(event.target.value)}
@@ -354,13 +436,20 @@ export function LandingChatbot() {
                     className="bg-muted/40 px-4 border-border/70 rounded-full h-11"
                   />
                   <Button
-                    type="submit"
+                    type={hasActiveResponse ? "button" : "submit"}
                     size="icon"
-                    disabled={isThinking || !draft.trim()}
+                    disabled={!hasActiveResponse && !draft.trim()}
+                    onClick={hasActiveResponse ? stopAssistant : undefined}
                     className="bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-200 rounded-full w-11 h-11 text-white dark:text-slate-900"
                   >
-                    <Send className="w-4 h-4" />
-                    <span className="sr-only">Send message</span>
+                    {hasActiveResponse ? (
+                      <Square className="w-4 h-4 fill-current" />
+                    ) : (
+                      <Send className="w-4 h-4" />
+                    )}
+                    <span className="sr-only">
+                      {hasActiveResponse ? "Stop response" : "Send message"}
+                    </span>
                   </Button>
                 </form>
               </div>
