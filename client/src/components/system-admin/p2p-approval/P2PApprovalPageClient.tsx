@@ -57,7 +57,13 @@ import {
 } from "lucide-react";
 import { ExportButton } from "@/components/system-admin/export/ExportButton";
 import { exportP2PHostsToExcel } from "@/components/system-admin/export/export-utils";
+import { useToast } from "@/hooks/use-toast";
+import { usePageViewTracking } from "@/hooks/use-action-badges";
+import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
+import { useActionBadgesStore } from "@/stores/action-badges-store";
+import { ActionBadge } from "@/components/action-badges/action-badge";
 import { cn } from "@/lib/utils";
+import { RecordBadge } from "@/components/action-badges/record-badge";
 import {
   fetchP2PHosts,
   reviewP2PHost,
@@ -98,7 +104,10 @@ const p2pStatusConfig: Record<
 function P2PStatusBadge({ host }: { host: P2PHostSummary }) {
   if (host.accountStatus === "SUSPENDED") {
     return (
-      <Badge variant="outline" className="gap-1 border-0 font-normal bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400">
+      <Badge
+        variant="outline"
+        className="gap-1 border-0 font-normal bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400"
+      >
         <Ban className="h-3.5 w-3.5" /> Suspended
       </Badge>
     );
@@ -200,7 +209,13 @@ const EMPTY_RESULT: P2PHostListResult = {
   },
 };
 
-type DialogType = "approve" | "reject" | "blockers" | "suspend" | "reactivate" | null;
+type DialogType =
+  | "approve"
+  | "reject"
+  | "blockers"
+  | "suspend"
+  | "reactivate"
+  | null;
 
 interface DialogState {
   type: DialogType;
@@ -225,6 +240,8 @@ export function P2PApprovalPageClient() {
     searchParams.get("search") || "",
   );
   const [dialog, setDialog] = useState<DialogState>(DEFAULT_DIALOG);
+  const isViewed = useActionBadgesStore((state) => state.isViewed);
+  const { trackPageView } = usePageViewTracking("P2P_HOST");
 
   const currentFilters = useMemo(
     () => ({
@@ -279,6 +296,10 @@ export function P2PApprovalPageClient() {
       const result = await fetchP2PHosts(currentFilters);
       setHostsData(result);
       setError(null);
+
+      // Mark loaded hosts as viewed (for badge tracking)
+      const hostIds = result.hosts.map((h) => h.id);
+      trackPageView(hostIds);
     } catch (cause) {
       setHostsData(EMPTY_RESULT);
       setError(
@@ -287,7 +308,10 @@ export function P2PApprovalPageClient() {
     } finally {
       setLoading(false);
     }
-  }, [currentFilters]);
+  }, [currentFilters, trackPageView]);
+
+  // Subscribe to real-time refreshes
+  useRealTimeRefresh(loadHosts, "P2P_HOST");
 
   useEffect(() => {
     void loadHosts();
@@ -394,13 +418,14 @@ export function P2PApprovalPageClient() {
   };
 
   return (
-    <div className="relative flex h-dvh w-full">
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0">
         <Header />
-        <Main className="gap-6 p-6 md:p-8">
+        <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-1">
-            <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
+            <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               P2P Approval
+              <ActionBadge entityType="P2P_HOST" className="h-6 min-w-[24px] text-sm" />
             </h1>
             <p className="max-w-2xl text-muted-foreground">
               Review renters who submitted vehicles and verification documents
@@ -546,7 +571,14 @@ export function P2PApprovalPageClient() {
                       className="group transition-colors hover:bg-muted/50"
                     >
                       <TableCell>
-                        <div className="text-sm font-medium">{host.name}</div>
+                        <div className="flex items-center gap-2">
+                          <div className="text-sm font-medium">{host.name}</div>
+                          {host.status === "pending" &&
+                            host.reviewReadiness.canPromote &&
+                            !isViewed("P2P_HOST", host.id) && (
+                              <RecordBadge show={true} variant="signal" />
+                            )}
+                        </div>
                         <div className="max-w-[140px] truncate text-xs text-muted-foreground">
                           Level: {host.verificationLevel.replaceAll("_", " ")}
                         </div>
@@ -599,7 +631,9 @@ export function P2PApprovalPageClient() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        <P2PStatusBadge host={host} />
+                        <div className="flex items-center gap-2">
+                          <P2PStatusBadge host={host} />
+                        </div>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {fmtDate(host.submittedAt)}
@@ -634,31 +668,35 @@ export function P2PApprovalPageClient() {
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator />
-                            {host.status !== "approved" && host.status !== "rejected" && (
-                              <DropdownMenuItem
-                                onClick={() => openRejectDialog(host)}
-                                className="text-red-600 focus:text-red-600"
-                                disabled={actionInProgress === host.id}
-                              >
-                                <ThumbsDown className="mr-2 h-4 w-4" /> Reject
-                              </DropdownMenuItem>
-                            )}
-                            {host.status === "approved" && host.accountStatus !== "SUSPENDED" && (
-                              <DropdownMenuItem
-                                onClick={() => openSuspendDialog(host)}
-                                className="text-orange-600 focus:text-orange-600"
-                                disabled={actionInProgress === host.id}
-                              >
-                                <AlertTriangle className="mr-2 h-4 w-4" /> Suspend
-                              </DropdownMenuItem>
-                            )}
+                            {host.status !== "approved" &&
+                              host.status !== "rejected" && (
+                                <DropdownMenuItem
+                                  onClick={() => openRejectDialog(host)}
+                                  className="text-red-600 focus:text-red-600"
+                                  disabled={actionInProgress === host.id}
+                                >
+                                  <ThumbsDown className="mr-2 h-4 w-4" /> Reject
+                                </DropdownMenuItem>
+                              )}
+                            {host.status === "approved" &&
+                              host.accountStatus !== "SUSPENDED" && (
+                                <DropdownMenuItem
+                                  onClick={() => openSuspendDialog(host)}
+                                  className="text-orange-600 focus:text-orange-600"
+                                  disabled={actionInProgress === host.id}
+                                >
+                                  <AlertTriangle className="mr-2 h-4 w-4" />{" "}
+                                  Suspend
+                                </DropdownMenuItem>
+                              )}
                             {host.accountStatus === "SUSPENDED" && (
                               <DropdownMenuItem
                                 onClick={() => openReactivateDialog(host)}
                                 className="text-green-600 focus:text-green-600"
                                 disabled={actionInProgress === host.id}
                               >
-                                <CheckCircle2 className="mr-2 h-4 w-4" /> Reactivate
+                                <CheckCircle2 className="mr-2 h-4 w-4" />{" "}
+                                Reactivate
                               </DropdownMenuItem>
                             )}
                           </DropdownMenuContent>

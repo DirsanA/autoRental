@@ -35,11 +35,14 @@ import {
   suspendAdminCompany,
 } from "./api";
 import { useToast } from "@/hooks/use-toast";
+import { usePageViewTracking } from "@/hooks/use-action-badges";
+import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
 import type {
   AdminCompanyApiStatus,
   AdminCompaniesPagination,
   AdminCompanySummary,
 } from "@/lib/admin-companies-api";
+import { ActionBadge } from "@/components/action-badges/action-badge";
 
 const PAGE_SIZE = 20;
 
@@ -76,6 +79,7 @@ function SummaryCard({
 export default function CompanyManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { trackPageView } = usePageViewTracking("COMPANY");
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -125,6 +129,10 @@ export default function CompanyManagementPage() {
         setCompanies(result.companies);
         setPagination(result.pagination);
         setError(null);
+
+        // Mark loaded companies as viewed (for badge tracking)
+        const companyIds = result.companies.map((c) => c.id);
+        trackPageView(companyIds);
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
@@ -140,9 +148,12 @@ export default function CompanyManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [page, reloadKey, search, statusFilter]);
+  }, [page, reloadKey, search, statusFilter, trackPageView]);
 
   const refreshCompanies = () => setReloadKey((value) => value + 1);
+
+  // Subscribe to real-time refreshes
+  useRealTimeRefresh(refreshCompanies, "COMPANY");
 
   const handleView = (company: Company) =>
     router.push(`/sysadmin/companies/${company.id}`);
@@ -238,14 +249,15 @@ export default function CompanyManagementPage() {
   ).length;
 
   return (
-    <div className="relative flex h-dvh w-full">
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0">
         <Header />
 
-        <Main className="gap-6 p-6 md:p-8">
+        <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-2">
-            <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
+            <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               Company Management
+              <ActionBadge entityType="COMPANY" className="h-6 min-w-[24px] text-sm" />
             </h1>
             <p className="max-w-2xl text-muted-foreground">
               Moderate registered companies, approve business onboarding, and
@@ -348,6 +360,7 @@ export default function CompanyManagementPage() {
                 onView={handleView}
                 onApprove={handleApprove}
                 onSuspend={handleSuspend}
+                showActionBadges={true}
               />
 
               <div className="flex items-center justify-between">

@@ -24,12 +24,15 @@ import { UserTable } from "./UserTable";
 import type { User } from "./data";
 import { deleteAdminUser, fetchAdminUsers, updateAdminUserStatus } from "./api";
 import { useToast } from "@/hooks/use-toast";
+import { usePageViewTracking } from "@/hooks/use-action-badges";
+import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
 import type {
   AdminUserAccountType,
   AdminUserApiStatus,
   AdminUsersPagination,
   AdminUserSummary,
 } from "@/lib/admin-users-api";
+import { ActionBadge } from "@/components/action-badges/action-badge";
 
 const PAGE_SIZE = 20;
 
@@ -66,6 +69,7 @@ function SummaryCard({
 export default function UserManagementPage() {
   const router = useRouter();
   const { toast } = useToast();
+  const { trackPageView } = usePageViewTracking("USER");
 
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
@@ -119,6 +123,10 @@ export default function UserManagementPage() {
         setUsers(result.users);
         setPagination(result.pagination);
         setError(null);
+
+        // Mark loaded users as viewed (for badge tracking)
+        const userIds = result.users.map((u) => u.id);
+        trackPageView(userIds);
       })
       .catch((cause: unknown) => {
         if (cancelled) return;
@@ -134,9 +142,12 @@ export default function UserManagementPage() {
     return () => {
       cancelled = true;
     };
-  }, [accountTypeFilter, page, reloadKey, search, statusFilter]);
+  }, [accountTypeFilter, page, reloadKey, search, statusFilter, trackPageView]);
 
   const refreshUsers = () => setReloadKey((value) => value + 1);
+
+  // Subscribe to real-time refreshes
+  useRealTimeRefresh(refreshUsers, "USER");
 
   const handleView = (user: User) => router.push(`/sysadmin/users/${user.id}`);
 
@@ -223,14 +234,15 @@ export default function UserManagementPage() {
   ).length;
 
   return (
-    <div className="relative flex h-dvh w-full">
-      <div className="flex flex-1 flex-col overflow-hidden">
+    <div className="relative flex h-full w-full overflow-hidden">
+      <div className="flex flex-1 flex-col min-h-0">
         <Header />
 
-        <Main className="gap-6 p-6 md:p-8 ">
+        <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-2">
-            <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
+            <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               User Management
+              <ActionBadge entityType="USER" className="h-6 min-w-[24px] text-sm" />
             </h1>
             <p className="max-w-2xl text-muted-foreground">
               Manage people accounts and internal admins. Company entities are
@@ -327,6 +339,7 @@ export default function UserManagementPage() {
                 onActivate={handleActivate}
                 onSuspend={handleSuspend}
                 onDelete={handleDeleteClick}
+                showActionBadges={true}
               />
 
               <div className="flex items-center justify-between">
