@@ -234,7 +234,7 @@ const Index = () => {
         ? `${vehicle.year} ${vehicle.model}`
         : "Vehicle details",
       rating:
-        vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
+        vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 0.0,
       trips: vehicle?.ratingCount ?? 0,
       model: vehicle?.model ?? "N/A",
       fuel: vehicle?.fuel ?? "Petrol",
@@ -614,15 +614,13 @@ const Index = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {similarCars.map((sc, index) => {
-                const id = sc.id || sc._id;
-
                 const image =
                   sc.imageUrl ||
                   sc.galleryImages?.[0] ||
                   FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
 
                 return (
-                  <Link href={`/cars/${id}`} key={id}>
+                  <Link href={`/cars/${sc.id}`} key={sc.id}>
                     <div className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800">
                       {/* IMAGE */}
                       <div className="relative aspect-[4/3] overflow-hidden">
@@ -635,14 +633,14 @@ const Index = () => {
                         />
 
                         <span className="absolute right-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow">
-                          ETB {sc.dailyRate || sc.price}/day
+                          ETB {sc.price}/day
                         </span>
                       </div>
 
                       {/* CONTENT */}
                       <div className="space-y-3 p-4">
                         <div>
-                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 dark:text-white">
+                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
                             {sc.make} {sc.model}
                           </h3>
 

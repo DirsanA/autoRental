@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { CarLoadingState } from "@/components/shared/car-loading-state";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import Fuse from "fuse.js";
 
 const API_BASE_URL = resolveApiBaseUrl();
 
@@ -38,13 +39,6 @@ type ApiVehicle = {
   delivery?: string;
   availability?: string;
   ownerType?: string;
-<<<<<<< Updated upstream
-=======
-  photos?: {
-    front?: string;
-    gallery?: string[];
-  };
->>>>>>> Stashed changes
   owner?: {
     name?: string;
     image?: string;
@@ -111,7 +105,9 @@ function parseVehiclesPayload(payload: unknown): ApiVehicle[] {
   return [];
 }
 
-function normalizeSearchValue(value: string) {
+function normalizeSearchValue(value: unknown) {
+  if (typeof value !== "string") return "";
+
   return value
     .toLowerCase()
     .replace(/[,_]+/g, " ")
@@ -160,7 +156,10 @@ function getCharacterDistance(left: string, right: string) {
   if (!left.length) return right.length;
   if (!right.length) return left.length;
 
-  const previous = Array.from({ length: right.length + 1 }, (_, index) => index);
+  const previous = Array.from(
+    { length: right.length + 1 },
+    (_, index) => index,
+  );
 
   for (let leftIndex = 1; leftIndex <= left.length; leftIndex += 1) {
     let diagonal = previous[0];
@@ -229,7 +228,9 @@ function getFieldMatchScore(fieldValue: string, queryTokens: string[]) {
   const normalizedField = normalizeSearchValue(fieldValue);
   if (!normalizedField) return 0;
 
-  const candidates = [normalizedField, ...normalizedField.split(" ")].filter(Boolean);
+  const candidates = [normalizedField, ...normalizedField.split(" ")].filter(
+    Boolean,
+  );
   let total = 0;
 
   for (const token of queryTokens) {
@@ -406,21 +407,15 @@ function getPriceIntentScore(vehicle: VehicleListingCard, intent: PriceIntent) {
   return 0;
 }
 
-function getVehicleResults(
-  vehicles: VehicleListingCard[],
-  query: string,
-) {
+function getVehicleResults(vehicles: VehicleListingCard[], query: string) {
   const normalizedQuery = normalizeSearchValue(query);
 
   if (!normalizedQuery) return vehicles;
 
   const priceIntent = parsePriceIntent(normalizedQuery);
-<<<<<<< Updated upstream
-=======
 
   const fuseQuery = buildFuseQuery(normalizedQuery);
 
->>>>>>> Stashed changes
   const ranked = new Map<string, RankedVehicle>();
 
   for (const vehicle of vehicles) {
@@ -438,8 +433,6 @@ function getVehicleResults(
     }
   }
 
-<<<<<<< Updated upstream
-=======
   for (const result of fuse.search(fuseQuery)) {
     const fuseScore = Math.max(0, 60 - (result.score ?? 1) * 60);
 
@@ -451,7 +444,6 @@ function getVehicleResults(
     });
   }
 
->>>>>>> Stashed changes
   return Array.from(ranked.values())
     .sort((left, right) => {
       if (right.score !== left.score) {
@@ -473,7 +465,6 @@ function VehicleCard({ vehicle }: { vehicle: VehicleListingCard }) {
       <Card className="overflow-hidden border border-gray-100 bg-white p-2 shadow-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-blue-100 hover:shadow-lg dark:border-gray-800 dark:bg-gray-800 dark:hover:border-blue-900">
         {/* RESPONSIVE LAYOUT */}
         <div className="flex flex-col gap-3 lg:grid lg:grid-cols-[220px_1fr]">
-          
           {/* IMAGE */}
           <div className="relative h-[220px] w-full overflow-hidden rounded-2xl bg-gray-100 sm:h-[260px] lg:h-full lg:min-h-[200px]">
             <Image
@@ -648,12 +639,6 @@ function CarsListingContent() {
     };
   }, []);
 
-<<<<<<< Updated upstream
-  const results = useMemo(
-    () => getVehicleResults(vehicles, queryFromUrl),
-    [queryFromUrl, vehicles],
-  );
-=======
   const fuse = useMemo(
     () =>
       new Fuse(vehicles, {
@@ -689,7 +674,6 @@ function CarsListingContent() {
 
     return filtered;
   }, [vehicles, fuse, queryFromUrl, minPrice, maxPrice, minRating]);
->>>>>>> Stashed changes
 
   function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
