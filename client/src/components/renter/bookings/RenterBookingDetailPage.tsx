@@ -34,6 +34,9 @@ import {
   fetchBookingReviews,
   updateBookingReview,
 } from "@/lib/booking-detail-api";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
+import { LifecycleActions } from "@/components/shared/bookings/LifecycleActions";
 
 interface BookingDetail {
   id: string;
@@ -600,7 +603,19 @@ export function RenterBookingDetailPage() {
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.7fr)_minmax(340px,0.95fr)]">
             <div className="space-y-6">
-              <Card>
+              <Tabs defaultValue="details" className="w-full">
+                <TabsList className="mb-6 grid w-full grid-cols-2 bg-muted/50 p-1">
+                  <TabsTrigger value="details">Booking Details</TabsTrigger>
+                  <TabsTrigger value="chat" className="gap-2">
+                    Live Chat & Process
+                    {(booking.status === "CONFIRMED" || booking.status === "ACTIVE") && (
+                      <span className="flex h-2 w-2 rounded-full bg-primary animate-pulse" />
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="space-y-6 mt-0">
+                  <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <CarFront className="h-5 w-5" />
@@ -811,7 +826,43 @@ export function RenterBookingDetailPage() {
                   </div>
                 </CardContent>
               </Card>
-            </div>
+            </TabsContent>
+
+            <TabsContent value="chat" className="space-y-6 mt-0 h-[calc(100vh-300px)] min-h-[500px]">
+              {booking.status === "CONFIRMED" ||
+              booking.status === "ACTIVE" ||
+              booking.status === "COMPLETED" ? (
+                <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] h-full overflow-hidden">
+                  <ChatWindow 
+                    bookingId={booking.id} 
+                    counterparty={{
+                      name: "Vehicle Owner",
+                      role: "HOST",
+                      avatar: booking.vehicle?.imageUrl || undefined // Use vehicle image if host avatar is missing
+                    }}
+                  />
+                  <div className="space-y-6 overflow-y-auto pr-2">
+                    <LifecycleActions
+                      booking={booking}
+                      userType="renter"
+                      onRefresh={handleRefresh}
+                    />
+                  </div>
+                </div>
+              ) : (
+                <Card className="border-2 border-dashed border-black p-12 text-center">
+                  <MessageSquareText className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
+                  <h3 className="text-lg font-bold uppercase">
+                    Chat Unavailable
+                  </h3>
+                  <p className="text-sm text-zinc-500">
+                    The chat room will open once your booking is confirmed.
+                  </p>
+                </Card>
+              )}
+            </TabsContent>
+          </Tabs>
+        </div>
 
             <div className="space-y-6">
               <Card>

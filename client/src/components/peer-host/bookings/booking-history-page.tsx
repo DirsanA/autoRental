@@ -48,6 +48,10 @@ import {
   type RenterBookingStatus,
 } from "@/lib/bookings-api";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
+import { LifecycleActions } from "@/components/shared/bookings/LifecycleActions";
+import { MessageSquareText } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -549,8 +553,24 @@ export function PeerHostBookingHistoryPage() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6">
-              <div className="gap-3 grid sm:grid-cols-2 md:grid-cols-3">
+            <div className="h-[700px] overflow-hidden p-4 sm:p-6">
+              <Tabs defaultValue="details" className="flex h-full flex-col">
+                <TabsList className="mb-6 grid w-full grid-cols-2 bg-muted/60 p-1">
+                  <TabsTrigger value="details">Booking Details</TabsTrigger>
+                  <TabsTrigger value="chat" className="gap-2">
+                    Live Chat & Process
+                    {(selectedBooking.status === "CONFIRMED" ||
+                      selectedBooking.status === "ACTIVE") && (
+                      <span className="flex h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent
+                  value="details"
+                  className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6"
+                >
+                  <div className="gap-3 grid sm:grid-cols-2 md:grid-cols-3">
                 <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs">
                     <UserRound className="w-4 h-4" />
@@ -607,16 +627,34 @@ export function PeerHostBookingHistoryPage() {
                 />
               </div>
 
-              <div className="flex flex-wrap items-center gap-4 text-muted-foreground text-xs">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4" />
-                  {selectedBooking.renter?.phone || selectedBooking.contactPhone || "No phone"}
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  {selectedBooking.pickupAddress || "Pickup address not provided"}
-                </div>
-              </div>
+                  </div>
+                </TabsContent>
+
+                <TabsContent value="chat" className="flex-1 overflow-hidden space-y-6">
+                  {selectedBooking.status === "CONFIRMED" ||
+                  selectedBooking.status === "ACTIVE" ||
+                  selectedBooking.status === "COMPLETED" ? (
+                    <div className="grid gap-6 lg:grid-cols-[1fr_250px] h-full overflow-hidden">
+                      <ChatWindow bookingId={selectedBooking.id} className="h-full" />
+                      <div className="space-y-6 overflow-y-auto pr-1">
+                        <LifecycleActions 
+                          booking={selectedBooking} 
+                          userType="provider" 
+                          onRefresh={refreshBookings} 
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
+                      <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
+                      <h3 className="font-bold text-lg uppercase text-zinc-400">Chat Unavailable</h3>
+                      <p className="text-sm text-zinc-500">
+                        The chat room will open once the booking is confirmed.
+                      </p>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
             </div>
           </DialogContent>
         ) : null}

@@ -20,6 +20,7 @@ import {
   MessageCircleCheckIcon,
   UserCheck,
   AlertCircle,
+  MessageSquareText,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
@@ -92,21 +93,14 @@ const dashboardRoutes: Route[] = [
   {
     id: "Bookings",
     title: "Bookings",
-    //company icon
     icon: <Building2 className="size-4" />,
     link: "/company/bookings",
-    // subs: [
-    //   {
-    //     title: "Meters",
-    //     link: "#",
-    //     icon: <PieChart className="size-4" />,
-    //   },
-    //   {
-    //     title: "Events",
-    //     link: "#",
-    //     icon: <Activity className="size-4" />,
-    //   },
-    // ],
+  },
+  {
+    id: "Messages",
+    title: "Messages",
+    icon: <MessageSquareText className="size-4" />,
+    link: "/company/messages",
   },
   // {
   //   id: "customers",

@@ -23,6 +23,7 @@ import {
   ArrowLeftRight,
   Plus,
   AlertCircle,
+  MessageSquareText,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
@@ -87,6 +88,12 @@ const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
     title: "Reviews",
     icon: <Star className="size-4" />,
     link: "/peerhost/reviews",
+  },
+  {
+    id: "messages",
+    title: "Messages",
+    icon: <MessageSquareText className="size-4" />,
+    link: "/peerhost/messages",
   },
   // Show "Add Vehicle" if user has vehicles, otherwise show "Become a Host"
   hasVehicles

@@ -1,5 +1,6 @@
 "use client";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ChatProvider } from "@/components/providers/chat-provider";
 
 export default function DashboardLayout({
   children,
@@ -13,7 +14,9 @@ export default function DashboardLayout({
       enableSystem
       disableTransitionOnChange
     >
-      {children}
+      <ChatProvider>
+        {children}
+      </ChatProvider>
     </ThemeProvider>
   );
 }

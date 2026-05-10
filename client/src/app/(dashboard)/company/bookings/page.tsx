@@ -17,6 +17,10 @@ import {
   fetchCompanyBookings,
 } from "@/lib/booking.api";
 import { cn } from "@/lib/utils";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
+import { LifecycleActions } from "@/components/shared/bookings/LifecycleActions";
+import { MessageSquareText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -519,7 +523,7 @@ export default function BookingManagement() {
 
       <Dialog open={isDetailOpen} onOpenChange={setIsDetailOpen}>
         {selectedBooking ? (
-          <DialogContent className="bg-background p-0 border-border/70 w-[calc(100vw-1rem)] sm:w-full sm:max-w-3xl overflow-hidden">
+          <DialogContent className="bg-background p-0 border-border/70 w-[calc(100vw-1rem)] sm:w-full sm:max-w-5xl h-[calc(100vh-2rem)] max-h-[900px] overflow-hidden flex flex-col">
             <DialogHeader className="bg-gradient-to-r from-slate-950 via-slate-900 to-emerald-950 px-5 sm:px-6 py-5 sm:py-6 text-left">
               <DialogTitle className="text-white text-xl">
                 {selectedBooking.vehicleName}
@@ -529,8 +533,20 @@ export default function BookingManagement() {
               </DialogDescription>
             </DialogHeader>
 
-            <div className="space-y-4 sm:space-y-6 p-4 sm:p-6 max-h-[calc(90vh-110px)] overflow-y-auto">
-              <div className="gap-3 grid sm:grid-cols-2 xl:grid-cols-4">
+            <div className="h-[700px] overflow-hidden p-4 sm:p-6">
+              <Tabs defaultValue="details" className="flex h-full flex-col">
+                <TabsList className="mb-6 grid w-full grid-cols-2 bg-muted/60 p-1">
+                  <TabsTrigger value="details">Booking Details</TabsTrigger>
+                  <TabsTrigger value="chat" className="gap-2">
+                    Live Chat & Process
+                    {(selectedBooking.status === "approved" || selectedBooking.status === "ACTIVE") && (
+                      <span className="flex h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
+                    )}
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="details" className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6">
+                  <div className="gap-3 grid sm:grid-cols-2 xl:grid-cols-4">
                 <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
                   <div className="flex items-center gap-2 text-muted-foreground text-xs">
                     <User className="w-4 h-4" />
@@ -590,12 +606,46 @@ export default function BookingManagement() {
                   label="Customer email"
                   value={selectedBooking.customerEmail || "Not provided"}
                 />
-                <BookingMetaRow
-                  label="Customer phone"
-                  value={selectedBooking.customerPhone || "Not provided"}
-                />
-              </div>
-            </div>
+                  <BookingMetaRow
+                    label="Customer phone"
+                    value={selectedBooking.customerPhone || "Not provided"}
+                  />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="chat" className="flex-1 overflow-hidden space-y-6">
+                {selectedBooking.status === "approved" ||
+                selectedBooking.status === "ACTIVE" ||
+                selectedBooking.status === "completed" ? (
+                  <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] h-full overflow-hidden">
+                    <ChatWindow 
+                      bookingId={selectedBooking.id} 
+                      className="h-full" 
+                      counterparty={{
+                        name: selectedBooking.customerName || "Renter",
+                        role: "RENTER"
+                      }}
+                    />
+                    <div className="space-y-6 overflow-y-auto pr-1">
+                      <LifecycleActions 
+                        booking={selectedBooking} 
+                        userType="provider" 
+                        onRefresh={refreshBookings} 
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
+                    <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
+                    <h3 className="font-bold text-lg uppercase text-zinc-400">Chat Unavailable</h3>
+                    <p className="text-sm text-zinc-500">
+                      The chat room will open once the booking is confirmed.
+                    </p>
+                  </Card>
+                )}
+              </TabsContent>
+            </Tabs>
+          </div>
           </DialogContent>
         ) : null}
       </Dialog>
