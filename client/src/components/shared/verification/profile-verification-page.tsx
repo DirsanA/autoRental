@@ -33,7 +33,6 @@ import { buildAuthHeader } from "@/lib/auth-token";
 import { coalesceRequest } from "@/lib/api-coalesce";
 import { updateProfile, fetchCurrentSession, changePassword } from "@/lib/auth-api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { ProfileVerificationSkeleton } from "./profile-verification-skeleton";
 
 type Status = "not_submitted" | "pending" | "approved" | "rejected";
 type VerificationAudience = "renter" | "peerhost";
@@ -810,10 +809,6 @@ export function ProfileVerificationPage({
       <Header />
 
       <Main className="container mx-auto max-w-5xl px-4 py-8">
-        {isLoading ? (
-          <ProfileVerificationSkeleton showRentalModes={isRenter} />
-        ) : (
-          <>
         <div className="mb-8 flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <div className="rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 p-2 shadow-lg dark:from-blue-600 dark:to-indigo-700">
@@ -1379,7 +1374,7 @@ export function ProfileVerificationPage({
                   <div className="rounded-xl border-2 border-dashed border-slate-300 bg-slate-100 p-8 text-center transition-colors hover:bg-slate-200 dark:border-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700">
                     <Upload className="mx-auto mb-2 h-8 w-8 text-slate-400 dark:text-slate-500" />
                     <p className="text-sm font-medium dark:text-slate-300">
-            {currentFiles.length === 0
+                      {currentFiles.length === 0
                         ? `Upload ${isWithDriverMode ? "Front of ID" : "Front of License"}`
                         : `Upload ${isWithDriverMode ? "Back of ID" : "Back of License"}`}
                     </p>
@@ -1405,8 +1400,6 @@ export function ProfileVerificationPage({
             </CardContent>
           </Card>
         </div>
-          </>
-        )}
       </Main>
     </div>
   );

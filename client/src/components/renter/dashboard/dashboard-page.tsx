@@ -16,6 +16,7 @@ import { Main } from "@/components/layout/main";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   deriveNextRelevantBooking,
   derivePaidThisMonthTotal,
@@ -23,7 +24,6 @@ import {
   type RenterDashboardBooking,
   type RenterDashboardSnapshot,
 } from "@/lib/renter-dashboard-api";
-import { RenterDashboardSkeleton } from "./dashboard-skeleton";
 
 function formatMoney(amount: number, currency = "ETB") {
   try {
@@ -133,7 +133,15 @@ const recentBookings = useMemo(() => bookings.slice(0, 5), [bookings]);
           </div>
 
           {loading ? (
-            <RenterDashboardSkeleton />
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Card key={i} className="p-4 bg-white dark:bg-slate-950 border border-slate-100 dark:border-slate-800">
+                  <Skeleton className="h-4 w-24" />
+                  <Skeleton className="mt-3 h-7 w-32" />
+                  <Skeleton className="mt-2 h-3 w-40" />
+                </Card>
+              ))}
+            </div>
           ) : error ? (
             <Card className="p-5 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800">
               <div className="flex items-start gap-3">
@@ -418,7 +426,7 @@ const recentBookings = useMemo(() => bookings.slice(0, 5), [bookings]);
 
                   <div className="mt-5">
                     <Button asChild variant="outline" className="w-full h-10 rounded-xl">
-                      <Link href="/renter/profile-verification">View profile</Link>
+                      <Link href="/renter/profile">View profile</Link>
                     </Button>
                   </div>
                 </Card>

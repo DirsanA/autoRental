@@ -71,6 +71,20 @@ export type CreateCompanyVehiclePayload = {
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+function formatDisplayDate(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+  }).format(date);
+}
+
+function addDays(date: Date, days: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+}
+
 export function mapApiStatusToCompanyStatus(
   status?: string,
 ): CompanyVehicle["status"] {
@@ -117,6 +131,8 @@ export function mapApiVehicleToCompanyVehicle(
     image: mainImage,
     galleryImages:
       vehicle.photos?.gallery?.filter(Boolean).length ? (vehicle.photos.gallery.filter(Boolean) as string[]) : [mainImage],
+    lastMaintenance: formatDisplayDate(createdAt),
+    nextMaintenance: formatDisplayDate(addDays(createdAt, 90)),
     mileage: vehicle.mileage,
     fuel: vehicle.fuel,
     transmission: vehicle.transmission,

@@ -18,7 +18,6 @@ import { cn } from "@/lib/utils";
 import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { readCachedAuthSession } from "@/lib/auth-api";
-import { Logo } from "@/components/logo";
 
 export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state: sidebarState } = useSidebar();
@@ -48,11 +47,15 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
             : "flex-row items-center justify-between",
         )}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <Logo
-            className={cn(isCollapsed ? "h-10 w-10" : "h-11 w-[144px]")}
-            textWeight="800"
-          />
+        <Link href="/renter/dashboard" className="flex items-center gap-2">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-foreground font-semibold text-background">
+            AR
+          </div>
+          {!isCollapsed && (
+            <span className="font-semibold text-black dark:text-white">
+              AutoRent
+            </span>
+          )}
         </Link>
 
         <SidebarTrigger />

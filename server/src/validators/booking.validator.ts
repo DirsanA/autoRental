@@ -5,14 +5,6 @@ const objectIdSchema = z
   .trim()
   .regex(/^[a-f\d]{24}$/i, "Must be a valid ObjectId");
 
-const bookingReferenceSchema = z
-  .string()
-  .trim()
-  .regex(
-    /^(?:[a-f\d]{24}|BK-[A-Z0-9]{10})$/i,
-    "Must be a valid booking reference",
-  );
-
 const optionalTrimmedString = z
   .string()
   .trim()
@@ -39,7 +31,7 @@ export const chapaCheckoutSchema = z.object({
 
 export const chapaVerifyQuerySchema = z
   .object({
-    bookingId: bookingReferenceSchema.optional(),
+    bookingId: objectIdSchema.optional(),
     tx_ref: z.string().trim().min(2).optional(),
     trx_ref: z.string().trim().min(2).optional(),
     status: z.string().trim().optional(),
@@ -70,7 +62,7 @@ export const renterBookingListQuerySchema = z
 
 export const bookingIdParamsSchema = z
   .object({
-    bookingId: bookingReferenceSchema,
+    bookingId: objectIdSchema,
   })
   .strict();
 
@@ -82,7 +74,7 @@ export const bookingSettlementActionSchema = z
 
 export const bookingReviewParamsSchema = z
   .object({
-    bookingId: bookingReferenceSchema,
+    bookingId: objectIdSchema,
     reviewId: objectIdSchema,
   })
   .strict();

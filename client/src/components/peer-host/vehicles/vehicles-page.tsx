@@ -1,27 +1,32 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
-import { Plus, Search } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
 import { fetchPeerHostVehicles } from "./api";
 import { VehiclesPageSkeleton } from "./vehicles-skeleton";
-import type { Vehicle, VehicleFilterStatus, VehicleStatus } from "./types";
 
-type VehicleStatusFilter = "all" | VehicleStatus;
+function statusBadgeVariant(
+  status: VehicleStatus,
+): "default" | "secondary" | "destructive" | "outline" {
+  switch (status) {
+    case "available":
+      return "default";
+    case "rented":
+      return "secondary";
+    case "pending_approval":
+      return "destructive";
+    case "maintenance":
+    case "retired":
+      return "outline";
+  }
+}
 
 function formatStatus(status: VehicleStatus) {
   switch (status) {
@@ -35,21 +40,6 @@ function formatStatus(status: VehicleStatus) {
       return "Pending approval";
     case "retired":
       return "Retired";
-  }
-}
-
-function statusBadgeClass(status: VehicleStatus) {
-  switch (status) {
-    case "available":
-      return "border-emerald-500 text-emerald-600 dark:text-emerald-400";
-    case "rented":
-      return "border-blue-500 text-blue-600 dark:text-blue-400";
-    case "maintenance":
-      return "border-amber-500 text-amber-600 dark:text-amber-400";
-    case "pending_approval":
-      return "border-red-500 text-red-600 dark:text-red-400";
-    case "retired":
-      return "border-slate-500 text-slate-600 dark:text-slate-400";
   }
 }
 
@@ -79,23 +69,34 @@ export function PeerHostVehiclesPage({
   const [isLoading, setIsLoading] = useState(
     !providedVehicles && !providedLoadError,
   );
-  const [searchTerm, setSearchTerm] = useState("");
-  const [activeFilter, setActiveFilter] = useState<VehicleStatusFilter>(
-    filter ?? "all",
-  );
+
+  // Render-time state synchronization: 
+  // If the filter changes, reset the state immediately during the render phase.
+  // This avoids the "cascading render" warning triggered by updating state in useEffect.
+  const [prevFilter, setPrevFilter] = useState(filter);
+  if (filter !== prevFilter) {
+    setPrevFilter(filter);
+    setIsLoading(true);
+    setLoadError(null);
+  }
 
   useEffect(() => {
+    // If we already have vehicles or a load error provided via props, 
+    // we don't need to fetch anything. The state is already initialized 
+    // from these props in the useState calls above.
     if (providedVehicles || providedLoadError) {
       return;
     }
 
     let cancelled = false;
 
-    fetchPeerHostVehicles()
+    // Loading and error states are now handled during render synchronization 
+    // above if the filter changes.
+
+    fetchPeerHostVehicles(filter)
       .then((nextVehicles) => {
         if (cancelled) return;
         setVehicles(nextVehicles);
-        setLoadError(null);
       })
       .catch((error: unknown) => {
         if (cancelled) return;
@@ -113,188 +114,194 @@ export function PeerHostVehiclesPage({
     return () => {
       cancelled = true;
     };
-  }, [providedLoadError, providedVehicles]);
+  }, [filter, providedLoadError, providedVehicles]);
 
-  const filteredVehicles = useMemo(() => {
-    const query = searchTerm.trim().toLowerCase();
+  const title =
+    providedTitle ??
+    (filter ? `My Vehicles · ${formatStatus(filter)}` : "My Vehicles");
 
-    return vehicles.filter((vehicle) => {
-      const matchesSearch =
-        query.length === 0 ||
-        vehicle.make.toLowerCase().includes(query) ||
-        vehicle.model.toLowerCase().includes(query) ||
-        vehicle.location.toLowerCase().includes(query) ||
-        vehicle.vin?.toLowerCase().includes(query);
+  // Smart Stats (later replace with backend aggregation)
+  const availableCount = vehicles.filter(
+    (v) => v.status === "available",
+  ).length;
 
-      const matchesFilter =
-        activeFilter === "all" ? true : vehicle.status === activeFilter;
+  const rentedCount = vehicles.filter((v) => v.status === "rented").length;
 
-      return matchesSearch && matchesFilter;
-    });
-  }, [activeFilter, searchTerm, vehicles]);
+  const maintenanceCount = vehicles.filter(
+    (v) => v.status === "maintenance",
+  ).length;
 
+  // Show skeleton while loading
   if (isLoading) {
     const loadingContent = <VehiclesPageSkeleton />;
     if (!showHeader) {
       return <div className="space-y-0">{loadingContent}</div>;
     }
     return (
-      <div className="flex flex-1 flex-col overflow-hidden dark:bg-slate-950">
+      <div className="flex flex-col flex-1 dark:bg-slate-950 overflow-hidden">
         <Header />
         <Main>{loadingContent}</Main>
       </div>
     );
   }
 
-  const title = providedTitle ?? "My Vehicles";
-
   const content = (
-    <div className="space-y-6">
-      {loadError ? (
-        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 dark:border-rose-500/20 dark:bg-rose-500/10 dark:text-rose-300">
-          {loadError}
-        </div>
-      ) : null}
-
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <>
+      <div className="flex flex-wrap justify-between items-center gap-4">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight text-foreground dark:text-white">
+          <h2 className="font-bold dark:text-white text-3xl tracking-tight">
             {title}
           </h2>
-          <p className="mt-1 text-sm text-muted-foreground dark:text-slate-400">
+          <p className="mt-1 text-muted-foreground dark:text-slate-400 text-sm">
             {description}
           </p>
         </div>
-        <Button
-          asChild
-          className="rounded-2xl bg-slate-950 text-white hover:bg-slate-800 dark:bg-blue-600 dark:hover:bg-blue-700"
-        >
-          <Link href="/peerhost/add-vehicle">
-            <Plus className="mr-2 h-4 w-4" />
-            Add vehicle
-          </Link>
-        </Button>
       </div>
 
-      <section className="rounded-2xl border border-border/70 bg-card/95 p-4 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div className="flex flex-1 flex-col gap-4 sm:flex-row sm:items-center">
-            <div className="relative w-full sm:max-w-sm">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Search by make, model, location, or VIN..."
-                className="h-10 rounded-2xl border-border/70 bg-background/70 pl-10"
-              />
+      <div className="gap-6 grid grid-cols-1 sm:grid-cols-3 mt-10">
+        <Card className="group relative bg-gradient-to-br from-emerald-500/10 dark:from-emerald-500/20 to-emerald-400/5 dark:to-emerald-400/10 shadow-lg hover:shadow-emerald-500/20 dark:hover:shadow-emerald-500/30 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+          <div className="top-0 right-0 absolute bg-emerald-500/10 dark:bg-emerald-500/20 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-emerald-600 dark:text-emerald-400 text-sm">
+                  Available Vehicles
+                </p>
+                <p className="mt-2 font-bold text-emerald-700 dark:text-emerald-300 text-3xl">
+                  {availableCount}
+                </p>
+              </div>
+              <div className="opacity-20 dark:opacity-30 text-4xl">🚗</div>
             </div>
+          </CardContent>
+        </Card>
 
-            <Select
-              value={activeFilter}
-              onValueChange={(value) =>
-                setActiveFilter(value as VehicleStatusFilter)
-              }
-            >
-              <SelectTrigger className="h-10 w-full rounded-2xl border-border/70 bg-background/70 sm:w-[200px]">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="available">Available</SelectItem>
-                <SelectItem value="rented">Rented out</SelectItem>
-                <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="pending_approval">Pending approval</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+        <Card className="group relative bg-gradient-to-br from-blue-500/10 dark:from-blue-500/20 to-blue-400/5 dark:to-blue-400/10 shadow-lg hover:shadow-blue-500/20 dark:hover:shadow-blue-500/30 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+          <div className="top-0 right-0 absolute bg-blue-500/10 dark:bg-blue-500/20 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-blue-600 dark:text-blue-400 text-sm">
+                  Rented Vehicles
+                </p>
+                <p className="mt-2 font-bold text-blue-700 dark:text-blue-300 text-3xl">
+                  {rentedCount}
+                </p>
+              </div>
+              <div className="opacity-20 dark:opacity-30 text-4xl">📅</div>
+            </div>
+          </CardContent>
+        </Card>
 
-          <p className="text-sm text-muted-foreground">
-            {`${filteredVehicles.length} matching vehicles`}
-          </p>
-        </div>
-      </section>
+        <Card className="group relative bg-gradient-to-br from-amber-500/10 dark:from-amber-500/20 to-amber-400/5 dark:to-amber-400/10 shadow-lg hover:shadow-amber-500/20 dark:hover:shadow-amber-500/30 backdrop-blur-sm border-0 overflow-hidden transition-all duration-300">
+          <div className="top-0 right-0 absolute bg-amber-500/10 dark:bg-amber-500/20 blur-2xl rounded-full w-24 h-24 group-hover:scale-125 transition-transform" />
+          <CardContent className="z-10 relative p-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="font-medium text-amber-600 dark:text-amber-400 text-sm">
+                  In Maintenance
+                </p>
+                <p className="mt-2 font-bold text-amber-700 dark:text-amber-300 text-3xl">
+                  {maintenanceCount}
+                </p>
+              </div>
+              <div className="opacity-20 dark:opacity-30 text-4xl">🛠️</div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
 
-      <div className="mt-10 grid gap-6 md:grid-cols-2 xl:grid-cols-2">
-        {filteredVehicles.length === 0 ? (
-          <div className="col-span-full py-20 text-center">
-            <p className="text-lg text-muted-foreground dark:text-slate-400">
-              No vehicles matched the current filters.
+      <div className="gap-6 grid md:grid-cols-2 xl:grid-cols-2 mt-10">
+        {loadError && (
+          <div className="col-span-full py-6 text-center">
+            <p className="text-red-600 dark:text-red-400 text-sm">
+              {loadError}
             </p>
-            <Button
-              asChild
-              className="mt-6 dark:bg-blue-600 dark:hover:bg-blue-700"
-            >
-              <Link href="/peerhost/add-vehicle">Add your first vehicle</Link>
+          </div>
+        )}
+
+        {vehicles.length === 0 && (
+          <div className="col-span-full py-20 text-center">
+            <p className="text-muted-foreground dark:text-slate-400 text-lg">
+              No vehicles found for this filter.
+            </p>
+            <Button className="dark:bg-blue-600 dark:hover:bg-blue-700 mt-6">
+              Add your first vehicle
             </Button>
           </div>
-        ) : (
-          filteredVehicles.map((vehicle) => (
-            <Card
-              key={vehicle.id}
-              className="group overflow-hidden border-border/40 transition-all duration-300 hover:shadow-2xl dark:border-slate-800 dark:bg-slate-900 dark:hover:shadow-2xl dark:hover:shadow-slate-900/50"
-            >
-              <div className="relative h-52 w-full overflow-hidden bg-muted dark:bg-slate-800">
-                {vehicle.imageUrl ? (
-                  <img
-                    src={vehicle.imageUrl}
-                    alt={`${vehicle.make} ${vehicle.model}`}
-                    className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105 dark:brightness-90"
-                    loading="lazy"
-                  />
-                ) : null}
+        )}
 
-                <div className="absolute right-3 top-3">
-                  <Badge
-                    variant="outline"
-                    className={cn(
-                      "border bg-white text-slate-950 dark:bg-white dark:text-slate-950",
-                      statusBadgeClass(vehicle.status),
-                    )}
-                  >
-                    {formatStatus(vehicle.status)}
-                  </Badge>
-                </div>
+        {vehicles.map((v) => (
+          <Card
+            key={v.id}
+            className="group dark:bg-slate-900 hover:shadow-2xl dark:hover:shadow-2xl dark:hover:shadow-slate-900/50 border-border/40 dark:border-slate-800 overflow-hidden transition-all duration-300"
+          >
+            <div className="relative bg-muted dark:bg-slate-800 w-full h-52 overflow-hidden">
+              {v.imageUrl && (
+                <img
+                  src={v.imageUrl}
+                  alt={`${v.make} ${v.model}`}
+                  className="dark:brightness-90 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                  loading="lazy"
+                />
+              )}
 
-                <div className="absolute bottom-3 left-3 rounded-full bg-black/70 px-3 py-1 text-sm text-white backdrop-blur-sm dark:bg-black/80">
-                  ${vehicle.dailyRate}/day
-                </div>
+              <div className="top-3 right-3 absolute">
+                <Badge
+                  variant={statusBadgeVariant(v.status)}
+                  className={cn(
+                    "bg-white text-slate-950 border-slate-200",
+                    "dark:bg-white dark:text-slate-950",
+                    v.status === "available" && "border-emerald-500",
+                    v.status === "rented" && "border-blue-500",
+                    v.status === "maintenance" && "border-amber-500",
+                    v.status === "pending_approval" && "border-red-500",
+                    v.status === "retired" && "border-slate-500",
+                  )}
+                >
+                  {formatStatus(v.status)}
+                </Badge>
               </div>
 
-              <CardContent className="space-y-4 p-5">
-                <div>
-                  <h3 className="text-lg font-semibold leading-tight text-foreground dark:text-white">
-                    {vehicle.year} {vehicle.make} {vehicle.model}
-                  </h3>
-                  <p className="mt-1 text-sm text-muted-foreground dark:text-slate-400">
-                    {vehicle.location}
-                  </p>
+              <div className="bottom-3 left-3 absolute bg-black/70 dark:bg-black/80 backdrop-blur-sm px-3 py-1 rounded-full text-white text-sm">
+                ${v.dailyRate}/day
+              </div>
+            </div>
+
+            <CardContent className="space-y-4 p-5">
+              <div>
+                <h3 className="font-semibold dark:text-white text-lg leading-tight">
+                  {v.year} {v.make} {v.model}
+                </h3>
+                <p className="mt-1 text-muted-foreground dark:text-slate-400 text-sm">
+                  {v.location}
+                </p>
+              </div>
+
+              <div className="flex justify-between items-center">
+                <div className="text-muted-foreground dark:text-slate-400 text-sm">
+                  ⭐{" "}
+                  <span className="font-medium text-foreground dark:text-white">
+                    {v.ratingAvg.toFixed(1)}
+                  </span>{" "}
+                  <span className="dark:text-slate-400">({v.ratingCount})</span>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div className="text-sm text-muted-foreground dark:text-slate-400">
-                    <span className="font-medium text-foreground dark:text-white">
-                      {vehicle.ratingAvg.toFixed(1)}
-                    </span>{" "}
-                    <span>({vehicle.ratingCount})</span>
-                  </div>
-
-                  <Button
-                    asChild
-                    variant="secondary"
-                    className="bg-muted/50 transition-colors hover:bg-muted dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
-                  >
-                    <Link href={`${detailHrefBase}/${vehicle.id}`}>
-                      View details
-                    </Link>
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))
-        )}
+                <Button
+                  asChild
+                  variant="secondary"
+                  className={cn(
+                    "bg-muted/50 hover:bg-muted dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 transition-colors",
+                  )}
+                >
+                  <Link href={`${detailHrefBase}/${v.id}`}>View details</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
       </div>
-    </div>
+    </>
   );
 
   if (!showHeader) {
@@ -302,7 +309,7 @@ export function PeerHostVehiclesPage({
   }
 
   return (
-    <div className="flex flex-1 flex-col overflow-hidden dark:bg-slate-950">
+    <div className="flex flex-col flex-1 dark:bg-slate-950 overflow-hidden">
       <Header />
       <Main>{content}</Main>
     </div>

@@ -3,7 +3,6 @@ import { Transaction } from "../models/Transaction.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Review } from "../models/Review.js";
 import { User } from "../models/User.js";
-import { isValidObjectId } from "mongoose";
 import { userPersistenceService } from "./user.persistence.service.js";
 import { chapaService } from "./chapa.service.js";
 import { walletService } from "./wallet.service.js";
@@ -92,22 +91,6 @@ function canExposePublicReturnUrl(url: string) {
   }
 
   return canExposeServerCallback(url);
-}
-
-function buildBookingLookupCriteria(bookingIdentifier: string) {
-  const normalized = String(bookingIdentifier || "").trim();
-
-  if (!normalized) {
-    return { bookingId: normalized };
-  }
-
-  if (isValidObjectId(normalized)) {
-    return {
-      $or: [{ _id: normalized }, { bookingId: normalized }],
-    };
-  }
-
-  return { bookingId: normalized };
 }
 
 function getBookingPaymentState(booking: BookingDocument) {
@@ -1002,13 +985,9 @@ export class BookingService {
   }
 
   async verifyChapaPayment(input: { bookingId?: string; txRef?: string }) {
-    const bookingIdCriteria = input.bookingId
-      ? [buildBookingLookupCriteria(input.bookingId)]
-      : [];
-
     const booking = await Booking.findOne({
       $or: [
-        ...bookingIdCriteria,
+        ...(input.bookingId ? [{ _id: input.bookingId }] : []),
         ...(input.txRef ? [{ "payment.tx_ref": input.txRef }] : []),
       ],
     });
@@ -1028,8 +1007,8 @@ export class BookingService {
     const renter = await this.resolveRenter(caller);
 
     const booking = await Booking.findOne({
+      _id: bookingId,
       renterId: renter._id,
-      ...buildBookingLookupCriteria(bookingId),
     })
 
       .populate({
@@ -1062,9 +1041,9 @@ export class BookingService {
     const renter = await this.resolveRenter(caller);
 
     const booking = await Booking.findOne({
+      _id: bookingId,
       renterId: renter._id,
       status: "COMPLETED",
-      ...buildBookingLookupCriteria(bookingId),
     }).lean();
 
     if (!booking) {
@@ -1123,8 +1102,8 @@ export class BookingService {
     const renter = await this.resolveRenter(caller);
 
     const booking = await Booking.findOne({
+      _id: bookingId,
       renterId: renter._id,
-      ...buildBookingLookupCriteria(bookingId),
     })
       .select("_id")
       .lean();
@@ -1182,8 +1161,8 @@ export class BookingService {
     const renter = await this.resolveRenter(caller);
 
     const booking = await Booking.findOne({
+      _id: bookingId,
       renterId: renter._id,
-      ...buildBookingLookupCriteria(bookingId),
     })
       .select("_id")
       .lean();
@@ -1212,8 +1191,8 @@ export class BookingService {
     const renter = await this.resolveRenter(caller);
 
     const booking = await Booking.findOne({
+      _id: bookingId,
       renterId: renter._id,
-      ...buildBookingLookupCriteria(bookingId),
     }).lean();
 
     if (!booking) {

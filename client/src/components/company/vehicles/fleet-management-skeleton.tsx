@@ -51,6 +51,19 @@ function VehicleCardSkeleton() {
             <ShimmerSkeleton className="h-5 w-20" />
           </div>
         </div>
+
+        {/* Service dates grid */}
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="space-y-2 rounded-2xl bg-muted/30 p-4">
+            <ShimmerSkeleton className="h-3 w-20" />
+            <ShimmerSkeleton className="h-4 w-28" />
+          </div>
+          <div className="space-y-2 rounded-2xl bg-muted/30 p-4">
+            <ShimmerSkeleton className="h-3 w-24" />
+            <ShimmerSkeleton className="h-4 w-28" />
+          </div>
+        </div>
+
         {/* Buttons */}
         <div className="flex flex-col gap-3 sm:flex-row">
           <ShimmerSkeleton className="h-11 w-full rounded-2xl" />

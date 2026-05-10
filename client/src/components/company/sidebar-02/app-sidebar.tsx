@@ -21,8 +21,7 @@ import {
   UserCheck,
   AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
-import { Logo } from "@/components/logo";
+import { Logo } from "@/components/dashboard/sidebar-02/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
@@ -166,12 +165,14 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
             : "flex-row items-center justify-between",
         )}
       >
-        <Link href="/" className="flex items-center gap-2">
-          <Logo
-            className={cn(isCollapsed ? "h-10 w-10" : "h-11 w-[144px]")}
-            textWeight="800"
-          />
-        </Link>
+        <a href="#" className="flex items-center gap-2">
+          <Logo className="w-8 h-8" />
+          {!isCollapsed && (
+            <span className="font-semibold text-black dark:text-white">
+              Acme
+            </span>
+          )}
+        </a>
 
         <motion.div
           key={isCollapsed ? "header-collapsed" : "header-expanded"}
