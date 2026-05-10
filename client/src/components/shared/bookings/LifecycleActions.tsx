@@ -31,6 +31,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface LifecycleActionsProps {
   booking: any;
@@ -43,6 +53,7 @@ const API_BASE = resolveApiBaseUrl();
 export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActionsProps) {
   const [loading, setLoading] = useState(false);
   const [activeForm, setActiveForm] = useState<"handover" | "return" | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ action: string; label: string; description: string } | null>(null);
   const { toast } = useToast();
   const status = booking.status;
 
@@ -111,7 +122,9 @@ export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActi
       <div className="w-full">
         <div className="flex items-center justify-between px-4 py-6 bg-card border rounded-2xl shadow-sm overflow-hidden">
           {steps.map((step, idx) => {
-            const isCompleted = idx < steps.findIndex(s => s.id === status) || status === "COMPLETED" || status === "completed";
+            const currentStatus = status.toUpperCase();
+            const normalizedStatus = (currentStatus === "APPROVED" ? "CONFIRMED" : currentStatus === "COMPLETED" ? "COMPLETED" : currentStatus);
+            const isCompleted = idx < steps.findIndex(s => s.id === normalizedStatus) || normalizedStatus === "COMPLETED";
             
             return (
               <div key={step.id} className="flex-1 flex items-center last:flex-none">
@@ -153,12 +166,20 @@ export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActi
           </div>
           <div className="flex-1 space-y-2">
             <h4 className="font-bold text-xl leading-none tracking-tight">Status Update</h4>
-            <p className="text-sm text-muted-foreground font-medium leading-relaxed">
-              {(status === "CONFIRMED" || status === "approved") && userType === "provider" && "Vehicle is ready! Start the handover process to begin the rental."}
-              {(status === "CONFIRMED" || status === "approved") && userType === "renter" && "The booking is confirmed. Waiting for the owner to hand over the keys."}
-              {status === "ACTIVE" && "Rental is currently active. Use the chat to coordinate the return location and time."}
-              {(status === "COMPLETED" || status === "completed") && "Booking successfully completed. Vehicle status has been updated."}
-            </p>
+            <div className="text-sm text-muted-foreground font-medium leading-relaxed">
+              {(status === "CONFIRMED" || status === "approved") && userType === "provider" && (
+                <p>The booking is confirmed. Please <strong>Initialize Handover</strong> to share the inspection list with the renter.</p>
+              )}
+              {(status === "CONFIRMED" || status === "approved") && userType === "renter" && (
+                <p>Waiting for the owner to start the handover process. You can use the chat to coordinate the meeting.</p>
+              )}
+              {status === "ACTIVE" && (
+                <p>Rental is currently active. Once you are done, either party can <strong>Initiate Return</strong> to start the closing process.</p>
+              )}
+              {(status === "COMPLETED" || status === "completed") && (
+                <p>Booking successfully completed. We hope you had a great trip!</p>
+              )}
+            </div>
           </div>
         </div>
 
@@ -166,7 +187,11 @@ export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActi
           {(status === "CONFIRMED" || status === "approved") && userType === "provider" && !activeForm && (
             <>
               <Button 
-                onClick={() => handleAction("handover/initiate")}
+                onClick={() => setConfirmAction({
+                  action: "handover/initiate",
+                  label: "Initialize Handover",
+                  description: "This will notify the renter that you are ready to hand over the vehicle keys and start the inspection."
+                })}
                 disabled={loading}
                 className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm transition-all text-lg tracking-tight"
               >
@@ -187,7 +212,11 @@ export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActi
           {status === "ACTIVE" && !activeForm && (
             <>
               <Button 
-                onClick={() => handleAction("return/initiate")}
+                onClick={() => setConfirmAction({
+                  action: "return/initiate",
+                  label: "Initiate Return",
+                  description: "This will start the vehicle return process. Both parties must be present for the final inspection."
+                })}
                 disabled={loading}
                 className="w-full h-14 bg-primary hover:bg-primary/90 text-primary-foreground font-bold shadow-sm transition-all text-lg tracking-tight"
               >
@@ -236,6 +265,27 @@ export function LifecycleActions({ booking, userType, onRefresh }: LifecycleActi
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={confirmAction !== null} onOpenChange={(open) => !open && setConfirmAction(null)}>
+        <AlertDialogContent className="rounded-3xl border-none shadow-2xl">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-xl font-bold">{confirmAction?.label}</AlertDialogTitle>
+            <AlertDialogDescription className="text-muted-foreground font-medium">
+              {confirmAction?.description}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="mt-4">
+            <AlertDialogCancel className="rounded-xl font-bold border-none bg-muted hover:bg-muted/80">Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => confirmAction && handleAction(confirmAction.action)}
+              className="rounded-xl font-bold bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20"
+            >
+              Confirm Action
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

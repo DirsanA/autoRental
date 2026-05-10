@@ -119,10 +119,14 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
                         {format(new Date(booking.startTime || booking.startDate), "MMM d")}
                       </span>
                     </div>
-                    <p className="text-xs font-medium text-muted-foreground truncate flex items-center gap-1.5">
-                      <User className="w-3.5 h-3.5" />
-                      {userType === "provider" ? (booking.customerName || booking.renter?.name) : "Vehicle Owner"}
-                    </p>
+                    <div className="flex items-center gap-2 mt-1">
+                      <p className="text-[10px] font-bold text-muted-foreground truncate flex items-center gap-1 uppercase tracking-wider">
+                        <User className="w-3 h-3" />
+                        {userType === "provider" ? (booking.customerName || booking.renter?.name) : "Vehicle Owner"}
+                      </p>
+                      <span className="text-[10px] font-medium text-zinc-300">|</span>
+                      <span className="text-[10px] font-bold text-primary/70 tracking-tighter">#{booking.bookingId}</span>
+                    </div>
                     <div className="flex items-center justify-between mt-3">
                       <Badge className={cn(
                         "text-[9px] font-bold px-2 py-0 border-none shadow-none uppercase tracking-tighter",
@@ -175,18 +179,20 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
               <div className="flex flex-col h-full min-h-0">
                 <ChatWindow 
                   bookingId={selectedBooking.id} 
+                  bookingDisplayId={selectedBooking.bookingId}
+                  vehicleName={selectedBooking.vehicleName || `${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}
                   className="h-full border-none shadow-none" 
                   counterparty={
                     userType === "provider" 
                       ? { 
                           name: selectedBooking.customerName || selectedBooking.renter?.name || "Renter", 
                           role: "RENTER",
-                          avatar: selectedBooking.renter?.avatarUrl 
+                          avatar: selectedBooking.renter?.profilePicture || selectedBooking.renter?.avatarUrl 
                         }
                       : { 
                           name: selectedBooking.vehicle?.host?.name || selectedBooking.company?.name || "Host", 
-                          role: selectedBooking.company ? "COMPANY" : "HOST",
-                          avatar: selectedBooking.vehicle?.host?.avatarUrl || selectedBooking.company?.logoUrl
+                          role: selectedBooking.company ? "COMPANY" : "PEERHOST",
+                          avatar: selectedBooking.company?.logoUrl || selectedBooking.company?.profilePicture || selectedBooking.vehicle?.host?.profilePicture || selectedBooking.vehicle?.host?.avatarUrl
                         }
                   }
                 />

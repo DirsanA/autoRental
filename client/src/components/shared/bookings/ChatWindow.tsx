@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 
 interface ChatWindowProps {
   bookingId: string;
+  bookingDisplayId?: string;
+  vehicleName?: string;
   className?: string;
   counterparty?: {
     name: string;
@@ -25,7 +27,7 @@ interface ChatWindowProps {
   };
 }
 
-export function ChatWindow({ bookingId, className, counterparty }: ChatWindowProps) {
+export function ChatWindow({ bookingId, bookingDisplayId, vehicleName, className, counterparty }: ChatWindowProps) {
   const { messages, sendMessage, joinRoom, isConnected, isLoading } = useChat();
   const { user } = useAuth();
   const [inputValue, setInputValue] = useState("");
@@ -49,8 +51,8 @@ export function ChatWindow({ bookingId, className, counterparty }: ChatWindowPro
   const handleScroll = () => {
     if (scrollRef.current) {
       const { scrollTop, scrollHeight, clientHeight } = scrollRef.current;
-      // Show button if we are more than 200px from the bottom
-      const isNearBottom = scrollHeight - scrollTop - clientHeight < 200;
+      // Show button if we are more than 100px from the bottom
+      const isNearBottom = scrollHeight - scrollTop - clientHeight < 100;
       setShowScrollButton(!isNearBottom);
     }
   };
@@ -77,18 +79,21 @@ export function ChatWindow({ bookingId, className, counterparty }: ChatWindowPro
           </Avatar>
           <div>
             <h3 className="font-bold tracking-tight text-sm flex items-center gap-2">
-              {counterparty?.name || "Chat"}
-              {counterparty?.role && (
-                <Badge variant="outline" className="text-[9px] font-black tracking-widest px-1.5 py-0 bg-primary/5 border-primary/20 text-primary">
-                  {counterparty.role}
-                </Badge>
-              )}
+              {counterparty?.role || "User"}
+              <span className="text-muted-foreground font-medium">•</span>
+              <span className="text-muted-foreground font-medium">{counterparty?.name || "Chat"}</span>
             </h3>
-            <div className="flex items-center gap-1.5">
-              <div className={cn("w-1.5 h-1.5 rounded-full", isConnected ? "bg-green-500" : "bg-zinc-300")} />
-              <span className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                {isLoading ? "Syncing..." : (isConnected ? "Active Now" : "Disconnected")}
-              </span>
+            <div className="flex items-center gap-2">
+              {vehicleName && (
+                <span className="text-[10px] font-bold text-primary uppercase tracking-tighter">
+                  {vehicleName}
+                </span>
+              )}
+              {bookingDisplayId && (
+                <span className="text-[10px] font-medium text-muted-foreground">
+                  #{bookingDisplayId}
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -184,10 +189,10 @@ export function ChatWindow({ bookingId, className, counterparty }: ChatWindowPro
           <Button
             size="icon"
             variant="secondary"
-            className="absolute bottom-4 right-4 rounded-full shadow-lg border animate-in fade-in slide-in-from-bottom-4"
+            className="absolute bottom-8 right-8 rounded-full shadow-2xl border bg-background/80 backdrop-blur-sm z-50 animate-in fade-in slide-in-from-bottom-4 hover:bg-background"
             onClick={scrollToBottom}
           >
-            <ArrowDown className="w-4 h-4" />
+            <ArrowDown className="w-5 h-5 text-primary" />
           </Button>
         )}
       </div>
