@@ -49,6 +49,11 @@ import {
   type RenterBookingsPagination,
   type RenterBookingStatus,
 } from "@/lib/bookings-api";
+import {
+  isChatAvailable,
+  getDepositStatusDisplay,
+  type UnifiedBookingStatus,
+} from "@/lib/booking-types-unified";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
@@ -147,7 +152,12 @@ function SummaryCard({
               {value}
             </p>
           </div>
-          <div className={cn("shadow-sm p-3 rounded-2xl text-white", accentClassName)}>
+          <div
+            className={cn(
+              "shadow-sm p-3 rounded-2xl text-white",
+              accentClassName,
+            )}
+          >
             <Icon className="w-5 h-5" />
           </div>
         </div>
@@ -220,7 +230,9 @@ function MobileBookingCard({
           </span>
         </div>
         <div className="flex justify-between items-center gap-3">
-          <span className="text-xs">Plate {booking.vehicle?.plate || "N/A"}</span>
+          <span className="text-xs">
+            Plate {booking.vehicle?.plate || "N/A"}
+          </span>
           <span className="font-semibold text-foreground">
             {formatCurrency(
               booking.pricing.totalAmount,
@@ -284,14 +296,17 @@ export function PeerHostBookingHistoryPage() {
   useEffect(() => {
     let cancelled = false;
 
-    fetchPeerHostBookings({
-      search: search || undefined,
-      status: statusFilter === "all" ? undefined : statusFilter,
-      page,
-      limit: PAGE_SIZE,
-    }, {
-      cacheKey: `peerhost-bookings-${search}-${statusFilter}-${page}-${reloadKey}`,
-    })
+    fetchPeerHostBookings(
+      {
+        search: search || undefined,
+        status: statusFilter === "all" ? undefined : statusFilter,
+        page,
+        limit: PAGE_SIZE,
+      },
+      {
+        cacheKey: `peerhost-bookings-${search}-${statusFilter}-${page}-${reloadKey}`,
+      },
+    )
       .then((result) => {
         if (cancelled) return;
         setBookings(result.bookings);
@@ -316,7 +331,9 @@ export function PeerHostBookingHistoryPage() {
 
   const refreshBookings = () => setReloadKey((value) => value + 1);
   const summary = useMemo(() => {
-    const pending = bookings.filter((booking) => booking.status === "PENDING").length;
+    const pending = bookings.filter(
+      (booking) => booking.status === "PENDING",
+    ).length;
     const confirmed = bookings.filter(
       (booking) => booking.status === "CONFIRMED",
     ).length;
@@ -376,7 +393,8 @@ export function PeerHostBookingHistoryPage() {
   ) => {
     const reason =
       returnCondition === "ISSUE_REPORTED"
-        ? window.prompt("Describe the issue reported for this return.") || undefined
+        ? window.prompt("Describe the issue reported for this return.") ||
+          undefined
         : undefined;
 
     try {
@@ -391,8 +409,7 @@ export function PeerHostBookingHistoryPage() {
         current
           ? {
               ...current,
-              status:
-                returnCondition === "CLEAN" ? "COMPLETED" : "DISPUTED",
+              status: returnCondition === "CLEAN" ? "COMPLETED" : "DISPUTED",
               returnCondition,
               returnConfirmedAt: new Date().toISOString(),
               depositStatus:
@@ -419,7 +436,11 @@ export function PeerHostBookingHistoryPage() {
           ) : error ? (
             <div className="bg-red-500/10 p-6 border border-red-500/20 rounded-2xl text-red-600 dark:text-red-400 text-sm text-center">
               <div>{error}</div>
-              <Button variant="outline" onClick={refreshBookings} className="mt-4">
+              <Button
+                variant="outline"
+                onClick={refreshBookings}
+                className="mt-4"
+              >
                 Try again
               </Button>
             </div>
@@ -470,14 +491,20 @@ export function PeerHostBookingHistoryPage() {
 
               <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 text-muted-foreground text-sm">
                 <div>
-                  Showing {bookings.length} records on this page (out of {pagination.total} total)
+                  Showing {bookings.length} records on this page (out of{" "}
+                  {pagination.total} total)
                 </div>
                 <div>
                   Page {pagination.page} of {pagination.totalPages}
                 </div>
               </div>
 
-              <div className={cn("bg-card/95 shadow-sm border border-border/70 rounded-2xl transition-opacity", loading && "opacity-70")}>
+              <div
+                className={cn(
+                  "bg-card/95 shadow-sm border border-border/70 rounded-2xl transition-opacity",
+                  loading && "opacity-70",
+                )}
+              >
                 <div className="flex justify-between items-center px-4 py-4 border-border/70 border-b text-muted-foreground text-sm">
                   <span>Peerhost booking records</span>
                   <span>Fast cached fetch with live filters</span>
@@ -501,41 +528,62 @@ export function PeerHostBookingHistoryPage() {
                   <Table>
                     <TableHeader className="bg-muted/40">
                       <TableRow className="hover:bg-transparent">
-                        <TableHead className="w-[240px]">Vehicle Name</TableHead>
+                        <TableHead className="w-[240px]">
+                          Vehicle Name
+                        </TableHead>
                         <TableHead className="w-[220px]">Guest Name</TableHead>
                         <TableHead className="w-[240px]">Dates</TableHead>
                         <TableHead className="w-[140px]">Status</TableHead>
                         <TableHead className="w-[140px]">Total</TableHead>
-                        <TableHead className="w-[120px] text-right">Detail</TableHead>
+                        <TableHead className="w-[120px] text-right">
+                          Detail
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
 
                     <TableBody>
                       {bookings.length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="py-14 text-muted-foreground text-center">
+                          <TableCell
+                            colSpan={6}
+                            className="py-14 text-muted-foreground text-center"
+                          >
                             No bookings matched the current filters.
                           </TableCell>
                         </TableRow>
                       ) : (
                         bookings.map((booking) => (
-                          <TableRow key={booking.id} className="border-border/60 align-top">
+                          <TableRow
+                            key={booking.id}
+                            className="border-border/60 align-top"
+                          >
                             <TableCell>
-                              <div className="font-medium">{vehicleName(booking)}</div>
+                              <div className="font-medium">
+                                {vehicleName(booking)}
+                              </div>
                               <div className="mt-1 text-muted-foreground text-xs">
-                                {booking.vehicle?.plate ? `Plate ${booking.vehicle.plate}` : "Plate unavailable"}
+                                {booking.vehicle?.plate
+                                  ? `Plate ${booking.vehicle.plate}`
+                                  : "Plate unavailable"}
                               </div>
                             </TableCell>
 
                             <TableCell>
-                              <div className="font-medium">{guestName(booking)}</div>
+                              <div className="font-medium">
+                                {guestName(booking)}
+                              </div>
                               <div className="mt-1 text-muted-foreground text-xs">
-                                {booking.renter?.phone || booking.contactPhone || "No contact"}
+                                {booking.renter?.phone ||
+                                  booking.contactPhone ||
+                                  "No contact"}
                               </div>
                             </TableCell>
 
                             <TableCell className="text-muted-foreground text-sm">
-                              {formatDateRange(booking.startTime, booking.endTime)}
+                              {formatDateRange(
+                                booking.startTime,
+                                booking.endTime,
+                              )}
                             </TableCell>
 
                             <TableCell>
@@ -622,9 +670,12 @@ export function PeerHostBookingHistoryPage() {
         {selectedBooking ? (
           <DialogContent className="bg-background p-0 border-border/70 w-[calc(100vw-1rem)] sm:w-full sm:max-w-2xl overflow-hidden">
             <DialogHeader className="bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950 px-5 sm:px-6 py-5 sm:py-6 text-left">
-              <DialogTitle className="text-white text-xl">{vehicleName(selectedBooking)}</DialogTitle>
+              <DialogTitle className="text-white text-xl">
+                {vehicleName(selectedBooking)}
+              </DialogTitle>
               <DialogDescription className="text-slate-300">
-                Booking {selectedBooking.bookingId} for {guestName(selectedBooking)}
+                Booking {selectedBooking.bookingId} for{" "}
+                {guestName(selectedBooking)}
               </DialogDescription>
             </DialogHeader>
 
@@ -646,132 +697,163 @@ export function PeerHostBookingHistoryPage() {
                   className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6"
                 >
                   <div className="gap-3 grid sm:grid-cols-2 md:grid-cols-3">
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <UserRound className="w-4 h-4" />
-                    Guest
-                  </div>
-                  <p className="mt-2 font-medium text-sm">{guestName(selectedBooking)}</p>
-                </div>
-
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <CalendarDays className="w-4 h-4" />
-                    Dates
-                  </div>
-                  <p className="mt-2 font-medium text-sm">
-                    {formatDateRange(selectedBooking.startTime, selectedBooking.endTime)}
-                  </p>
-                </div>
-
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Wallet className="w-4 h-4" />
-                    Total
-                  </div>
-                  <p className="mt-2 font-medium text-sm">
-                    {formatCurrency(
-                      selectedBooking.pricing.totalAmount,
-                      selectedBooking.pricing.currency,
-                    )}
-                  </p>
-                </div>
-              </div>
-
-              <div className="px-4 border border-border/70 rounded-2xl">
-                <DetailRow label="Status" value={bookingStatusLabel(selectedBooking.status)} />
-                <DetailRow
-                  label="Payment"
-                  value={paymentStateLabel(selectedBooking.paymentState)}
-                />
-                <DetailRow
-                  label="Booked on"
-                  value={formatDateTime(selectedBooking.createdAt)}
-                />
-                <DetailRow
-                  label="Pickup"
-                  value={selectedBooking.pickupAddress || "Not provided"}
-                />
-                <DetailRow
-                  label="Return"
-                  value={selectedBooking.returnAddress || "Not provided"}
-                />
-                <DetailRow
-                  label="Booking mode"
-                  value={selectedBooking.withDriver ? "With driver" : "Self-drive"}
-                />
-                <DetailRow
-                  label="Deposit"
-                  value={formatCurrency(
-                    selectedBooking.securityDepositAmount || 0,
-                    selectedBooking.pricing.currency,
-                  )}
-                />
-                <DetailRow
-                  label="Deposit status"
-                  value={selectedBooking.depositStatus.replaceAll("_", " ")}
-                />
-                <DetailRow
-                  label="Guest email"
-                  value={selectedBooking.renter?.email || "Not provided"}
-                />
-              </div>
-            </TabsContent>
-
-                <TabsContent value="chat" className="flex-1 overflow-hidden space-y-6">
-                  {selectedBooking.status === "CONFIRMED" ||
-                  selectedBooking.status === "ACTIVE" ||
-                  selectedBooking.status === "COMPLETED" ? (
-                    <div className="grid gap-6 lg:grid-cols-[1fr_250px] h-full overflow-hidden">
-                      <ChatWindow bookingId={selectedBooking.id} className="h-full" />
-                      <div className="space-y-6 overflow-y-auto pr-1">
-                        <LifecycleActions 
-                          booking={selectedBooking} 
-                          userType="provider" 
-                          onRefresh={refreshBookings} 
-                        />
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <UserRound className="w-4 h-4" />
+                        Guest
                       </div>
+                      <p className="mt-2 font-medium text-sm">
+                        {guestName(selectedBooking)}
+                      </p>
                     </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                {selectedBooking.status === "CONFIRMED" &&
-                selectedBooking.paymentState === "paid" ? (
-                  <Button
-                    onClick={() => void handleActivateBooking(selectedBooking)}
-                    disabled={isMutatingBooking}
-                  >
-                    {isMutatingBooking ? "Starting..." : "Verify Pickup & Start Trip"}
-                  </Button>
-                ) : null}
-                {selectedBooking.status === "ACTIVE" ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        void handleReturnConfirmation(
-                          selectedBooking,
-                          "ISSUE_REPORTED",
-                        )
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <CalendarDays className="w-4 h-4" />
+                        Dates
+                      </div>
+                      <p className="mt-2 font-medium text-sm">
+                        {formatDateRange(
+                          selectedBooking.startTime,
+                          selectedBooking.endTime,
+                        )}
+                      </p>
+                    </div>
+
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <Wallet className="w-4 h-4" />
+                        Total
+                      </div>
+                      <p className="mt-2 font-medium text-sm">
+                        {formatCurrency(
+                          selectedBooking.pricing.totalAmount,
+                          selectedBooking.pricing.currency,
+                        )}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="px-4 border border-border/70 rounded-2xl">
+                    <DetailRow
+                      label="Status"
+                      value={bookingStatusLabel(selectedBooking.status)}
+                    />
+                    <DetailRow
+                      label="Payment"
+                      value={paymentStateLabel(selectedBooking.paymentState)}
+                    />
+                    <DetailRow
+                      label="Booked on"
+                      value={formatDateTime(selectedBooking.createdAt)}
+                    />
+                    <DetailRow
+                      label="Pickup"
+                      value={selectedBooking.pickupAddress || "Not provided"}
+                    />
+                    <DetailRow
+                      label="Return"
+                      value={selectedBooking.returnAddress || "Not provided"}
+                    />
+                    <DetailRow
+                      label="Booking mode"
+                      value={
+                        selectedBooking.withDriver
+                          ? "With driver"
+                          : "Self-drive"
                       }
-                      disabled={isMutatingBooking}
-                    >
-                      Report Issue
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        void handleReturnConfirmation(selectedBooking, "CLEAN")
-                      }
-                      disabled={isMutatingBooking}
-                    >
-                      {isMutatingBooking ? "Saving..." : "Confirm Clean Return"}
-                    </Button>
-                  </>
-                ) : null}
-              </div>
+                    />
+                    <DetailRow
+                      label="Deposit"
+                      value={formatCurrency(
+                        selectedBooking.securityDepositAmount || 0,
+                        selectedBooking.pricing.currency,
+                      )}
+                    />
+                    <DetailRow
+                      label="Deposit status"
+                      value={getDepositStatusDisplay(
+                        selectedBooking.depositStatus,
+                      )}
+                    />
+                    <DetailRow
+                      label="Guest email"
+                      value={selectedBooking.renter?.email || "Not provided"}
+                    />
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="chat"
+                  className="flex-1 overflow-hidden space-y-6"
+                >
+                  {isChatAvailable(
+                    selectedBooking.status as UnifiedBookingStatus,
+                    selectedBooking.paymentState,
+                  ) ? (
+                    <div className="grid gap-6 lg:grid-cols-[1fr_250px] h-full overflow-hidden">
+                      <ChatWindow
+                        bookingId={selectedBooking.id}
+                        className="h-full"
+                      />
+                      <div className="space-y-6 overflow-y-auto pr-1">
+                        <LifecycleActions
+                          booking={selectedBooking}
+                          userType="provider"
+                          onRefresh={refreshBookings}
+                        />
+                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                          {selectedBooking.status === "CONFIRMED" &&
+                          selectedBooking.paymentState === "paid" ? (
+                            <Button
+                              onClick={() =>
+                                void handleActivateBooking(selectedBooking)
+                              }
+                              disabled={isMutatingBooking}
+                            >
+                              {isMutatingBooking
+                                ? "Starting..."
+                                : "Verify Pickup & Start Trip"}
+                            </Button>
+                          ) : null}
+                          {selectedBooking.status === "ACTIVE" ? (
+                            <>
+                              <Button
+                                variant="outline"
+                                onClick={() =>
+                                  void handleReturnConfirmation(
+                                    selectedBooking,
+                                    "ISSUE_REPORTED",
+                                  )
+                                }
+                                disabled={isMutatingBooking}
+                              >
+                                Report Issue
+                              </Button>
+                              <Button
+                                onClick={() =>
+                                  void handleReturnConfirmation(
+                                    selectedBooking,
+                                    "CLEAN",
+                                  )
+                                }
+                                disabled={isMutatingBooking}
+                              >
+                                {isMutatingBooking
+                                  ? "Saving..."
+                                  : "Confirm Clean Return"}
+                              </Button>
+                            </>
+                          ) : null}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
                       <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
-                      <h3 className="font-bold text-lg uppercase text-zinc-400">Chat Unavailable</h3>
+                      <h3 className="font-bold text-lg uppercase text-zinc-400">
+                        Chat Unavailable
+                      </h3>
                       <p className="text-sm text-zinc-500">
                         The chat room will open once the booking is confirmed.
                       </p>

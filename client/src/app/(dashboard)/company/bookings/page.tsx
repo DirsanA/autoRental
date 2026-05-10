@@ -12,14 +12,16 @@ import {
   Wallet,
 } from "lucide-react";
 import { useDeferredValue, useEffect, useMemo, useState } from "react";
-import {
-  type CompanyBooking,
-  fetchCompanyBookings,
-} from "@/lib/booking.api";
+import { type CompanyBooking, fetchCompanyBookings } from "@/lib/booking.api";
 import {
   activateOwnedBooking,
   confirmOwnedBookingReturn,
 } from "@/lib/bookings-api";
+import {
+  isChatAvailable,
+  getDepositStatusDisplay,
+  type UnifiedBookingStatus,
+} from "@/lib/booking-types-unified";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
@@ -320,7 +322,8 @@ export default function BookingManagement() {
   ) => {
     const reason =
       returnCondition === "ISSUE_REPORTED"
-        ? window.prompt("Describe the issue reported for this return.") || undefined
+        ? window.prompt("Describe the issue reported for this return.") ||
+          undefined
         : undefined;
 
     try {
@@ -387,8 +390,8 @@ export default function BookingManagement() {
               Booking Management
             </h2>
             <p className="mt-2 text-muted-foreground text-sm sm:text-base">
-              Keep reservation activity in view with faster loading, clearer filters,
-              and quick access to every booking detail.
+              Keep reservation activity in view with faster loading, clearer
+              filters, and quick access to every booking detail.
             </p>
           </div>
 
@@ -452,12 +455,19 @@ export default function BookingManagement() {
               </div>
 
               <p className="text-muted-foreground text-sm">
-                {loading ? "Refreshing bookings..." : `${filteredBookings.length} matching bookings`}
+                {loading
+                  ? "Refreshing bookings..."
+                  : `${filteredBookings.length} matching bookings`}
               </p>
             </div>
           </div>
 
-          <div className={cn("bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl transition-opacity", loading && "opacity-70")}>
+          <div
+            className={cn(
+              "bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl transition-opacity",
+              loading && "opacity-70",
+            )}
+          >
             <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-2 mb-4 text-muted-foreground text-sm">
               <span>Company booking history</span>
               <span>Updated from live booking records</span>
@@ -496,7 +506,10 @@ export default function BookingManagement() {
                 <TableBody>
                   {filteredBookings.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="py-16 text-muted-foreground text-center">
+                      <TableCell
+                        colSpan={7}
+                        className="py-16 text-muted-foreground text-center"
+                      >
                         No company bookings matched the current filters.
                       </TableCell>
                     </TableRow>
@@ -522,14 +535,21 @@ export default function BookingManagement() {
                         <TableCell className="py-4">
                           <div className="flex items-center gap-2 text-foreground">
                             <Car className="w-4 h-4 text-muted-foreground" />
-                            <span className="font-medium">{booking.vehicleName}</span>
+                            <span className="font-medium">
+                              {booking.vehicleName}
+                            </span>
                           </div>
                         </TableCell>
 
                         <TableCell className="py-4 text-muted-foreground text-sm">
                           <div className="flex items-center gap-2">
                             <Calendar className="w-4 h-4 text-muted-foreground" />
-                            <span>{formatDateRange(booking.startDate, booking.endDate)}</span>
+                            <span>
+                              {formatDateRange(
+                                booking.startDate,
+                                booking.endDate,
+                              )}
+                            </span>
                           </div>
                           <div className="flex items-center gap-2 mt-1 text-muted-foreground text-xs">
                             <Clock className="w-3 h-3" />
@@ -548,7 +568,10 @@ export default function BookingManagement() {
                         <TableCell className="py-4">
                           <Badge
                             variant="outline"
-                            className={cn("rounded-full font-semibold capitalize", getStatusStyle(booking.status))}
+                            className={cn(
+                              "rounded-full font-semibold capitalize",
+                              getStatusStyle(booking.status),
+                            )}
                           >
                             {booking.status}
                           </Badge>
@@ -583,7 +606,8 @@ export default function BookingManagement() {
                 {selectedBooking.vehicleName}
               </DialogTitle>
               <DialogDescription className="text-slate-300">
-                Booking {selectedBooking.bookingId} for {selectedBooking.customerName}
+                Booking {selectedBooking.bookingId} for{" "}
+                {selectedBooking.customerName}
               </DialogDescription>
             </DialogHeader>
 
@@ -593,171 +617,202 @@ export default function BookingManagement() {
                   <TabsTrigger value="details">Booking Details</TabsTrigger>
                   <TabsTrigger value="chat" className="gap-2">
                     Live Chat & Process
-                    {(selectedBooking.status === "approved" || selectedBooking.status === "ACTIVE") && (
+                    {isChatAvailable(
+                      selectedBooking.rawStatus as UnifiedBookingStatus,
+                      selectedBooking.paymentState,
+                    ) && (
                       <span className="flex h-2 w-2 animate-pulse rounded-full bg-emerald-500" />
                     )}
                   </TabsTrigger>
                 </TabsList>
 
-                <TabsContent value="details" className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6">
+                <TabsContent
+                  value="details"
+                  className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6"
+                >
                   <div className="gap-3 grid sm:grid-cols-2 xl:grid-cols-4">
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <User className="w-4 h-4" />
-                    Customer
-                  </div>
-                  <p className="mt-2 font-semibold text-foreground text-sm">
-                    {selectedBooking.customerName}
-                  </p>
-                </div>
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Car className="w-4 h-4" />
-                    Vehicle
-                  </div>
-                  <p className="mt-2 font-semibold text-foreground text-sm">
-                    {selectedBooking.vehicleName}
-                  </p>
-                </div>
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Calendar className="w-4 h-4" />
-                    Trip dates
-                  </div>
-                  <p className="mt-2 font-semibold text-foreground text-sm">
-                    {formatDateRange(
-                      selectedBooking.startDate,
-                      selectedBooking.endDate,
-                    )}
-                  </p>
-                </div>
-                <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                  <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                    <Wallet className="w-4 h-4" />
-                    Amount
-                  </div>
-                  <p className="mt-2 font-semibold text-foreground text-sm">
-                    {formatCurrency(selectedBooking.totalAmount)}
-                  </p>
-                </div>
-              </div>
-
-              <div className="px-4 border border-border/70 rounded-2xl">
-                <BookingMetaRow label="Booking ID" value={selectedBooking.bookingId} />
-                <BookingMetaRow
-                  label="Status"
-                  value={selectedBooking.status}
-                />
-                <BookingMetaRow
-                  label="Pickup location"
-                  value={selectedBooking.pickupLocation}
-                />
-                <BookingMetaRow
-                  label="Booked on"
-                  value={formatRelativeTimestamp(selectedBooking.createdAt)}
-                />
-                <BookingMetaRow
-                  label="Customer email"
-                  value={selectedBooking.customerEmail || "Not provided"}
-                />
-                  <BookingMetaRow
-                    label="Customer phone"
-                    value={selectedBooking.customerPhone || "Not provided"}
-                  />
-                <BookingMetaRow
-                  label="Booking mode"
-                  value={selectedBooking.withDriver ? "With driver" : "Self-drive"}
-                />
-                <BookingMetaRow
-                  label="Security deposit"
-                  value={formatCurrency(
-                    selectedBooking.securityDepositAmount || 0,
-                  )}
-                />
-                <BookingMetaRow
-                  label="Deposit status"
-                  value={selectedBooking.depositStatus.replaceAll("_", " ")}
-                />
-              </div>
-
-              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                {selectedBooking.rawStatus === "CONFIRMED" &&
-                selectedBooking.paymentState === "paid" ? (
-                  <Button
-                    onClick={() => void handleActivateBooking(selectedBooking)}
-                    disabled={isMutatingBooking}
-                  >
-                    {isMutatingBooking ? "Starting..." : "Verify Pickup & Start Trip"}
-                  </Button>
-                ) : null}
-                {selectedBooking.rawStatus === "CONFIRMED" &&
-                selectedBooking.paymentState === "paid" &&
-                !selectedBooking.withDriver &&
-                !selectedBooking.originalDocsChecked ? (
-                  <p className="text-xs text-muted-foreground">
-                    Self-drive bookings must be verified physically before activation.
-                  </p>
-                ) : null}
-                {selectedBooking.rawStatus === "ACTIVE" ? (
-                  <>
-                    <Button
-                      variant="outline"
-                      onClick={() =>
-                        void handleReturnConfirmation(
-                          selectedBooking,
-                          "ISSUE_REPORTED",
-                        )
-                      }
-                      disabled={isMutatingBooking}
-                    >
-                      Report Issue
-                    </Button>
-                    <Button
-                      onClick={() =>
-                        void handleReturnConfirmation(selectedBooking, "CLEAN")
-                      }
-                      disabled={isMutatingBooking}
-                    >
-                      {isMutatingBooking ? "Saving..." : "Confirm Clean Return"}
-                    </Button>
-                  </>
-                ) : null}
-                </div>
-              </TabsContent>
-
-              <TabsContent value="chat" className="flex-1 overflow-hidden space-y-6">
-                {selectedBooking.status === "approved" ||
-                selectedBooking.status === "ACTIVE" ||
-                selectedBooking.status === "completed" ? (
-                  <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] h-full overflow-hidden">
-                    <ChatWindow 
-                      bookingId={selectedBooking.id} 
-                      className="h-full" 
-                      counterparty={{
-                        name: selectedBooking.customerName || "Renter",
-                        role: "RENTER"
-                      }}
-                    />
-                    <div className="space-y-6 overflow-y-auto pr-1">
-                      <LifecycleActions 
-                        booking={selectedBooking} 
-                        userType="provider" 
-                        onRefresh={refreshBookings} 
-                      />
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <User className="w-4 h-4" />
+                        Customer
+                      </div>
+                      <p className="mt-2 font-semibold text-foreground text-sm">
+                        {selectedBooking.customerName}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <Car className="w-4 h-4" />
+                        Vehicle
+                      </div>
+                      <p className="mt-2 font-semibold text-foreground text-sm">
+                        {selectedBooking.vehicleName}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <Calendar className="w-4 h-4" />
+                        Trip dates
+                      </div>
+                      <p className="mt-2 font-semibold text-foreground text-sm">
+                        {formatDateRange(
+                          selectedBooking.startDate,
+                          selectedBooking.endDate,
+                        )}
+                      </p>
+                    </div>
+                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
+                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
+                        <Wallet className="w-4 h-4" />
+                        Amount
+                      </div>
+                      <p className="mt-2 font-semibold text-foreground text-sm">
+                        {formatCurrency(selectedBooking.totalAmount)}
+                      </p>
                     </div>
                   </div>
-                ) : (
-                  <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
-                    <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
-                    <h3 className="font-bold text-lg uppercase text-zinc-400">Chat Unavailable</h3>
-                    <p className="text-sm text-zinc-500">
-                      The chat room will open once the booking is confirmed.
-                    </p>
-                  </Card>
-                )}
-              </TabsContent>
-            </Tabs>
-          </div>
+
+                  <div className="px-4 border border-border/70 rounded-2xl">
+                    <BookingMetaRow
+                      label="Booking ID"
+                      value={selectedBooking.bookingId}
+                    />
+                    <BookingMetaRow
+                      label="Status"
+                      value={selectedBooking.status}
+                    />
+                    <BookingMetaRow
+                      label="Pickup location"
+                      value={selectedBooking.pickupLocation}
+                    />
+                    <BookingMetaRow
+                      label="Booked on"
+                      value={formatRelativeTimestamp(selectedBooking.createdAt)}
+                    />
+                    <BookingMetaRow
+                      label="Customer email"
+                      value={selectedBooking.customerEmail || "Not provided"}
+                    />
+                    <BookingMetaRow
+                      label="Customer phone"
+                      value={selectedBooking.customerPhone || "Not provided"}
+                    />
+                    <BookingMetaRow
+                      label="Booking mode"
+                      value={
+                        selectedBooking.withDriver
+                          ? "With driver"
+                          : "Self-drive"
+                      }
+                    />
+                    <BookingMetaRow
+                      label="Security deposit"
+                      value={formatCurrency(
+                        selectedBooking.securityDepositAmount || 0,
+                      )}
+                    />
+                    <BookingMetaRow
+                      label="Deposit status"
+                      value={getDepositStatusDisplay(
+                        selectedBooking.depositStatus,
+                      )}
+                    />
+                  </div>
+
+                  <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                    {selectedBooking.rawStatus === "CONFIRMED" &&
+                    selectedBooking.paymentState === "paid" ? (
+                      <Button
+                        onClick={() =>
+                          void handleActivateBooking(selectedBooking)
+                        }
+                        disabled={isMutatingBooking}
+                      >
+                        {isMutatingBooking
+                          ? "Starting..."
+                          : "Verify Pickup & Start Trip"}
+                      </Button>
+                    ) : null}
+                    {selectedBooking.rawStatus === "CONFIRMED" &&
+                    selectedBooking.paymentState === "paid" &&
+                    !selectedBooking.withDriver &&
+                    !selectedBooking.originalDocsChecked ? (
+                      <p className="text-xs text-muted-foreground">
+                        Self-drive bookings must be verified physically before
+                        activation.
+                      </p>
+                    ) : null}
+                    {selectedBooking.rawStatus === "ACTIVE" ? (
+                      <>
+                        <Button
+                          variant="outline"
+                          onClick={() =>
+                            void handleReturnConfirmation(
+                              selectedBooking,
+                              "ISSUE_REPORTED",
+                            )
+                          }
+                          disabled={isMutatingBooking}
+                        >
+                          Report Issue
+                        </Button>
+                        <Button
+                          onClick={() =>
+                            void handleReturnConfirmation(
+                              selectedBooking,
+                              "CLEAN",
+                            )
+                          }
+                          disabled={isMutatingBooking}
+                        >
+                          {isMutatingBooking
+                            ? "Saving..."
+                            : "Confirm Clean Return"}
+                        </Button>
+                      </>
+                    ) : null}
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="chat"
+                  className="flex-1 overflow-hidden space-y-6"
+                >
+                  {isChatAvailable(
+                    selectedBooking.rawStatus as UnifiedBookingStatus,
+                    selectedBooking.paymentState,
+                  ) ? (
+                    <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] h-full overflow-hidden">
+                      <ChatWindow
+                        bookingId={selectedBooking.id}
+                        className="h-full"
+                        counterparty={{
+                          name: selectedBooking.customerName || "Renter",
+                          role: "RENTER",
+                        }}
+                      />
+                      <div className="space-y-6 overflow-y-auto pr-1">
+                        <LifecycleActions
+                          booking={selectedBooking}
+                          userType="provider"
+                          onRefresh={refreshBookings}
+                        />
+                      </div>
+                    </div>
+                  ) : (
+                    <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
+                      <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
+                      <h3 className="font-bold text-lg uppercase text-zinc-400">
+                        Chat Unavailable
+                      </h3>
+                      <p className="text-sm text-zinc-500">
+                        The chat room will open once the booking is confirmed.
+                      </p>
+                    </Card>
+                  )}
+                </TabsContent>
+              </Tabs>
+            </div>
           </DialogContent>
         ) : null}
       </Dialog>

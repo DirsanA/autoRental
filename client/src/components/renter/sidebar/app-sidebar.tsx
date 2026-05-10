@@ -1,7 +1,17 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Car, Home, User, AlertCircle, Wallet, MessageSquareText } from "lucide-react";
+import {
+  BookOpen,
+  Car,
+  Home,
+  User,
+  AlertCircle,
+  Wallet,
+  MessageSquareText,
+  CreditCard,
+  History,
+} from "lucide-react";
 
 import {
   Sidebar,
@@ -99,6 +109,44 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
           </SidebarMenuItem>
 
           <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Messages" asChild>
+              <Link
+                href="/renter/messages"
+                prefetch={true}
+                className={cn(
+                  "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <MessageSquareText className="size-4" />
+                {!isCollapsed && (
+                  <span className="ml-2 text-sm font-medium">Messages</span>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Security Deposits" asChild>
+              <Link
+                href="/renter/deposits"
+                prefetch={true}
+                className={cn(
+                  "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <CreditCard className="size-4" />
+                {!isCollapsed && (
+                  <span className="ml-2 text-sm font-medium">
+                    Security Deposits
+                  </span>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
             <SidebarMenuButton tooltip="Profile Settings" asChild>
               <Link
                 href="/renter/profile-verification"
@@ -143,9 +191,9 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
       </SidebarContent>
 
       <SidebarFooter className="p-4">
-        <ReportIssueModal 
+        <ReportIssueModal
           trigger={
-            <SidebarMenuButton 
+            <SidebarMenuButton
               tooltip="Report a Problem"
               className="w-full justify-start gap-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
             >
