@@ -26,6 +26,7 @@ import { deleteAdminUser, fetchAdminUsers, updateAdminUserStatus } from "./api";
 import { useToast } from "@/hooks/use-toast";
 import { usePageViewTracking } from "@/hooks/use-action-badges";
 import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 import type {
   AdminUserAccountType,
   AdminUserApiStatus,
@@ -232,6 +233,10 @@ export default function UserManagementPage() {
   const adminUsers = users.filter(
     (user) => user.accountType === "ADMIN",
   ).length;
+
+  if (loading && users.length === 0) {
+    return <AdminListPageSkeleton stats={3} columns={6} rows={6} />;
+  }
 
   return (
     <div className="relative flex h-full w-full overflow-hidden">

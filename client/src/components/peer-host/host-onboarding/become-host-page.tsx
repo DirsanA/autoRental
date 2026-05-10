@@ -124,6 +124,8 @@ export function PeerHostBecomeHostPage({
     features: [] as string[],
     condition: "",
     price: "",
+    allowSelfDrive: false,
+    securityDepositAmount: "",
     weeklyDiscount: "",
     monthlyDiscount: "",
     availability: "",
@@ -310,6 +312,9 @@ export function PeerHostBecomeHostPage({
   const yearNumber = parseRequiredNumber(formData.year);
   const seatsNumber = parseRequiredNumber(formData.seats);
   const priceNumber = parseRequiredNumber(formData.price);
+  const securityDepositNumber = parseOptionalNumber(
+    formData.securityDepositAmount,
+  );
 
   const isCarStepComplete =
     !!formData.make.trim() &&
@@ -325,7 +330,11 @@ export function PeerHostBecomeHostPage({
   const isDocumentsStepComplete =
     !!documents.ownership && !!documents.insurance;
 
-  const isPricingStepComplete = !!priceNumber && priceNumber >= 0;
+  const isPricingStepComplete =
+    !!priceNumber &&
+    priceNumber >= 0 &&
+    (!formData.allowSelfDrive ||
+      (securityDepositNumber !== undefined && securityDepositNumber > 0));
 
   const isStepComplete = () => {
     switch (step) {
@@ -364,6 +373,14 @@ export function PeerHostBecomeHostPage({
       if (priceNumber === undefined || priceNumber < 0) {
         throw new Error("Price must be a valid number");
       }
+      if (
+        formData.allowSelfDrive &&
+        (securityDepositNumber === undefined || securityDepositNumber <= 0)
+      ) {
+        throw new Error(
+          "Self-drive vehicles must include a refundable security deposit",
+        );
+      }
       if (!photos.front || !photos.back || !photos.side || !photos.interior) {
         throw new Error("Please upload all 4 required car photos");
       }
@@ -386,6 +403,10 @@ export function PeerHostBecomeHostPage({
         condition: formData.condition.trim() || undefined,
 
         price: priceNumber,
+        allowSelfDrive: formData.allowSelfDrive,
+        securityDepositAmount: formData.allowSelfDrive
+          ? securityDepositNumber
+          : 0,
         weeklyDiscount: weeklyDiscountNumber,
         monthlyDiscount: monthlyDiscountNumber,
         availability: formData.availability.trim() || undefined,
@@ -993,6 +1014,56 @@ export function PeerHostBecomeHostPage({
                       }
                       className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm"
                     />
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/70">
+                    <div className="flex items-start gap-3">
+                      <input
+                        type="checkbox"
+                        checked={formData.allowSelfDrive}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            allowSelfDrive: e.target.checked,
+                            securityDepositAmount: e.target.checked
+                              ? formData.securityDepositAmount
+                              : "",
+                          })
+                        }
+                        className="mt-1 h-4 w-4 rounded border-slate-300"
+                      />
+                      <div>
+                        <p className="font-medium text-slate-900 dark:text-slate-100 text-sm">
+                          Allow self-drive bookings
+                        </p>
+                        <p className="mt-1 text-muted-foreground dark:text-slate-400 text-xs sm:text-sm">
+                          Only admin-approved renters with verified ID and driver license can book this car without a driver.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-4 space-y-2">
+                      <Label className="text-muted-foreground dark:text-slate-400 text-xs">
+                        Refundable security deposit (ETB)
+                      </Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        disabled={!formData.allowSelfDrive}
+                        placeholder="e.g. 5000"
+                        value={formData.securityDepositAmount}
+                        onChange={(e) =>
+                          setFormData({
+                            ...formData,
+                            securityDepositAmount: e.target.value,
+                          })
+                        }
+                        className="bg-slate-100 dark:bg-slate-800 border-0 h-9 sm:h-10 dark:placeholder:text-slate-500 dark:text-slate-200 text-sm disabled:opacity-60"
+                      />
+                      <p className="text-[11px] text-muted-foreground dark:text-slate-400">
+                        Held in system escrow during the trip and refunded to the renter wallet after safe return.
+                      </p>
+                    </div>
                   </div>
 
                   <div className="space-y-2">

@@ -1,6 +1,7 @@
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { coalesceRequest } from "@/lib/api-coalesce";
+import type { CompanyBookingListItem } from "@/lib/bookings-api";
 
 const API_BASE_URL = resolveApiBaseUrl();
 
@@ -26,6 +27,13 @@ export type CompanyBooking = {
 
   pickupLocation: string;
   totalAmount: number;
+  currency: string;
+  paymentState: "pending" | "paid" | "failed";
+  withDriver: boolean;
+  securityDepositAmount: number;
+  depositStatus: string;
+  originalDocsChecked: boolean;
+  rawStatus: string;
 
   status: BookingStatus;
 
@@ -42,10 +50,12 @@ export type CompanyBooking = {
 export const normalizeStatus = (status: string) => {
   switch (status) {
     case "CONFIRMED":
+    case "ACTIVE":
       return "approved";
     case "PENDING":
       return "pending";
-    case "REJECTED":
+    case "CANCELLED":
+    case "DISPUTED":
       return "rejected";
     case "COMPLETED":
       return "completed";
@@ -62,7 +72,7 @@ export async function fetchCompanyBookings(options?: {
   cacheKey?: string;
 }): Promise<CompanyBooking[]> {
   return coalesceRequest(options?.cacheKey || "company-bookings", async () => {
-    const res = await fetch(`${API_BASE_URL}/bookings`, {
+    const res = await fetch(`${API_BASE_URL}/bookings/company`, {
       method: "GET",
       credentials: "include",
       headers: buildAuthHeader(),
@@ -78,25 +88,7 @@ export async function fetchCompanyBookings(options?: {
 
     const json = (await res.json()) as {
       data?: {
-        bookings?: Array<{
-          id?: string;
-          bookingId?: string;
-          startTime?: string;
-          endTime?: string;
-          createdAt?: string;
-          pickupAddress?: string | null;
-          status?: string;
-          pricing?: { totalAmount?: number };
-          renter?: {
-            name?: string | null;
-            phone?: string | null;
-            email?: string | null;
-          } | null;
-          vehicle?: {
-            make?: string | null;
-            model?: string | null;
-          } | null;
-        }>;
+        bookings?: CompanyBookingListItem[];
       };
     };
 
@@ -116,6 +108,13 @@ export async function fetchCompanyBookings(options?: {
       createdAt: booking.createdAt || "",
       pickupLocation: booking.pickupAddress || "Not provided",
       totalAmount: booking.pricing?.totalAmount || 0,
+      currency: booking.pricing?.currency || "ETB",
+      paymentState: booking.paymentState || "pending",
+      withDriver: booking.withDriver ?? true,
+      securityDepositAmount: booking.securityDepositAmount || 0,
+      depositStatus: booking.depositStatus || "NOT_REQUIRED",
+      originalDocsChecked: Boolean(booking.originalDocsChecked),
+      rawStatus: booking.status || "PENDING",
       status: normalizeStatus(booking.status || "PENDING"),
     }));
   });

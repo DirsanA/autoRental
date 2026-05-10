@@ -45,6 +45,8 @@ type DraftVehicle = {
   plate: string;
   vin: string;
   pricePerDay: string;
+  allowSelfDrive: boolean;
+  securityDepositAmount: string;
   initialAvailability: "AVAILABLE" | "MAINTENANCE";
   mileage: string;
   fuel: "petrol" | "diesel" | "hybrid" | "electric";
@@ -80,6 +82,8 @@ const defaultDraft: DraftVehicle = {
   plate: "",
   vin: "",
   pricePerDay: "",
+  allowSelfDrive: false,
+  securityDepositAmount: "",
   initialAvailability: "AVAILABLE",
   mileage: "",
   fuel: "petrol",
@@ -196,6 +200,9 @@ export function AddCompanyVehiclePage() {
       const price = Number(draft.pricePerDay);
       const mileage = draft.mileage.trim() ? Number(draft.mileage) : undefined;
       const seats = Number(draft.seats);
+      const securityDeposit = draft.securityDepositAmount.trim()
+        ? Number(draft.securityDepositAmount)
+        : 0;
 
       if (!draft.make.trim()) throw new Error("Make is required.");
       if (!draft.model.trim()) throw new Error("Model is required.");
@@ -205,6 +212,12 @@ export function AddCompanyVehiclePage() {
       }
       if (!Number.isFinite(price) || price < 0) {
         throw new Error("Daily rate must be a valid number.");
+      }
+      if (
+        draft.allowSelfDrive &&
+        (!Number.isFinite(securityDeposit) || securityDeposit <= 0)
+      ) {
+        throw new Error("Self-drive vehicles require a security deposit above 0.");
       }
       if (!Number.isFinite(seats) || seats < 1) {
         throw new Error("Seats must be at least 1.");
@@ -230,6 +243,8 @@ export function AddCompanyVehiclePage() {
         seats,
         features: draft.features,
         price,
+        allowSelfDrive: draft.allowSelfDrive,
+        securityDepositAmount: draft.allowSelfDrive ? securityDeposit : 0,
         status: draft.initialAvailability,
         condition: draft.description.trim() || undefined,
         photos: {
@@ -548,6 +563,64 @@ export function AddCompanyVehiclePage() {
                       placeholder="Describe the vehicle condition and details..."
                       rows={4}
                     />
+                  </div>
+                </div>
+              </div>
+
+              <div className="bg-white dark:bg-slate-900 shadow-sm p-5 border border-slate-200 dark:border-slate-800 rounded-3xl">
+                <div className="mb-4">
+                  <h3 className="font-semibold text-slate-900 dark:text-white">
+                    Self-drive settings
+                  </h3>
+                  <p className="text-slate-500 dark:text-slate-400 text-sm">
+                    Control whether this vehicle can be rented without a driver and what refundable deposit is required.
+                  </p>
+                </div>
+
+                <div className="space-y-4">
+                  <label className="flex items-start gap-3 rounded-2xl border border-slate-200 dark:border-slate-800 px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={draft.allowSelfDrive}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          allowSelfDrive: event.target.checked,
+                          securityDepositAmount: event.target.checked
+                            ? current.securityDepositAmount
+                            : "",
+                        }))
+                      }
+                      className="mt-1 h-4 w-4 rounded border-slate-300"
+                    />
+                    <div>
+                      <p className="font-medium text-slate-900 dark:text-white">
+                        Allow self-drive
+                      </p>
+                      <p className="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                        Approved self-drive renters can book this vehicle without a driver.
+                      </p>
+                    </div>
+                  </label>
+
+                  <div className="space-y-2">
+                    <Label>Security deposit (ETB)</Label>
+                    <Input
+                      type="number"
+                      min="0"
+                      disabled={!draft.allowSelfDrive}
+                      value={draft.securityDepositAmount}
+                      onChange={(event) =>
+                        setDraft((current) => ({
+                          ...current,
+                          securityDepositAmount: event.target.value,
+                        }))
+                      }
+                      placeholder="5000"
+                    />
+                    <p className="text-xs text-slate-500 dark:text-slate-400">
+                      This deposit is held in platform escrow and refunded to the renter wallet after a clean return.
+                    </p>
                   </div>
                 </div>
               </div>

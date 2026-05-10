@@ -69,9 +69,15 @@ const payoutStatusStyles: Record<string, string> = {
 export function WalletPage({
   title,
   ownerType,
+  description,
+  showEscrowBalance = true,
+  payoutRedirectPath,
 }: {
   title: string;
   ownerType: WalletOwnerType;
+  description?: string;
+  showEscrowBalance?: boolean;
+  payoutRedirectPath?: string;
 }) {
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -123,7 +129,6 @@ export function WalletPage({
 
   useEffect(() => {
     refresh();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [refresh]);
 
   const currency = wallet?.currency || "ETB";
@@ -150,6 +155,13 @@ export function WalletPage({
         amount: parsedAmount,
         payoutMethod: "CHAPA",
         ownerType,
+        ...(payoutRedirectPath
+          ? {
+              metadata: {
+                redirectPath: payoutRedirectPath,
+              },
+            }
+          : {}),
       });
 
       if (result.checkoutUrl) {
@@ -173,7 +185,8 @@ export function WalletPage({
           <div>
             <h1 className="font-bold text-3xl tracking-tight">{title}</h1>
             <p className="mt-1 text-muted-foreground">
-              Track escrow funds, available balance, and request withdrawals.
+              {description ||
+                "Track escrow funds, available balance, and request withdrawals."}
             </p>
           </div>
           <Button variant="outline" onClick={refresh} disabled={isLoading}>
@@ -194,22 +207,29 @@ export function WalletPage({
             <CardHeader className="pb-2">
               <CardTitle className="text-base">Balances</CardTitle>
             </CardHeader>
-            <CardContent className="gap-4 grid sm:grid-cols-2">
-              <div className="bg-card p-4 border rounded-lg">
-                <div className="text-muted-foreground text-xs uppercase tracking-wide">
-                  Escrow (Pending)
+            <CardContent
+              className={cn(
+                "grid gap-4",
+                showEscrowBalance ? "sm:grid-cols-2" : "sm:grid-cols-1",
+              )}
+            >
+              {showEscrowBalance && (
+                <div className="bg-card p-4 border rounded-lg">
+                  <div className="text-muted-foreground text-xs uppercase tracking-wide">
+                    Escrow (Pending)
+                  </div>
+                  <div className="mt-2 font-bold tabular-nums text-2xl">
+                    {isLoading || !wallet ? (
+                      <WalletAmountSkeleton />
+                    ) : (
+                      formatMoney(pending, currency)
+                    )}
+                  </div>
+                  <p className="mt-1 text-muted-foreground text-xs">
+                    Held until refund, safe return settlement, or admin decision.
+                  </p>
                 </div>
-                <div className="mt-2 font-bold tabular-nums text-2xl">
-                  {isLoading || !wallet ? (
-                    <WalletAmountSkeleton />
-                  ) : (
-                    formatMoney(pending, currency)
-                  )}
-                </div>
-                <p className="mt-1 text-muted-foreground text-xs">
-                  Funds locked until completion or admin release.
-                </p>
-              </div>
+              )}
 
               <div className="bg-card p-4 border rounded-lg">
                 <div className="text-muted-foreground text-xs uppercase tracking-wide">
@@ -223,7 +243,9 @@ export function WalletPage({
                   )}
                 </div>
                 <p className="mt-1 text-muted-foreground text-xs">
-                  Withdrawable balance.
+                  {showEscrowBalance
+                    ? "Withdrawable balance."
+                    : "Platform commission available for withdrawal."}
                 </p>
               </div>
             </CardContent>

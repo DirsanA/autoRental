@@ -19,6 +19,8 @@ type ApiVehicle = {
   condition?: string;
   status?: string;
   price?: number;
+  allowSelfDrive?: boolean;
+  securityDepositAmount?: number;
   availability?: string;
   delivery?: string;
   createdAt?: string;
@@ -41,6 +43,8 @@ export type UpdateCompanyVehiclePayload = Partial<{
   features: string[];
   condition: string;
   price: number;
+  allowSelfDrive: boolean;
+  securityDepositAmount: number;
   availability: string;
   delivery: string;
   status: "AVAILABLE" | "BOOKED" | "MAINTENANCE" | "RETIRED" | "PENDING_APPROVAL";
@@ -60,6 +64,8 @@ export type CreateCompanyVehiclePayload = {
   features: string[];
   condition?: string;
   price: number;
+  allowSelfDrive?: boolean;
+  securityDepositAmount?: number;
   status?: "AVAILABLE" | "MAINTENANCE";
   photos: {
     front: string;
@@ -123,6 +129,11 @@ export function mapApiVehicleToCompanyVehicle(
     seats: vehicle.seats,
     features: Array.isArray(vehicle.features) ? vehicle.features : [],
     description: vehicle.condition,
+    allowSelfDrive: Boolean(vehicle.allowSelfDrive),
+    securityDepositAmount:
+      typeof vehicle.securityDepositAmount === "number"
+        ? vehicle.securityDepositAmount
+        : 0,
     ratingAvg: 0,
     ratingCount: 0,
   };

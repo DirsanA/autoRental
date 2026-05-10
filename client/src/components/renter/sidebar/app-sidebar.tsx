@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Car, Home, User, AlertCircle, MessageSquareText } from "lucide-react";
+import { BookOpen, Car, Home, User, AlertCircle, Wallet, MessageSquareText } from "lucide-react";
 
 import {
   Sidebar,
@@ -92,29 +92,6 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
                 {!isCollapsed && (
                   <span className="ml-2 text-sm font-medium">
                     Booking History
-                  </span>
-                )}
-              </Link>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-
-          <SidebarMenuItem>
-            <SidebarMenuButton tooltip="Messages" asChild>
-              <Link
-                href="/renter/messages"
-                prefetch={true}
-                className={cn(
-                  "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
-                  isCollapsed && "justify-center",
-                )}
-              >
-                <div className="relative">
-                  <MessageSquareText className="size-4" />
-                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
-                </div>
-                {!isCollapsed && (
-                  <span className="ml-2 text-sm font-medium">
-                    Messages
                   </span>
                 )}
               </Link>

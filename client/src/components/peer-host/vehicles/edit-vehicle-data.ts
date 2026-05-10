@@ -35,6 +35,8 @@ export function createEditableDetails(vehicle: Vehicle): EditableVehicleDetails 
     location: vehicle.location,
     dailyRate: vehicle.dailyRate,
     description: vehicle.description || defaultDescription,
+    allowSelfDrive: Boolean(vehicle.allowSelfDrive),
+    securityDepositAmount: vehicle.securityDepositAmount || 0,
     features:
       vehicle.features && vehicle.features.length > 0
         ? [...vehicle.features]

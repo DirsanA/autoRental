@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useCallback, useEffect, useState, useMemo } from "react";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { Header } from "@/components/layout/header";
@@ -15,7 +15,6 @@ import {
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import {
   Select,
   SelectContent,
@@ -44,6 +43,7 @@ import {
 import { format } from "date-fns";
 import Link from "next/link";
 import { cn } from "@/lib/utils";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 
 interface Report {
   id: string;
@@ -145,7 +145,7 @@ export function ReportManagementPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const apiBaseUrl = resolveApiBaseUrl();
 
-  const fetchReports = async () => {
+  const fetchReports = useCallback(async () => {
     setIsLoading(true);
     try {
       const query = new URLSearchParams();
@@ -164,11 +164,11 @@ export function ReportManagementPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [apiBaseUrl, statusFilter, typeFilter]);
 
   useEffect(() => {
     fetchReports();
-  }, [statusFilter, typeFilter]);
+  }, [fetchReports]);
 
   // Client-side text search
   const filteredReports = useMemo(() => {
@@ -184,6 +184,10 @@ export function ReportManagementPage() {
   }, [reports, searchQuery]);
 
   const countByStatus = (s: string) => reports.filter((r) => r.status === s).length;
+
+  if (isLoading && reports.length === 0) {
+    return <AdminListPageSkeleton stats={4} columns={6} rows={6} showHelperCard={false} />;
+  }
 
   return (
     <div className="relative flex h-dvh w-full">
@@ -346,7 +350,7 @@ export function ReportManagementPage() {
                           className="opacity-60 group-hover:opacity-100 transition-opacity"
                           asChild
                         >
-                          <Link href={`/sysadmin/reports/${report.id || (report as any)._id}`}>
+                          <Link href={`/sysadmin/reports/${report.id}`}>
                             <Eye className="mr-1.5 h-3.5 w-3.5" />
                             View
                           </Link>

@@ -47,6 +47,21 @@ export function UserDetailPage({ userId }: { userId: string }) {
     null,
   );
 
+  const loadUser = async () => {
+    setLoading(true);
+    try {
+      const data = await fetchAdminUserDetail(userId);
+      setUser(data);
+      setLoadError(null);
+    } catch (cause: unknown) {
+      setLoadError(
+        cause instanceof Error ? cause.message : "Failed to load user",
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -226,7 +241,7 @@ export function UserDetailPage({ userId }: { userId: string }) {
                       value="verification"
                       className="mt-6 focus-visible:ring-0"
                     >
-                      <VerificationTab user={user} />
+                      <VerificationTab user={user} onUserRefresh={loadUser} />
                     </TabsContent>
 
                     <TabsContent

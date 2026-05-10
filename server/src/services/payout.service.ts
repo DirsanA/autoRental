@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Company } from "../models/Company.js";
+import { AccountType } from "../models/User.js";
 import { Payout } from "../models/Payout.js";
 import { Transaction } from "../models/Transaction.js";
 import { walletService } from "./wallet.service.js";
@@ -19,6 +20,27 @@ type OwnerContext = {
 };
 
 export class PayoutService {
+  private resolveReturnPath(
+    owner: OwnerContext,
+    accountType: AccountType | undefined,
+    metadata?: Record<string, unknown>,
+  ) {
+    const requestedPath = metadata?.redirectPath;
+    if (typeof requestedPath === "string" && requestedPath.startsWith("/")) {
+      return requestedPath;
+    }
+
+    if (owner.ownerType === "Company") {
+      return "/company/wallet";
+    }
+
+    if (accountType === AccountType.ADMIN) {
+      return "/sysadmin/wallet";
+    }
+
+    return "/peerhost/wallet";
+  }
+
   private async resolveOwnerByAuthUser(
     authUserId: string,
     input?: { ownerType?: "User" | "Company" },
@@ -79,8 +101,15 @@ export class PayoutService {
       authUserId,
       input.ownerType ? { ownerType: input.ownerType } : undefined,
     );
-    const wallet = await walletService.getWalletByOwner(owner.ownerId, owner.ownerType);
-    const available = wallet?.availableBalance || 0;
+    const user = await userPersistenceService.findByAuthId(authUserId);
+    const isSystemAdminPayout =
+      owner.ownerType === "User" && user?.accountType === AccountType.ADMIN;
+    const wallet = isSystemAdminPayout
+      ? null
+      : await walletService.getWalletByOwner(owner.ownerId, owner.ownerType);
+    const available = isSystemAdminPayout
+      ? (await walletService.getSystemWalletSnapshot()).availableBalance
+      : (wallet?.availableBalance || 0);
 
     if (input.amount < 500) {
       throw ApiError.unprocessable("Minimum withdrawal amount is 500 ETB");
@@ -91,7 +120,6 @@ export class PayoutService {
     }
 
     // Resolve user details for checkout
-    const user = await userPersistenceService.findByAuthId(authUserId);
     const email = user?.email || "user@example.com";
     const firstName = user?.firstName || user?.name?.split(" ")[0] || "Account";
     const lastName = user?.lastName || user?.name?.split(" ").slice(1).join(" ") || "Holder";
@@ -116,18 +144,8 @@ export class PayoutService {
     });
 
     try {
-      // Debit wallet immediately without waiting for admin
-      await walletService.debitAvailableForPayout({
-        ownerId: owner.ownerId,
-        ownerType: owner.ownerType,
-        amount: input.amount,
-        payoutId: payout._id as unknown as mongoose.Types.ObjectId,
-        idempotencyKey: `payout:${payout.id}:debit`,
-        currency: owner.currency,
-      });
-
-      const routePrefix = owner.ownerType === "User" ? "peerhost" : "company";
-      const returnUrl = `http://localhost:3000/${routePrefix}/wallet`;
+      const returnPath = this.resolveReturnPath(owner, user?.accountType, input.metadata);
+      const returnUrl = `http://localhost:3000${returnPath}`;
 
       const chapaResult = await chapaService.initializeTransaction({
         amount: input.amount.toFixed(2),
@@ -142,6 +160,35 @@ export class PayoutService {
           description: "Withdrawal from AutoRental Wallet",
         },
       });
+
+      if (isSystemAdminPayout) {
+        const payoutTx = await Transaction.create({
+          payerId: owner.ownerId,
+          receiverModel: "System",
+          amount: input.amount,
+          currency: owner.currency,
+          type: "PAYOUT",
+          status: "COMPLETED",
+          paymentGatewayId: transferRef,
+          metadata: {
+            payoutId: payout.id,
+            ownerType: owner.ownerType,
+            source: "SYSTEM_WALLET",
+          },
+        });
+
+        payout.transactionIds = [payoutTx._id as any];
+      } else {
+        // Debit wallet immediately without waiting for admin
+        await walletService.debitAvailableForPayout({
+          ownerId: owner.ownerId,
+          ownerType: owner.ownerType,
+          amount: input.amount,
+          payoutId: payout._id as unknown as mongoose.Types.ObjectId,
+          idempotencyKey: `payout:${payout.id}:debit`,
+          currency: owner.currency,
+        });
+      }
 
       payout.gatewayReference = transferRef;
       await payout.save();

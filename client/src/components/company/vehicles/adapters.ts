@@ -76,6 +76,8 @@ export function mapCompanyVehicleToDashboardVehicle(
     seats: vehicle.seats,
     features: vehicle.features,
     description: vehicle.description,
+    allowSelfDrive: vehicle.allowSelfDrive,
+    securityDepositAmount: vehicle.securityDepositAmount,
     ratingAvg: vehicle.ratingAvg ?? 0,
     ratingCount: vehicle.ratingCount ?? 0,
   };

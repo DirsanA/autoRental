@@ -8,6 +8,8 @@ import { AccountType } from "../models/User.js";
 import { bookingController } from "../controllers/booking.controller.js";
 import {
   bookingIdParamsSchema,
+  bookingPickupVerificationSchema,
+  bookingReturnConfirmationSchema,
   bookingReviewCreateSchema,
   bookingReviewParamsSchema,
   bookingReviewUpdateSchema,
@@ -37,6 +39,15 @@ export function createBookingRoutes(auth: Auth): Router {
     authorize("read", "Booking"),
     validate({ query: renterBookingListQuerySchema }),
     bookingController.listPeerHostBookings,
+  );
+
+  router.get(
+    "/company",
+    authenticate,
+    requireAccountType(AccountType.COMPANY),
+    authorize("read", "Booking"),
+    validate({ query: renterBookingListQuerySchema }),
+    bookingController.listCompanyBookings,
   );
 
   router.post(
@@ -107,6 +118,30 @@ export function createBookingRoutes(auth: Auth): Router {
     authorize("create", "Review"),
     validate({ params: bookingReviewParamsSchema }),
     bookingController.deleteReview,
+  );
+
+  router.patch(
+    "/:bookingId/activate",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    authorize("update", "Booking"),
+    validate({
+      params: bookingIdParamsSchema,
+      body: bookingPickupVerificationSchema,
+    }),
+    bookingController.activateOwnedBooking,
+  );
+
+  router.patch(
+    "/:bookingId/return-confirmation",
+    authenticate,
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    authorize("update", "Booking"),
+    validate({
+      params: bookingIdParamsSchema,
+      body: bookingReturnConfirmationSchema,
+    }),
+    bookingController.confirmOwnedBookingReturn,
   );
 
   router.patch(

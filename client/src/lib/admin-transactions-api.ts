@@ -42,6 +42,8 @@ export type AdminTransactionType =
   | "REFUND"
   | "PAYOUT"
   | "COMMISSION"
+  | "DEPOSIT_RELEASE_TO_OWNER"
+  | "SYSTEM_WALLET_REFUND"
   | "ESCROW_HOLD"
   | "ESCROW_RELEASE"
   | "REFUND_REVERSAL";
@@ -62,6 +64,74 @@ export type AdminTransaction = {
   createdAt: string | null;
 };
 
+export type AdminTransactionDetail = {
+  transaction: AdminTransaction;
+  booking: {
+    id: string;
+    bookingId: string | null;
+    status: string | null;
+    paymentStatus: string | null;
+    startTime: string | null;
+    endTime: string | null;
+  } | null;
+  vehicle: {
+    id: string;
+    label: string | null;
+    plate: string | null;
+    ownerType: "User" | "Company" | null;
+    ownerName: string | null;
+  } | null;
+  renter: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+  ownerWallet: {
+    pendingBalance: number;
+    availableBalance: number;
+    currency: string;
+  } | null;
+  actions: {
+    canRefundToSystemWallet: boolean;
+    ineligibleReason: string | null;
+    canRefundDepositToRenter: boolean;
+    refundDepositIneligibleReason: string | null;
+    canReleaseDepositToOwner: boolean;
+    releaseDepositIneligibleReason: string | null;
+  };
+};
+
+export type AdminDepositRefundItem = {
+  transaction: AdminTransaction;
+  booking: {
+    id: string;
+    bookingId: string | null;
+    status: string | null;
+    depositStatus: string | null;
+    paymentStatus: string | null;
+    startTime: string | null;
+    endTime: string | null;
+  } | null;
+  renter: {
+    id: string;
+    name: string | null;
+    email: string | null;
+  } | null;
+  vehicle: {
+    id: string;
+    label: string | null;
+    plate: string | null;
+    ownerType: "User" | "Company" | null;
+    ownerName: string | null;
+  } | null;
+  actions: {
+    canRefundDepositToRenter: boolean;
+    refundDepositIneligibleReason: string | null;
+    canReleaseDepositToOwner: boolean;
+    releaseDepositIneligibleReason: string | null;
+  };
+};
+
 export type AdminTransactionListFilters = {
   page?: number;
   limit?: number;
@@ -75,6 +145,11 @@ export type AdminTransactionListFilters = {
 
 export type AdminTransactionListResult = {
   transactions: AdminTransaction[];
+  pagination: { page: number; limit: number; total: number; totalPages: number };
+};
+
+export type AdminDepositRefundListResult = {
+  items: AdminDepositRefundItem[];
   pagination: { page: number; limit: number; total: number; totalPages: number };
 };
 
@@ -104,6 +179,127 @@ export async function fetchAdminTransactions(
   if (!payload.data) {
     throw new Error("Transactions response was empty.");
   }
+  return payload.data;
+}
+
+export async function fetchAdminTransactionDetail(
+  transactionId: string,
+): Promise<AdminTransactionDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/transactions/admin/${transactionId}`,
+    buildRequestInit(),
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as { data?: AdminTransactionDetail };
+  if (!payload.data) {
+    throw new Error("Transaction detail response was empty.");
+  }
+  return payload.data;
+}
+
+export async function refundEscrowToSystemWallet(input: {
+  transactionId: string;
+  reason?: string;
+}) {
+  const response = await fetch(
+    `${API_BASE_URL}/transactions/admin/${input.transactionId}/refund-to-system-wallet`,
+    {
+      method: "PATCH",
+      ...buildRequestInit({
+        headers: { "Content-Type": "application/json" },
+      }),
+      body: JSON.stringify(
+        input.reason?.trim() ? { reason: input.reason.trim() } : {},
+      ),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      sourceTransactionId: string;
+      recoveryTransactionId: string;
+      bookingId: string;
+      amount: number;
+      currency: string;
+      ownerType: "User" | "Company";
+    };
+  };
+
+  if (!payload.data) {
+    throw new Error("Refund response was empty.");
+  }
+
+  return payload.data;
+}
+
+export async function fetchAdminDepositRefunds(
+  filters: AdminTransactionListFilters = {},
+): Promise<AdminDepositRefundListResult> {
+  const params = new URLSearchParams();
+  if (filters.page) params.set("page", String(filters.page));
+  if (filters.limit) params.set("limit", String(filters.limit));
+  if (filters.status) params.set("status", filters.status);
+
+  const response = await fetch(
+    `${API_BASE_URL}/transactions/admin/deposit-refunds${params.toString() ? `?${params.toString()}` : ""}`,
+    buildRequestInit(),
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as { data?: AdminDepositRefundListResult };
+  if (!payload.data) {
+    throw new Error("Deposit refunds response was empty.");
+  }
+  return payload.data;
+}
+
+export async function settleHeldSecurityDeposit(input: {
+  transactionId: string;
+  action: "REFUND_TO_RENTER" | "RELEASE_TO_OWNER";
+  reason?: string;
+}) {
+  const response = await fetch(
+    `${API_BASE_URL}/transactions/admin/${input.transactionId}/settle-deposit`,
+    {
+      method: "PATCH",
+      ...buildRequestInit({
+        headers: { "Content-Type": "application/json" },
+      }),
+      body: JSON.stringify({
+        action: input.action,
+        reason: input.reason?.trim() || undefined,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      amount: number;
+      currency: string;
+      action: "REFUND_TO_RENTER" | "RELEASE_TO_OWNER";
+      bookingId: string;
+    };
+  };
+
+  if (!payload.data) {
+    throw new Error("Deposit settlement response was empty.");
+  }
+
   return payload.data;
 }
 

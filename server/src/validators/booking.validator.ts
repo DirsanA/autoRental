@@ -37,6 +37,27 @@ export const chapaCheckoutSchema = z.object({
     .transform((value) => (value ? value : undefined)),
 });
 
+export const bookingPickupVerificationSchema = z
+  .object({
+    originalDocsChecked: z.boolean(),
+    manualDocumentHoldNote: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
+export const bookingReturnConfirmationSchema = z
+  .object({
+    returnCondition: z.enum(["CLEAN", "ISSUE_REPORTED"]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
+export const bookingDepositSettlementSchema = z
+  .object({
+    action: z.enum(["REFUND_TO_RENTER", "RELEASE_TO_OWNER"]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .strict();
+
 export const chapaVerifyQuerySchema = z
   .object({
     bookingId: bookingReferenceSchema.optional(),
@@ -120,4 +141,13 @@ export type BookingReviewCreateInput = z.infer<typeof bookingReviewCreateSchema>
 export type BookingReviewUpdateInput = z.infer<typeof bookingReviewUpdateSchema>;
 export type BookingSettlementActionInput = z.infer<
   typeof bookingSettlementActionSchema
+>;
+export type BookingPickupVerificationInput = z.infer<
+  typeof bookingPickupVerificationSchema
+>;
+export type BookingReturnConfirmationInput = z.infer<
+  typeof bookingReturnConfirmationSchema
+>;
+export type BookingDepositSettlementInput = z.infer<
+  typeof bookingDepositSettlementSchema
 >;

@@ -5,6 +5,7 @@ import {
   updateAdminUserStatus,
   updateAdminUserVerificationLevel,
   updateAdminUserVerification,
+  updateAdminUserSelfDriveAccess,
 } from "@/lib/admin-users-api";
 import type {
   UserStatus,
@@ -43,9 +44,17 @@ export async function updateVerificationStatus(
 
 export async function promoteUserVerificationLevel(
   userId: string,
-  _action: "promote_id" | "promote_license",
+  action: "promote_id" | "promote_license",
 ): Promise<UserFullDetail> {
-  // For now, all promotions go to PEER_HOST since that's the only level supported by the server
-  // TODO: Update server schema to support ID_VERIFIED and LICENSE_VERIFIED
-  return updateAdminUserVerificationLevel(userId, "PEER_HOST");
+  return updateAdminUserVerificationLevel(
+    userId,
+    action === "promote_id" ? "ID_VERIFIED" : "LICENSE_VERIFIED",
+  );
+}
+
+export async function updateUserSelfDriveAccess(
+  userId: string,
+  canSelfDrive: boolean,
+): Promise<UserFullDetail> {
+  return updateAdminUserSelfDriveAccess(userId, canSelfDrive);
 }

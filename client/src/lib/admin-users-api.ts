@@ -24,6 +24,8 @@ export type AdminUserDetail = AdminUserSummary & {
   accountType: AdminUserAccountType | null;
   emailVerified: boolean;
   verificationLevel: string | null;
+  canSelfDrive: boolean;
+  selfDriveApprovedAt: string | null;
   image: string | null;
   phoneNumber: string | null;
   walletBalance: number | null;
@@ -193,6 +195,8 @@ type ApiUser = {
   accountType?: string;
   emailVerified?: boolean;
   verificationLevel?: string;
+  canSelfDrive?: boolean;
+  selfDriveApprovedAt?: string | null;
   image?: string;
   phoneNumber?: string;
   walletBalance?: number;
@@ -398,6 +402,8 @@ function mapApiUserToDetail(user: ApiUser): AdminUserDetail {
     lastLogin: user.lastLogin || null,
     emailVerified: !!user.emailVerified,
     verificationLevel: user.verificationLevel || null,
+    canSelfDrive: !!user.canSelfDrive,
+    selfDriveApprovedAt: user.selfDriveApprovedAt || null,
     image: user.image || null,
     phoneNumber: user.phoneNumber || null,
     walletBalance:
@@ -798,11 +804,6 @@ export async function updateAdminUserVerificationLevel(
   userId: string,
   verificationLevel: "ID_VERIFIED" | "LICENSE_VERIFIED" | "PEER_HOST",
 ): Promise<AdminUserDetail> {
-  // For now, only PEER_HOST is supported by the server schema
-  // TODO: Update server schema to support ID_VERIFIED and LICENSE_VERIFIED
-  const supportedLevel =
-    verificationLevel === "PEER_HOST" ? verificationLevel : "PEER_HOST";
-
   const response = await fetch(
     `${API_BASE_URL}/users/${encodeURIComponent(userId)}/verification-level`,
     buildRequestInit({
@@ -811,7 +812,7 @@ export async function updateAdminUserVerificationLevel(
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        verificationLevel: supportedLevel,
+        verificationLevel,
       }),
     }),
   );
@@ -836,6 +837,48 @@ export async function updateAdminUserVerificationLevel(
 
   if (!payload.data) {
     throw new Error("Verification level updated but response was empty.");
+  }
+
+  return mapApiUserDetailResponse(payload.data);
+}
+
+export async function updateAdminUserSelfDriveAccess(
+  userId: string,
+  canSelfDrive: boolean,
+): Promise<AdminUserDetail> {
+  const response = await fetch(
+    `${API_BASE_URL}/users/${encodeURIComponent(userId)}/self-drive-access`,
+    buildRequestInit({
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        canSelfDrive,
+      }),
+    }),
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: {
+      user?: ApiUser;
+      company?: ApiCompany | null;
+      metrics?: ApiMetrics | null;
+      verifications?: ApiVerificationRecord[];
+      ownedVehicles?: ApiOwnedVehicle[];
+      recentBookings?: ApiRecentBooking[];
+      recentReviews?: ApiRecentReview[];
+      recentDisputes?: ApiRecentDispute[];
+      recentTransactions?: ApiRecentTransaction[];
+    };
+  };
+
+  if (!payload.data) {
+    throw new Error("Self-drive access updated but response was empty.");
   }
 
   return mapApiUserDetailResponse(payload.data);

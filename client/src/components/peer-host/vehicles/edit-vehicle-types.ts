@@ -18,5 +18,7 @@ export interface EditableVehicleDetails {
   dailyRate: number;
   description: string;
   features: string[];
+  allowSelfDrive: boolean;
+  securityDepositAmount: number;
   specifications: VehicleSpecifications;
 }

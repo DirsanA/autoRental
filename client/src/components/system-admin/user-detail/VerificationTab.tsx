@@ -24,11 +24,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
   CheckCircle2,
+  CarFront,
   CreditCard,
   FileCheck2,
   ImageIcon,
@@ -44,11 +44,16 @@ import {
   formatLabel,
   maskIdentity,
 } from "./formatters";
-import { updateVerificationStatus, promoteUserVerificationLevel } from "./api";
+import {
+  updateVerificationStatus,
+  promoteUserVerificationLevel,
+  updateUserSelfDriveAccess,
+} from "./api";
 import { useToast } from "@/hooks/use-toast";
 
 interface VerificationTabProps {
   user: UserFullDetail;
+  onUserRefresh: () => Promise<void>;
 }
 
 interface VerificationAction {
@@ -585,7 +590,7 @@ function SecondaryVerificationItem({
 /**
  * Shows the current matched verification document and a lighter submission history.
  */
-export function VerificationTab({ user }: VerificationTabProps) {
+export function VerificationTab({ user, onUserRefresh }: VerificationTabProps) {
   const { toast } = useToast();
   const approvedCount = countByStatus(user, "APPROVED");
   const pendingCount = countByStatus(user, "PENDING");
@@ -596,6 +601,19 @@ export function VerificationTab({ user }: VerificationTabProps) {
     verification: UserVerificationRecord | null;
     open: boolean;
   }>({ verification: null, open: false });
+  const [isUpdatingSelfDrive, setIsUpdatingSelfDrive] = useState(false);
+
+  const hasApprovedId = user.verifications.some(
+    (verification) =>
+      verification.status === "APPROVED" &&
+      ID_DOCUMENT_TYPES.has(verification.documentType || ""),
+  );
+  const hasApprovedLicense = user.verifications.some(
+    (verification) =>
+      verification.status === "APPROVED" &&
+      verification.documentType === "DRIVER_LICENSE",
+  );
+  const canApproveSelfDrive = hasApprovedId && hasApprovedLicense;
 
   const openPreview = (title: string, src: string) => {
     setPreviewTitle(title);
@@ -617,7 +635,7 @@ export function VerificationTab({ user }: VerificationTabProps) {
         action.action === "promote_license"
       ) {
         // Handle promotion actions
-        const updatedUser = await promoteUserVerificationLevel(
+        await promoteUserVerificationLevel(
           user.id,
           action.action,
         );
@@ -627,8 +645,7 @@ export function VerificationTab({ user }: VerificationTabProps) {
           description: `User has been promoted to PEER_HOST verification level.`,
         });
 
-        // TODO: Update local user state with updatedUser data
-        // This would typically trigger a state update to refresh the UI
+        await onUserRefresh();
       } else {
         // Handle regular approve/reject actions
         await updateVerificationStatus(
@@ -643,8 +660,7 @@ export function VerificationTab({ user }: VerificationTabProps) {
           description: `Verification has been ${action.action}d successfully.`,
         });
 
-        // TODO: Refresh user data to show updated verification status
-        // This would typically trigger a refetch of the user data
+        await onUserRefresh();
       }
     } catch (error) {
       toast({
@@ -655,6 +671,31 @@ export function VerificationTab({ user }: VerificationTabProps) {
             : "Failed to update verification",
         variant: "destructive",
       });
+    }
+  };
+
+  const handleSelfDriveAccess = async (nextValue: boolean) => {
+    setIsUpdatingSelfDrive(true);
+    try {
+      await updateUserSelfDriveAccess(user.id, nextValue);
+      await onUserRefresh();
+      toast({
+        title: nextValue ? "Self-drive approved" : "Self-drive revoked",
+        description: nextValue
+          ? "The renter can now book eligible vehicles in self-drive mode."
+          : "The renter can no longer use self-drive mode.",
+      });
+    } catch (error) {
+      toast({
+        title: "Unable to update self-drive access",
+        description:
+          error instanceof Error
+            ? error.message
+            : "Failed to update self-drive access.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUpdatingSelfDrive(false);
     }
   };
 
@@ -830,6 +871,86 @@ export function VerificationTab({ user }: VerificationTabProps) {
                 No verification record is available for this user yet.
               </div>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="border-none shadow-sm ring-1 ring-border">
+          <CardHeader>
+            <CardTitle>Self-Drive Access</CardTitle>
+            <CardDescription>
+              Separate manual approval for renters who want to book eligible vehicles without a driver.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
+            <div className="rounded-2xl border bg-muted/20 p-5">
+              <div className="flex items-start gap-3">
+                <div className="rounded-2xl bg-primary/10 p-3 text-primary">
+                  <CarFront className="h-5 w-5" />
+                </div>
+                <div className="space-y-2">
+                  <p className="font-semibold">
+                    {user.canSelfDrive
+                      ? "Self-drive is approved"
+                      : "Self-drive is not approved"}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    Require both an approved ID/passport and approved driver license before enabling this.
+                  </p>
+                  <div className="grid gap-2 text-sm sm:grid-cols-2">
+                    <div className="rounded-xl border bg-background px-3 py-2">
+                      ID or passport:{" "}
+                      <span className="font-medium">
+                        {hasApprovedId ? "Approved" : "Missing"}
+                      </span>
+                    </div>
+                    <div className="rounded-xl border bg-background px-3 py-2">
+                      Driver license:{" "}
+                      <span className="font-medium">
+                        {hasApprovedLicense ? "Approved" : "Missing"}
+                      </span>
+                    </div>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    {user.selfDriveApprovedAt
+                      ? `Approved on ${formatDateTime(user.selfDriveApprovedAt)}`
+                      : "No self-drive approval timestamp recorded yet."}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border bg-background p-5">
+              <div className="space-y-3">
+                <Badge
+                  variant={user.canSelfDrive ? "default" : "outline"}
+                  className="w-fit"
+                >
+                  {user.canSelfDrive ? "Access Enabled" : "Access Disabled"}
+                </Badge>
+                {!canApproveSelfDrive && !user.canSelfDrive ? (
+                  <p className="text-sm text-muted-foreground">
+                    Approve the renter&apos;s ID/passport and driver license first.
+                  </p>
+                ) : null}
+                <div className="flex flex-col gap-2">
+                  <Button
+                    disabled={
+                      isUpdatingSelfDrive || user.canSelfDrive || !canApproveSelfDrive
+                    }
+                    onClick={() => void handleSelfDriveAccess(true)}
+                  >
+                    Approve Self-Drive
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={isUpdatingSelfDrive || !user.canSelfDrive}
+                    onClick={() => void handleSelfDriveAccess(false)}
+                  >
+                    Revoke Self-Drive
+                  </Button>
+                </div>
+              </div>
+            </div>
           </CardContent>
         </Card>
 

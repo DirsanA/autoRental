@@ -5,6 +5,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { requireRequestUser } from "../utils/requestContext.js";
 import type {
   AdminUserListQueryInput,
+  AdminUserSelfDriveAccessInput,
   AdminUserVerificationLevelInput,
 } from "../validators/user.admin.validator.js";
 
@@ -121,6 +122,19 @@ export function createUserController(userService: UserService) {
         requireRequestUser(req),
         String(req.params.id),
         req.body as AdminUserVerificationLevelInput,
+      );
+
+      res.json({
+        success: true,
+        data,
+      });
+    }),
+
+    updateSelfDriveAccess: asyncHandler(async (req: Request, res: Response) => {
+      const data = await userService.updateSelfDriveAccess(
+        requireRequestUser(req),
+        String(req.params.id),
+        req.body as AdminUserSelfDriveAccessInput,
       );
 
       res.json({

@@ -75,6 +75,7 @@ export type BookingPaymentStatus = {
     startTime: string;
     endTime: string;
     pricing: {
+      rentalSubtotal: number;
       totalAmount: number;
       systemCommission: number;
       totalHours: number;
@@ -119,11 +120,26 @@ export type RenterBookingListItem = {
   updatedAt: string | null;
   pricing: {
     pricePerHour: number;
+    rentalSubtotal: number;
     totalHours: number;
     systemCommission: number;
     totalAmount: number;
     currency: string;
   };
+  securityDepositAmount: number;
+  depositStatus:
+    | "NOT_REQUIRED"
+    | "HELD_IN_ESCROW"
+    | "REFUNDED_TO_RENTER"
+    | "RELEASED_TO_OWNER"
+    | "UNDER_REVIEW";
+  pickupVerifiedAt: string | null;
+  pickupVerifiedBy: string | null;
+  originalDocsChecked: boolean;
+  manualDocumentHoldNote: string | null;
+  returnConfirmedAt: string | null;
+  returnConfirmedBy: string | null;
+  returnCondition: "CLEAN" | "ISSUE_REPORTED" | null;
   payment: {
     method: "CHAPA" | "CASH" | "BANK_TRANSFER" | "TELEBIRR" | null;
     status: "PENDING" | "PAID" | "FAILED" | null;
@@ -183,6 +199,13 @@ export type PeerHostBookingListItem = RenterBookingListItem & {
 
 export type PeerHostBookingListResult = {
   bookings: PeerHostBookingListItem[];
+  pagination: RenterBookingsPagination;
+};
+
+export type CompanyBookingListItem = PeerHostBookingListItem;
+
+export type CompanyBookingListResult = {
+  bookings: CompanyBookingListItem[];
   pagination: RenterBookingsPagination;
 };
 
@@ -308,6 +331,120 @@ export async function fetchPeerHostBookings(
       },
     };
   });
+}
+
+export async function fetchCompanyBookings(
+  filters: RenterBookingListFilters = {},
+  options?: { cacheKey?: string },
+): Promise<CompanyBookingListResult> {
+  const cacheKey =
+    options?.cacheKey || `company-bookings-${JSON.stringify(filters)}`;
+
+  return coalesceRequest(cacheKey, async () => {
+    const query = new URLSearchParams();
+
+    if (filters.search?.trim()) query.set("search", filters.search.trim());
+    if (filters.status) query.set("status", filters.status);
+    if (filters.paymentState) query.set("paymentState", filters.paymentState);
+    if (filters.page) query.set("page", String(filters.page));
+    if (filters.limit) query.set("limit", String(filters.limit));
+
+    const response = await fetch(
+      `${API_BASE_URL}/bookings/company${query.toString() ? `?${query.toString()}` : ""}`,
+      buildRequestInit(),
+    );
+
+    if (!response.ok) {
+      throw new Error(await parseApiError(response));
+    }
+
+    const payload = (await response.json()) as {
+      data?: {
+        bookings?: CompanyBookingListItem[];
+        pagination?: Partial<RenterBookingsPagination>;
+      };
+    };
+
+    return {
+      bookings: payload.data?.bookings || [],
+      pagination: {
+        page: payload.data?.pagination?.page || filters.page || 1,
+        limit: payload.data?.pagination?.limit || filters.limit || 10,
+        total: payload.data?.pagination?.total || 0,
+        totalPages: payload.data?.pagination?.totalPages || 1,
+      },
+    };
+  });
+}
+
+export async function activateOwnedBooking(input: {
+  bookingId: string;
+  ownerType: "User" | "Company";
+  originalDocsChecked: boolean;
+  manualDocumentHoldNote?: string;
+}) {
+  const response = await fetch(
+    `${API_BASE_URL}/bookings/${encodeURIComponent(input.bookingId)}/activate`,
+    {
+      method: "PATCH",
+      ...buildRequestInit({
+        headers: { "Content-Type": "application/json" },
+      }),
+      body: JSON.stringify({
+        originalDocsChecked: input.originalDocsChecked,
+        manualDocumentHoldNote: input.manualDocumentHoldNote?.trim() || undefined,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: { booking?: RenterBookingListItem };
+  };
+
+  if (!payload.data?.booking) {
+    throw new Error("Booking activation response was empty.");
+  }
+
+  return payload.data.booking;
+}
+
+export async function confirmOwnedBookingReturn(input: {
+  bookingId: string;
+  ownerType: "User" | "Company";
+  returnCondition: "CLEAN" | "ISSUE_REPORTED";
+  reason?: string;
+}) {
+  const response = await fetch(
+    `${API_BASE_URL}/bookings/${encodeURIComponent(input.bookingId)}/return-confirmation`,
+    {
+      method: "PATCH",
+      ...buildRequestInit({
+        headers: { "Content-Type": "application/json" },
+      }),
+      body: JSON.stringify({
+        returnCondition: input.returnCondition,
+        reason: input.reason?.trim() || undefined,
+      }),
+    },
+  );
+
+  if (!response.ok) {
+    throw new Error(await parseApiError(response));
+  }
+
+  const payload = (await response.json()) as {
+    data?: { booking?: RenterBookingListItem };
+  };
+
+  if (!payload.data?.booking) {
+    throw new Error("Booking return confirmation response was empty.");
+  }
+
+  return payload.data.booking;
 }
 
 export async function verifyChapaBookingPayment(input: {

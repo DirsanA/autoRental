@@ -10,6 +10,7 @@ import { randomBytes } from "node:crypto";
  */
 export interface IPriceSnapshot {
   pricePerHour: number;        // Base hourly rental price
+  rentalSubtotal: number;      // Rental fee before commission/deposit
   systemCommission: number;    // Platform commission fee
   totalAmount: number;         // Final payable amount
   totalHours: number;          // Duration in hours
@@ -65,6 +66,13 @@ export interface IBooking {
   actualReturnTime?: Date; // Actual return time (if completed)
 
   withDriver: boolean; // Whether booking includes driver
+  securityDepositAmount: number;
+  depositStatus:
+    | "NOT_REQUIRED"
+    | "HELD_IN_ESCROW"
+    | "REFUNDED_TO_RENTER"
+    | "RELEASED_TO_OWNER"
+    | "UNDER_REVIEW";
 
   /**
    * =========================
@@ -93,6 +101,13 @@ export interface IBooking {
   driverAssigned?: Schema.Types.ObjectId; // Assigned driver if applicable
 
   collateralDetails?: ICollateralDetails; // Security deposit info
+  pickupVerifiedAt?: Date;
+  pickupVerifiedBy?: Schema.Types.ObjectId;
+  originalDocsChecked: boolean;
+  manualDocumentHoldNote?: string;
+  returnConfirmedAt?: Date;
+  returnConfirmedBy?: Schema.Types.ObjectId;
+  returnCondition?: "CLEAN" | "ISSUE_REPORTED";
 
   cancelReason?: string; // Reason for cancellation (if any)
   cancelledAt?: Date;    // Cancellation timestamp
@@ -146,6 +161,7 @@ const bookingSchema = new Schema<IBooking>(
      */
     priceSnapshot: {
       pricePerHour: { type: Number, required: true },
+      rentalSubtotal: { type: Number, required: true, default: 0 },
       systemCommission: { type: Number, required: true },
       totalAmount: { type: Number, required: true },
       totalHours: { type: Number, required: true },
@@ -163,6 +179,18 @@ const bookingSchema = new Schema<IBooking>(
      * Whether booking includes driver service
      */
     withDriver: { type: Boolean, default: false },
+    securityDepositAmount: { type: Number, default: 0, min: 0 },
+    depositStatus: {
+      type: String,
+      enum: [
+        "NOT_REQUIRED",
+        "HELD_IN_ESCROW",
+        "REFUNDED_TO_RENTER",
+        "RELEASED_TO_OWNER",
+        "UNDER_REVIEW",
+      ],
+      default: "NOT_REQUIRED",
+    },
 
     /**
      * Booking lifecycle status
@@ -244,6 +272,29 @@ const bookingSchema = new Schema<IBooking>(
         type: Schema.Types.ObjectId,
         ref: "User",
       },
+    },
+    pickupVerifiedAt: { type: Date },
+    pickupVerifiedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    originalDocsChecked: {
+      type: Boolean,
+      default: false,
+    },
+    manualDocumentHoldNote: {
+      type: String,
+      trim: true,
+      maxlength: 500,
+    },
+    returnConfirmedAt: { type: Date },
+    returnConfirmedBy: {
+      type: Schema.Types.ObjectId,
+      ref: "User",
+    },
+    returnCondition: {
+      type: String,
+      enum: ["CLEAN", "ISSUE_REPORTED"],
     },
 
     /**

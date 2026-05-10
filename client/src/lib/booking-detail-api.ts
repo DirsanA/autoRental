@@ -3,6 +3,13 @@ import { resolveApiBaseUrl } from "@/lib/api-base-url";
 
 const API_BASE_URL = resolveApiBaseUrl();
 
+async function parseApiError(response: Response) {
+  const payload = (await response.json().catch(() => null)) as
+    | { error?: { message?: string } }
+    | null;
+  return payload?.error?.message || response.statusText;
+}
+
 function buildRequestInit(init?: RequestInit): RequestInit {
   return {
     cache: "no-store",
@@ -27,7 +34,9 @@ export async function fetchBookingDetail(bookingId: string) {
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch booking details: ${response.statusText}`);
+    throw new Error(
+      `Failed to fetch booking details: ${await parseApiError(response)}`,
+    );
   }
 
   const result = await response.json();
@@ -54,7 +63,7 @@ export async function createBookingReview(
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to create review: ${response.statusText}`);
+    throw new Error(`Failed to create review: ${await parseApiError(response)}`);
   }
 
   const result = await response.json();
@@ -82,7 +91,7 @@ export async function updateBookingReview(
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to update review: ${response.statusText}`);
+    throw new Error(`Failed to update review: ${await parseApiError(response)}`);
   }
 
   const result = await response.json();
@@ -101,7 +110,7 @@ export async function fetchBookingReviews(bookingId: string) {
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to fetch reviews: ${response.statusText}`);
+    throw new Error(`Failed to fetch reviews: ${await parseApiError(response)}`);
   }
 
   const result = await response.json();
@@ -120,7 +129,7 @@ export async function deleteBookingReview(bookingId: string, reviewId: string) {
   );
 
   if (!response.ok) {
-    throw new Error(`Failed to delete review: ${response.statusText}`);
+    throw new Error(`Failed to delete review: ${await parseApiError(response)}`);
   }
 
   const result = await response.json();

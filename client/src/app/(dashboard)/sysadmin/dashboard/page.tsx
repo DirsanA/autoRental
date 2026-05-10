@@ -4,8 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
 import {
   Users,
-  Building2,
-  Car,
   DollarSign,
   BadgeCheck,
   ShieldAlert,
@@ -34,6 +32,13 @@ import {
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { MonthlyExecutiveReportDialog } from "@/components/system-admin/reports/MonthlyExecutiveReportDialog";
+import { AdminDashboardPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
+
+type TooltipDatum = {
+  name?: string;
+  dataKey?: string;
+  value?: unknown;
+};
 
 function ChartTooltip({
   active,
@@ -43,7 +48,7 @@ function ChartTooltip({
   formatValue,
 }: {
   active?: boolean;
-  payload?: any[];
+  payload?: TooltipDatum[];
   label?: string;
   isDark: boolean;
   formatValue: (value: unknown, name: string) => string;
@@ -196,11 +201,7 @@ export default function SystemAdminDashboard() {
   ];
 
   if (loading) {
-    return (
-      <div className="p-6 rounded-3xl bg-white dark:bg-slate-950 shadow-sm border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100">
-        Loading...
-      </div>
-    );
+    return <AdminDashboardPageSkeleton />;
   }
 
   if (error) {
@@ -338,7 +339,11 @@ export default function SystemAdminDashboard() {
                       tickFormatter={(value) => formatMoney(Number(value) || 0)}
                     />
                     <Tooltip
-                      content={(props: any) => (
+                      content={(props: {
+                        active?: boolean;
+                        payload?: TooltipDatum[];
+                        label?: string;
+                      }) => (
                         <ChartTooltip
                           {...props}
                           isDark={isDark}
@@ -392,7 +397,11 @@ export default function SystemAdminDashboard() {
                       ))}
                     </Pie>
                     <Tooltip
-                      content={(props: any) => (
+                      content={(props: {
+                        active?: boolean;
+                        payload?: TooltipDatum[];
+                        label?: string;
+                      }) => (
                         <ChartTooltip
                           {...props}
                           isDark={isDark}

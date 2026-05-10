@@ -20,6 +20,8 @@ export interface ITransaction {
     | "REFUND"
     | "PAYOUT"
     | "COMMISSION"
+    | "DEPOSIT_RELEASE_TO_OWNER"
+    | "SYSTEM_WALLET_REFUND"
     | "ESCROW_HOLD"
     | "ESCROW_RELEASE"
     | "REFUND_REVERSAL";
@@ -72,6 +74,8 @@ const transactionSchema = new Schema<ITransaction>(
         "REFUND",
         "PAYOUT",
         "COMMISSION",
+        "DEPOSIT_RELEASE_TO_OWNER",
+        "SYSTEM_WALLET_REFUND",
         "ESCROW_HOLD",
         "ESCROW_RELEASE",
         "REFUND_REVERSAL",

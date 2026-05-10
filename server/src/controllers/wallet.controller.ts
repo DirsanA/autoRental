@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { Company } from "../models/Company.js";
+import { AccountType } from "../models/User.js";
 import { walletService } from "../services/wallet.service.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
 import { asyncHandler } from "../utils/asyncHandler.js";
@@ -47,10 +48,24 @@ async function resolveOwner(input: {
 export const walletController = {
   getMyWallet: asyncHandler(async (req: Request, res: Response) => {
     const caller = requireRequestUser(req, "Please sign in to view wallet");
+    const ownerType =
+      typeof req.query?.ownerType === "string"
+        ? (req.query.ownerType as OwnerTypeQuery)
+        : undefined;
+
+    if (caller.accountType === AccountType.ADMIN && ownerType !== "Company") {
+      const wallet = await walletService.getSystemWalletSnapshot();
+      res.json({
+        success: true,
+        data: wallet,
+      });
+      return;
+    }
+
     const owner = await resolveOwner({
       userId: String(caller.id),
       authUserId: typeof (caller as any).authUserId === "string" ? (caller as any).authUserId : null,
-      ownerType: typeof req.query?.ownerType === "string" ? (req.query.ownerType as OwnerTypeQuery) : undefined,
+      ownerType,
     });
 
     // Backfill any missing wallet entries for already-paid bookings.
@@ -59,6 +74,13 @@ export const walletController = {
       ownerType: owner.ownerType,
       limit: 50,
     });
+
+    if (owner.ownerType === "User") {
+      await walletService.reconcileHeldSecurityDepositsForRenter({
+        renterId: owner.ownerId,
+        limit: 50,
+      });
+    }
 
     const wallet = await walletService.getWalletByOwner(
       owner.ownerId,
@@ -81,10 +103,23 @@ export const walletController = {
 
   getMyWalletLedger: asyncHandler(async (req: Request, res: Response) => {
     const caller = requireRequestUser(req, "Please sign in to view wallet ledger");
+    const ownerType =
+      typeof req.query?.ownerType === "string"
+        ? (req.query.ownerType as OwnerTypeQuery)
+        : undefined;
+
+    if (caller.accountType === AccountType.ADMIN && ownerType !== "Company") {
+      res.json({
+        success: true,
+        data: [],
+      });
+      return;
+    }
+
     const owner = await resolveOwner({
       userId: String(caller.id),
       authUserId: typeof (caller as any).authUserId === "string" ? (caller as any).authUserId : null,
-      ownerType: typeof req.query?.ownerType === "string" ? (req.query.ownerType as OwnerTypeQuery) : undefined,
+      ownerType,
     });
     const items = await walletService.getLedgerByOwner(
       owner.ownerId,

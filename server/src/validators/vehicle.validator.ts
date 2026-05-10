@@ -32,6 +32,8 @@ export const createVehicleSchema = z
     condition: z.string().trim().max(500).optional(),
 
     price: z.number().nonnegative(),
+    allowSelfDrive: z.boolean().optional().default(false),
+    securityDepositAmount: z.number().min(0).optional().default(0),
     status: z
       .enum([
         "AVAILABLE",
@@ -72,6 +74,22 @@ export const createVehicleSchema = z
         message: "Ownership and insurance documents are required",
       });
     }
+
+    if (data.allowSelfDrive && (!data.securityDepositAmount || data.securityDepositAmount <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["securityDepositAmount"],
+        message: "Security deposit must be greater than 0 when self-drive is enabled",
+      });
+    }
+
+    if (!data.allowSelfDrive && (data.securityDepositAmount ?? 0) !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["securityDepositAmount"],
+        message: "Security deposit must be 0 when self-drive is disabled",
+      });
+    }
   });
 
 export const vehicleIdParamsSchema = z.object({
@@ -106,6 +124,8 @@ export const updateVehicleSchema = z
     features: z.array(z.string().trim().min(1)).optional(),
     condition: z.string().trim().max(500).optional(),
     price: z.number().nonnegative().optional(),
+    allowSelfDrive: z.boolean().optional(),
+    securityDepositAmount: z.number().min(0).optional(),
     weeklyDiscount: z.number().min(0).max(100).optional(),
     monthlyDiscount: z.number().min(0).max(100).optional(),
     availability: z.string().trim().max(1000).optional(),
@@ -122,6 +142,23 @@ export const updateVehicleSchema = z
         "PENDING_APPROVAL",
       ])
       .optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.allowSelfDrive === true && (!data.securityDepositAmount || data.securityDepositAmount <= 0)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["securityDepositAmount"],
+        message: "Security deposit must be greater than 0 when self-drive is enabled",
+      });
+    }
+
+    if (data.allowSelfDrive === false && data.securityDepositAmount !== undefined && data.securityDepositAmount !== 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["securityDepositAmount"],
+        message: "Security deposit must be 0 when self-drive is disabled",
+      });
+    }
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field is required for update",

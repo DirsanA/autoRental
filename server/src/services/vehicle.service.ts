@@ -306,6 +306,10 @@ export class VehicleService {
       updateData.features = normalizeFeatures(updateData.features);
     }
 
+    if (updateData.allowSelfDrive === false) {
+      updateData.securityDepositAmount = 0;
+    }
+
     // If peerhost updates pickup/return addresses, attempt to refresh geocodes.
     if (
       typeof updateData.pickupAddress === "string" ||
@@ -538,6 +542,10 @@ export class VehicleService {
       features: normalizeFeatures(data.features),
       condition: data.condition,
       price: data.price,
+      allowSelfDrive: Boolean(data.allowSelfDrive),
+      securityDepositAmount: data.allowSelfDrive
+        ? data.securityDepositAmount || 0
+        : 0,
       weeklyDiscount: data.weeklyDiscount,
       monthlyDiscount: data.monthlyDiscount,
       availability: data.availability,

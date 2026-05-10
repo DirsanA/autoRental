@@ -16,6 +16,10 @@ import {
   type CompanyBooking,
   fetchCompanyBookings,
 } from "@/lib/booking.api";
+import {
+  activateOwnedBooking,
+  confirmOwnedBookingReturn,
+} from "@/lib/bookings-api";
 import { cn } from "@/lib/utils";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
@@ -206,6 +210,7 @@ export default function BookingManagement() {
   const [error, setError] = useState<string | null>(null);
   const [lastCompletedRequestKey, setLastCompletedRequestKey] = useState("");
   const deferredSearchQuery = useDeferredValue(searchQuery);
+  const [isMutatingBooking, setIsMutatingBooking] = useState(false);
   const trimmedSearch = deferredSearchQuery.trim().toLowerCase();
   const requestKey = JSON.stringify({ reloadKey });
   const loading = requestKey !== lastCompletedRequestKey;
@@ -283,6 +288,55 @@ export default function BookingManagement() {
   };
 
   const refreshBookings = () => setReloadKey((value) => value + 1);
+
+  const handleActivateBooking = async (booking: CompanyBooking) => {
+    const originalDocsChecked = booking.withDriver
+      ? false
+      : window.confirm(
+          "Confirm that the renter's original documents were checked physically before starting this self-drive trip.",
+        );
+
+    if (!booking.withDriver && !originalDocsChecked) {
+      return;
+    }
+
+    try {
+      setIsMutatingBooking(true);
+      await activateOwnedBooking({
+        bookingId: booking.bookingId,
+        ownerType: "Company",
+        originalDocsChecked,
+      });
+      setIsDetailOpen(false);
+      refreshBookings();
+    } finally {
+      setIsMutatingBooking(false);
+    }
+  };
+
+  const handleReturnConfirmation = async (
+    booking: CompanyBooking,
+    returnCondition: "CLEAN" | "ISSUE_REPORTED",
+  ) => {
+    const reason =
+      returnCondition === "ISSUE_REPORTED"
+        ? window.prompt("Describe the issue reported for this return.") || undefined
+        : undefined;
+
+    try {
+      setIsMutatingBooking(true);
+      await confirmOwnedBookingReturn({
+        bookingId: booking.bookingId,
+        ownerType: "Company",
+        returnCondition,
+        reason,
+      });
+      setIsDetailOpen(false);
+      refreshBookings();
+    } finally {
+      setIsMutatingBooking(false);
+    }
+  };
 
   const exportToCSV = () => {
     const headers = [
@@ -610,6 +664,64 @@ export default function BookingManagement() {
                     label="Customer phone"
                     value={selectedBooking.customerPhone || "Not provided"}
                   />
+                <BookingMetaRow
+                  label="Booking mode"
+                  value={selectedBooking.withDriver ? "With driver" : "Self-drive"}
+                />
+                <BookingMetaRow
+                  label="Security deposit"
+                  value={formatCurrency(
+                    selectedBooking.securityDepositAmount || 0,
+                  )}
+                />
+                <BookingMetaRow
+                  label="Deposit status"
+                  value={selectedBooking.depositStatus.replaceAll("_", " ")}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                {selectedBooking.rawStatus === "CONFIRMED" &&
+                selectedBooking.paymentState === "paid" ? (
+                  <Button
+                    onClick={() => void handleActivateBooking(selectedBooking)}
+                    disabled={isMutatingBooking}
+                  >
+                    {isMutatingBooking ? "Starting..." : "Verify Pickup & Start Trip"}
+                  </Button>
+                ) : null}
+                {selectedBooking.rawStatus === "CONFIRMED" &&
+                selectedBooking.paymentState === "paid" &&
+                !selectedBooking.withDriver &&
+                !selectedBooking.originalDocsChecked ? (
+                  <p className="text-xs text-muted-foreground">
+                    Self-drive bookings must be verified physically before activation.
+                  </p>
+                ) : null}
+                {selectedBooking.rawStatus === "ACTIVE" ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void handleReturnConfirmation(
+                          selectedBooking,
+                          "ISSUE_REPORTED",
+                        )
+                      }
+                      disabled={isMutatingBooking}
+                    >
+                      Report Issue
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        void handleReturnConfirmation(selectedBooking, "CLEAN")
+                      }
+                      disabled={isMutatingBooking}
+                    >
+                      {isMutatingBooking ? "Saving..." : "Confirm Clean Return"}
+                    </Button>
+                  </>
+                ) : null}
                 </div>
               </TabsContent>
 

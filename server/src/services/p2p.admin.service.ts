@@ -5,6 +5,8 @@ import { Vehicle } from "../models/Vehicle.js";
 import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
+import { notificationDispatcher } from "./notification.dispatcher.js";
+import { userPersistenceService } from "./user.persistence.service.js";
 import { walletService } from "./wallet.service.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type {
