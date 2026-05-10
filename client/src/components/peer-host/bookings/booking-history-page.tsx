@@ -626,9 +626,7 @@ export function PeerHostBookingHistoryPage() {
                   value={selectedBooking.renter?.email || "Not provided"}
                 />
               </div>
-
-                  </div>
-                </TabsContent>
+            </TabsContent>
 
                 <TabsContent value="chat" className="flex-1 overflow-hidden space-y-6">
                   {selectedBooking.status === "CONFIRMED" ||
