@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CalendarDays,
+  Car,
   CarFront,
   CreditCard,
   Loader2,
@@ -570,10 +571,10 @@ export function RenterBookingDetailPage() {
 
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
             <StatCard
-              title="Trip Window"
-              value={formatDuration(booking.pricing.totalHours)}
-              note={`${formatDateTime(booking.startTime)} to ${formatDateTime(booking.endTime)}`}
-              icon={CalendarDays}
+              title="Vehicle"
+              value={booking.vehicle ? `${booking.vehicle.make} ${booking.vehicle.model}` : "N/A"}
+              note={booking.vehicle?.plate || "No plate info"}
+              icon={Car}
             />
             <StatCard
               title="Payment State"
