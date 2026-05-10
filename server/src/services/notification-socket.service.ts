@@ -49,6 +49,15 @@ export class NotificationSocketService {
         }
       });
 
+      // Join booking room for chat
+      socket.on("join_booking_room", (data: { bookingId: string; userId: string }) => {
+        if (data.bookingId) {
+          socket.join(`booking:${data.bookingId}`);
+          console.log(`[NotificationSocket] User ${data.userId} joined booking room ${data.bookingId}`);
+          socket.emit("joined_room", { room: `booking:${data.bookingId}` });
+        }
+      });
+
       // Handle client disconnect
       socket.on("disconnect", () => {
         console.log(`[NotificationSocket] Client disconnected: ${socket.id}`);
@@ -136,6 +145,14 @@ export class NotificationSocketService {
    */
   isInitialized(): boolean {
     return this.initialized;
+  }
+
+  /**
+   * Emit event to a specific room
+   */
+  emitToRoom(room: string, event: string, data: unknown): void {
+    if (!this.io) return;
+    this.io.to(room).emit(event, data);
   }
 
   /**
