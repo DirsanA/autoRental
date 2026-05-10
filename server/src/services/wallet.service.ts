@@ -490,7 +490,7 @@ export class WalletService {
       Transaction.aggregate<{ _id: null; total: number }>([
         {
           $match: {
-            type: "COMMISSION",
+            type: { $in: ["COMMISSION", "SYSTEM_WALLET_REFUND"] },
             status: "COMPLETED",
           },
         },
@@ -540,6 +540,147 @@ export class WalletService {
       lifetimePaidOut: totalPaidOut,
       lifetimeRefunded: 0,
     };
+  }
+
+  async refundEscrowToSystemWallet(input: {
+    sourceTransactionId: string;
+    reason?: string;
+    initiatedBy?: string;
+  }) {
+    const session = await mongoose.startSession();
+    try {
+      let response:
+        | {
+            sourceTransactionId: string;
+            recoveryTransactionId: string;
+            bookingId: string;
+            amount: number;
+            currency: string;
+            ownerType: WalletOwnerType;
+          }
+        | null = null;
+
+      await session.withTransaction(async () => {
+        const sourceTransaction = await Transaction.findById(input.sourceTransactionId).session(session);
+        if (!sourceTransaction) {
+          throw ApiError.notFound("Escrow transaction not found");
+        }
+
+        if (sourceTransaction.type !== "ESCROW_HOLD") {
+          throw ApiError.unprocessable("Only escrow-hold transactions can be refunded to the system wallet");
+        }
+
+        if (sourceTransaction.status !== "HELD_IN_ESCROW") {
+          throw ApiError.unprocessable("This escrow transaction is no longer eligible for system refund");
+        }
+
+        if (!sourceTransaction.bookingId) {
+          throw ApiError.unprocessable("Escrow transaction is missing its booking reference");
+        }
+
+        const booking = await Booking.findById(sourceTransaction.bookingId).session(session);
+        if (!booking) {
+          throw ApiError.notFound("Booking not found for escrow transaction");
+        }
+
+        const idempotencyKey = `transaction:${sourceTransaction.id}:system-wallet-refund`;
+        if (await this.hasWalletEntry(idempotencyKey, session)) {
+          throw ApiError.unprocessable("This escrow transaction has already been refunded to the system wallet");
+        }
+
+        const owner = await this.resolveOwnerForBooking(booking, session);
+        const wallet = await this.getOrCreateWallet(owner, session);
+        if (!wallet) {
+          throw ApiError.internal("Wallet resolution failed");
+        }
+
+        const hostEarning = roundMoney(
+          booking.priceSnapshot.totalAmount - booking.priceSnapshot.systemCommission,
+        );
+
+        if (wallet.pendingBalance < hostEarning) {
+          throw ApiError.unprocessable("Owner escrow balance is no longer sufficient for this refund");
+        }
+
+        const beforePending = wallet.pendingBalance;
+        wallet.pendingBalance = roundMoney(wallet.pendingBalance - hostEarning);
+        await wallet.save({ session });
+
+        const recoveryTransaction = await new Transaction({
+          bookingId: booking._id,
+          payerId: owner.ownerId,
+          receiverModel: "System",
+          amount: hostEarning,
+          currency: owner.currency,
+          type: "SYSTEM_WALLET_REFUND",
+          status: "COMPLETED",
+          paymentGatewayId: sourceTransaction.paymentGatewayId || booking.payment.tx_ref,
+          metadata: {
+            bookingId: booking.bookingId,
+            reason: input.reason || "Refunded to system wallet by admin",
+            initiatedBy: input.initiatedBy || null,
+            recoveredFromOwnerType: owner.ownerType,
+            sourceTransactionId: sourceTransaction.id,
+            sourceBalance: "pendingBalance",
+          },
+        }).save({ session });
+
+        if (!recoveryTransaction?._id) {
+          throw ApiError.internal("Failed to create system wallet refund transaction");
+        }
+
+        await new WalletEntry({
+          walletId: wallet._id,
+          ownerId: owner.ownerId,
+          ownerType: owner.ownerType,
+          bookingId: booking._id,
+          transactionId: recoveryTransaction._id,
+          entryType: "ADJUSTMENT",
+          currency: owner.currency,
+          amount: hostEarning,
+          balanceField: "pendingBalance",
+          before: beforePending,
+          after: wallet.pendingBalance,
+          idempotencyKey,
+          metadata: {
+            movement: "SYSTEM_WALLET_REFUND",
+            sourceTransactionId: sourceTransaction.id,
+            reason: input.reason || null,
+          },
+        }).save({ session });
+
+        const existingMetadata =
+          typeof sourceTransaction.metadata === "object" && sourceTransaction.metadata
+            ? (sourceTransaction.metadata as unknown as Record<string, unknown>)
+            : {};
+
+        sourceTransaction.status = "REFUNDED";
+        sourceTransaction.set("metadata", {
+          ...existingMetadata,
+          systemWalletRefundAt: new Date().toISOString(),
+          systemWalletRefundTransactionId: recoveryTransaction.id,
+          systemWalletRefundReason: input.reason || null,
+        });
+        await sourceTransaction.save({ session });
+
+        response = {
+          sourceTransactionId: sourceTransaction.id,
+          recoveryTransactionId: recoveryTransaction.id,
+          bookingId: booking.bookingId,
+          amount: hostEarning,
+          currency: owner.currency,
+          ownerType: owner.ownerType,
+        };
+      });
+
+      if (!response) {
+        throw ApiError.internal("System wallet refund completed without a response payload");
+      }
+
+      return response;
+    } finally {
+      await session.endSession();
+    }
   }
 
   async getLedgerByOwner(ownerId: mongoose.Types.ObjectId, ownerType: WalletOwnerType) {

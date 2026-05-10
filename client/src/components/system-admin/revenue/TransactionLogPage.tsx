@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -40,6 +41,8 @@ const statusStyles: Record<string, string> = {
   CANCELLED: "bg-slate-100 text-slate-700 dark:bg-slate-900 dark:text-slate-300",
 };
 
+const EMPTY_VALUE = "-";
+
 function fmtMoney(value: number, currency: string) {
   return new Intl.NumberFormat("en-US", {
     style: "currency",
@@ -49,10 +52,11 @@ function fmtMoney(value: number, currency: string) {
 }
 
 function fmtDate(value: string | null) {
-  return value ? new Date(value).toLocaleString() : "—";
+  return value ? new Date(value).toLocaleString() : EMPTY_VALUE;
 }
 
 export default function TransactionLogPage() {
+  const router = useRouter();
   const [items, setItems] = useState<AdminTransaction[]>([]);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
@@ -74,28 +78,23 @@ export default function TransactionLogPage() {
     [page, q, status, type],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    async function load() {
-      setIsLoading(true);
-      setError(null);
-      try {
-        const data = await fetchAdminTransactions(activeFilters);
-        if (cancelled) return;
-        setItems(data.transactions || []);
-        setTotalPages(data.pagination.totalPages || 1);
-      } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : "Failed to load transactions");
-      } finally {
-        if (!cancelled) setIsLoading(false);
-      }
+  const loadTransactions = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const data = await fetchAdminTransactions(activeFilters);
+      setItems(data.transactions || []);
+      setTotalPages(data.pagination.totalPages || 1);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to load transactions");
+    } finally {
+      setIsLoading(false);
     }
-    load();
-    return () => {
-      cancelled = true;
-    };
   }, [activeFilters]);
+
+  useEffect(() => {
+    loadTransactions();
+  }, [loadTransactions]);
 
   function resetToFirstPage() {
     setPage(1);
@@ -113,7 +112,7 @@ export default function TransactionLogPage() {
                 View and filter platform transactions (live).
               </p>
             </div>
-            <Button variant="outline" onClick={() => resetToFirstPage()} disabled={isLoading}>
+            <Button variant="outline" onClick={loadTransactions} disabled={isLoading}>
               Refresh
             </Button>
           </div>
@@ -140,7 +139,7 @@ export default function TransactionLogPage() {
             <Select
               value={status}
               onValueChange={(v) => {
-                setStatus(v as any);
+                setStatus(v as AdminTransactionStatus | "all");
                 resetToFirstPage();
               }}
             >
@@ -161,7 +160,7 @@ export default function TransactionLogPage() {
             <Select
               value={type}
               onValueChange={(v) => {
-                setType(v as any);
+                setType(v as AdminTransactionType | "all");
                 resetToFirstPage();
               }}
             >
@@ -177,6 +176,7 @@ export default function TransactionLogPage() {
                 <SelectItem value="PAYOUT">PAYOUT</SelectItem>
                 <SelectItem value="REFUND">REFUND</SelectItem>
                 <SelectItem value="REFUND_REVERSAL">REFUND_REVERSAL</SelectItem>
+                <SelectItem value="SYSTEM_WALLET_REFUND">SYSTEM_WALLET_REFUND</SelectItem>
                 <SelectItem value="COLLATERAL_DEPOSIT">COLLATERAL_DEPOSIT</SelectItem>
               </SelectContent>
             </Select>
@@ -191,18 +191,19 @@ export default function TransactionLogPage() {
                   <TableHead>Status</TableHead>
                   <TableHead>Booking</TableHead>
                   <TableHead className="text-right">Amount</TableHead>
+                  <TableHead className="text-right">Details</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                       Loading...
                     </TableCell>
                   </TableRow>
                 ) : items.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="py-12 text-center text-muted-foreground">
+                    <TableCell colSpan={6} className="py-12 text-center text-muted-foreground">
                       No transactions found.
                     </TableCell>
                   </TableRow>
@@ -214,7 +215,7 @@ export default function TransactionLogPage() {
                         <TableCell className="text-sm text-muted-foreground">
                           {fmtDate(t.createdAt)}
                         </TableCell>
-                        <TableCell className="font-medium">{t.type || "—"}</TableCell>
+                        <TableCell className="font-medium">{t.type || EMPTY_VALUE}</TableCell>
                         <TableCell>
                           <Badge
                             variant="outline"
@@ -228,6 +229,15 @@ export default function TransactionLogPage() {
                         </TableCell>
                         <TableCell className="text-right font-semibold tabular-nums">
                           {fmtMoney(t.amount, t.currency || "ETB")}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/sysadmin/revenue/transactions/${t.id}`)}
+                          >
+                            Details
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );

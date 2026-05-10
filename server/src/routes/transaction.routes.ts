@@ -6,7 +6,11 @@ import { authorize } from "../middlewares/authorize.js";
 import { validate } from "../middlewares/validate.js";
 import { AccountType } from "../models/User.js";
 import { transactionController } from "../controllers/transaction.controller.js";
-import { transactionListQuerySchema } from "../validators/transaction.validator.js";
+import {
+  transactionIdParamsSchema,
+  transactionListQuerySchema,
+  transactionSystemWalletRefundSchema,
+} from "../validators/transaction.validator.js";
 
 export function createTransactionRoutes(auth: Auth): Router {
   const router = Router();
@@ -19,6 +23,27 @@ export function createTransactionRoutes(auth: Auth): Router {
     authorize("read", "Transaction"),
     validate({ query: transactionListQuerySchema }),
     transactionController.listAdminTransactions,
+  );
+
+  router.get(
+    "/admin/:transactionId",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("read", "Transaction"),
+    validate({ params: transactionIdParamsSchema }),
+    transactionController.getAdminTransactionDetail,
+  );
+
+  router.patch(
+    "/admin/:transactionId/refund-to-system-wallet",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "Transaction"),
+    validate({
+      params: transactionIdParamsSchema,
+      body: transactionSystemWalletRefundSchema,
+    }),
+    transactionController.refundEscrowToSystemWallet,
   );
 
   return router;
