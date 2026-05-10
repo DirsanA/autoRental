@@ -4,7 +4,6 @@ import { useEffect, useState } from "react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -37,7 +36,6 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Bell,
   BellOff,
   Check,
   CheckCheck,
@@ -45,7 +43,6 @@ import {
   Loader2,
   MoreHorizontal,
   Trash2,
-  X,
 } from "lucide-react";
 import {
   useAdminNotificationsStore,
@@ -56,6 +53,7 @@ import type {
 } from "@/lib/admin-notifications-api";
 import { cn } from "@/lib/utils";
 import { useRouter } from "next/navigation";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 
 const CATEGORY_CONFIG: Record<
   AdminNotificationCategory,
@@ -290,6 +288,10 @@ export default function AdminNotificationsPage() {
       setDeleteTarget(null);
     }
   };
+
+  if (isLoading && notifications.length === 0) {
+    return <AdminListPageSkeleton stats={0} columns={5} rows={6} showHelperCard={false} />;
+  }
 
   return (
     <div className="relative flex h-full w-full overflow-hidden">

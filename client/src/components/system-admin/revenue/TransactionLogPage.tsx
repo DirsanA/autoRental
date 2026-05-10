@@ -24,6 +24,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { cn } from "@/lib/utils";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 import {
   fetchAdminTransactions,
   type AdminTransaction,
@@ -98,6 +99,10 @@ export default function TransactionLogPage() {
 
   function resetToFirstPage() {
     setPage(1);
+  }
+
+  if (isLoading && items.length === 0) {
+    return <AdminListPageSkeleton stats={0} columns={6} rows={6} showHelperCard={false} />;
   }
 
   return (
@@ -182,9 +187,9 @@ export default function TransactionLogPage() {
             </Select>
           </div>
 
-          <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
+          <div className="max-h-[70vh] overflow-auto rounded-xl border bg-card shadow-sm">
             <Table>
-              <TableHeader className="bg-muted/50">
+              <TableHeader className="sticky top-0 z-10 bg-muted/50">
                 <TableRow className="hover:bg-transparent">
                   <TableHead>Date</TableHead>
                   <TableHead>Type</TableHead>

@@ -37,6 +37,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { usePageViewTracking } from "@/hooks/use-action-badges";
 import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 import type {
   AdminCompanyApiStatus,
   AdminCompaniesPagination,
@@ -247,6 +248,10 @@ export default function CompanyManagementPage() {
   const verifiedCompanies = companies.filter(
     (company) => company.isVerified,
   ).length;
+
+  if (loading && companies.length === 0) {
+    return <AdminListPageSkeleton stats={4} columns={6} rows={6} />;
+  }
 
   return (
     <div className="relative flex h-full w-full overflow-hidden">

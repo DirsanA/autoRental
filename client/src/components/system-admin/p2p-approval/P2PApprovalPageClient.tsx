@@ -57,13 +57,13 @@ import {
 } from "lucide-react";
 import { ExportButton } from "@/components/system-admin/export/ExportButton";
 import { exportP2PHostsToExcel } from "@/components/system-admin/export/export-utils";
-import { useToast } from "@/hooks/use-toast";
 import { usePageViewTracking } from "@/hooks/use-action-badges";
 import { useRealTimeRefresh } from "@/hooks/use-real-time-refresh";
 import { useActionBadgesStore } from "@/stores/action-badges-store";
 import { ActionBadge } from "@/components/action-badges/action-badge";
 import { cn } from "@/lib/utils";
 import { RecordBadge } from "@/components/action-badges/record-badge";
+import { AdminListPageSkeleton } from "@/components/system-admin/sysadmin-page-skeletons";
 import {
   fetchP2PHosts,
   reviewP2PHost,
@@ -318,7 +318,7 @@ export function P2PApprovalPageClient() {
   }, [loadHosts]);
 
   const handleView = (host: P2PHostSummary) => {
-    router.push(`/sysadmin/p2p/${host.id}`);
+    router.push(`/sysadmin/P2P/${host.id}`);
   };
 
   const openApproveDialog = (host: P2PHostSummary) => {
@@ -417,11 +417,81 @@ export function P2PApprovalPageClient() {
     });
   };
 
+  const renderHostActions = (
+    host: P2PHostSummary,
+    triggerClassName?: string,
+  ) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn(
+            "h-8 w-8 opacity-60 transition-opacity hover:opacity-100",
+            triggerClassName,
+          )}
+          disabled={actionInProgress === host.id}
+        >
+          <MoreHorizontal className="h-4 w-4" />
+          <span className="sr-only">Actions</span>
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-44">
+        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+        <DropdownMenuItem onClick={() => handleView(host)}>
+          <Eye className="mr-2 h-4 w-4" /> View details
+        </DropdownMenuItem>
+        {host.status !== "approved" && (
+          <DropdownMenuItem
+            onClick={() => openApproveDialog(host)}
+            disabled={
+              actionInProgress === host.id || !host.reviewReadiness.canPromote
+            }
+          >
+            <ThumbsUp className="mr-2 h-4 w-4" /> Approve
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator />
+        {host.status !== "approved" && host.status !== "rejected" && (
+          <DropdownMenuItem
+            onClick={() => openRejectDialog(host)}
+            className="text-red-600 focus:text-red-600"
+            disabled={actionInProgress === host.id}
+          >
+            <ThumbsDown className="mr-2 h-4 w-4" /> Reject
+          </DropdownMenuItem>
+        )}
+        {host.status === "approved" && host.accountStatus !== "SUSPENDED" && (
+          <DropdownMenuItem
+            onClick={() => openSuspendDialog(host)}
+            className="text-orange-600 focus:text-orange-600"
+            disabled={actionInProgress === host.id}
+          >
+            <AlertTriangle className="mr-2 h-4 w-4" /> Suspend
+          </DropdownMenuItem>
+        )}
+        {host.accountStatus === "SUSPENDED" && (
+          <DropdownMenuItem
+            onClick={() => openReactivateDialog(host)}
+            className="text-green-600 focus:text-green-600"
+            disabled={actionInProgress === host.id}
+          >
+            <CheckCircle2 className="mr-2 h-4 w-4" /> Reactivate
+          </DropdownMenuItem>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
+  if (loading && hostsData.hosts.length === 0) {
+    return <AdminListPageSkeleton stats={4} columns={8} rows={6} showHelperCard={false} />;
+  }
+
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <div className="flex flex-1 flex-col min-h-0">
+    <div className="relative flex h-full w-full min-w-0 overflow-x-hidden">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header />
-        <Main className="gap-6 p-6 md:p-8 pb-20">
+        <Main className="min-w-0 gap-6 p-6 pb-20 md:p-8">
           <div className="flex flex-col gap-1">
             <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               P2P Approval
@@ -461,63 +531,69 @@ export function P2PApprovalPageClient() {
             </div>
           )}
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-            <div className="relative w-full sm:max-w-xs">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search host name, email..."
-                value={searchInput}
-                onChange={(event) => setSearchInput(event.target.value)}
-                onBlur={() =>
-                  pushFilters({
-                    search: searchInput.trim() || undefined,
-                    page: 1,
-                  })
-                }
-                onKeyDown={(event) => {
-                  if (event.key === "Enter") {
+          <div className="rounded-xl border bg-card p-4 shadow-sm">
+            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                  <Input
+                    placeholder="Search host name, email..."
+                    value={searchInput}
+                    onChange={(event) => setSearchInput(event.target.value)}
+                    onBlur={() =>
+                      pushFilters({
+                        search: searchInput.trim() || undefined,
+                        page: 1,
+                      })
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        pushFilters({
+                          search: searchInput.trim() || undefined,
+                          page: 1,
+                        });
+                      }
+                    }}
+                    className="pl-9"
+                  />
+                </div>
+
+                <Select
+                  value={currentFilters.status}
+                  onValueChange={(value) =>
                     pushFilters({
-                      search: searchInput.trim() || undefined,
+                      status: value === "all" ? undefined : value,
                       page: 1,
-                    });
+                    })
                   }
-                }}
-                className="pl-9"
-              />
+                >
+                  <SelectTrigger className="w-full sm:w-[180px]">
+                    <SelectValue placeholder="All statuses" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All statuses</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                    <SelectItem value="approved">Approved</SelectItem>
+                    <SelectItem value="flagged">Flagged</SelectItem>
+                    <SelectItem value="rejected">Rejected</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                <ExportButton
+                  onExport={() => exportP2PHostsToExcel(hostsData.hosts)}
+                  disabled={loading || hostsData.hosts.length === 0}
+                />
+                <Button
+                  variant="outline"
+                  onClick={() => void loadHosts()}
+                  disabled={loading}
+                >
+                  Refresh
+                </Button>
+              </div>
             </div>
-
-            <Select
-              value={currentFilters.status}
-              onValueChange={(value) =>
-                pushFilters({
-                  status: value === "all" ? undefined : value,
-                  page: 1,
-                })
-              }
-            >
-              <SelectTrigger className="sm:w-[160px]">
-                <SelectValue placeholder="All statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All statuses</SelectItem>
-                <SelectItem value="pending">Pending</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="flagged">Flagged</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
-
-            <ExportButton
-              onExport={() => exportP2PHostsToExcel(hostsData.hosts)}
-              disabled={loading || hostsData.hosts.length === 0}
-            />
-            <Button
-              variant="outline"
-              onClick={() => void loadHosts()}
-              disabled={loading}
-            >
-              Refresh
-            </Button>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -526,17 +602,18 @@ export function P2PApprovalPageClient() {
           </div>
 
           <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-            <Table>
-              <TableHeader className="bg-muted/50">
+            <div className="max-h-[65vh] overflow-y-auto">
+            <Table className="w-full table-fixed">
+              <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/85">
                 <TableRow className="hover:bg-transparent">
-                  <TableHead>Host</TableHead>
-                  <TableHead>Contact</TableHead>
-                  <TableHead>Verification</TableHead>
-                  <TableHead>Vehicles</TableHead>
-                  <TableHead>Documents</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Submitted</TableHead>
-                  <TableHead className="w-[50px]" />
+                  <TableHead className="w-[20%]">Host</TableHead>
+                  <TableHead className="w-[18%]">Contact</TableHead>
+                  <TableHead className="w-[16%]">Verification</TableHead>
+                  <TableHead className="w-[12%]">Vehicles</TableHead>
+                  <TableHead className="w-[14%]">Documents</TableHead>
+                  <TableHead className="w-[10%]">Status</TableHead>
+                  <TableHead className="w-[8%]">Submitted</TableHead>
+                  <TableHead className="w-[2%]" />
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -570,7 +647,7 @@ export function P2PApprovalPageClient() {
                       key={host.id}
                       className="group transition-colors hover:bg-muted/50"
                     >
-                      <TableCell>
+                      <TableCell className="align-top">
                         <div className="flex items-center gap-2">
                           <div className="text-sm font-medium">{host.name}</div>
                           {host.status === "pending" &&
@@ -579,7 +656,7 @@ export function P2PApprovalPageClient() {
                               <RecordBadge show={true} variant="signal" />
                             )}
                         </div>
-                        <div className="max-w-[140px] truncate text-xs text-muted-foreground">
+                        <div className="max-w-[180px] truncate text-xs text-muted-foreground">
                           Level: {host.verificationLevel.replaceAll("_", " ")}
                         </div>
                         <div className="mt-2">
@@ -589,8 +666,8 @@ export function P2PApprovalPageClient() {
                           />
                         </div>
                       </TableCell>
-                      <TableCell>
-                        <div className="max-w-[150px] truncate text-sm text-muted-foreground">
+                      <TableCell className="align-top">
+                        <div className="max-w-[180px] break-words text-sm text-muted-foreground">
                           {host.email}
                         </div>
                         {host.phoneNumber && (
@@ -599,7 +676,7 @@ export function P2PApprovalPageClient() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top">
                         <div className="text-xs text-muted-foreground">
                           {host.verificationStatus || "N/A"}
                         </div>
@@ -612,7 +689,7 @@ export function P2PApprovalPageClient() {
                           </div>
                         )}
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top">
                         <div className="text-sm">
                           {host.vehiclesOwned} total
                         </div>
@@ -621,7 +698,7 @@ export function P2PApprovalPageClient() {
                           {host.vehiclesApproved} approved
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top">
                         <div className="flex flex-wrap gap-1">
                           <DocCheck ok={host.hasIdDocument} label="ID" />
                           <DocCheck
@@ -630,83 +707,26 @@ export function P2PApprovalPageClient() {
                           />
                         </div>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="align-top">
                         <div className="flex items-center gap-2">
                           <P2PStatusBadge host={host} />
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
+                      <TableCell className="align-top text-sm text-muted-foreground">
                         {fmtDate(host.submittedAt)}
                       </TableCell>
-                      <TableCell>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 opacity-60 transition-opacity group-hover:opacity-100"
-                              disabled={actionInProgress === host.id}
-                            >
-                              <MoreHorizontal className="h-4 w-4" />
-                              <span className="sr-only">Actions</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end" className="w-44">
-                            <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                            <DropdownMenuItem onClick={() => handleView(host)}>
-                              <Eye className="mr-2 h-4 w-4" /> View details
-                            </DropdownMenuItem>
-                            {host.status !== "approved" && (
-                              <DropdownMenuItem
-                                onClick={() => openApproveDialog(host)}
-                                disabled={
-                                  actionInProgress === host.id ||
-                                  !host.reviewReadiness.canPromote
-                                }
-                              >
-                                <ThumbsUp className="mr-2 h-4 w-4" /> Approve
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuSeparator />
-                            {host.status !== "approved" &&
-                              host.status !== "rejected" && (
-                                <DropdownMenuItem
-                                  onClick={() => openRejectDialog(host)}
-                                  className="text-red-600 focus:text-red-600"
-                                  disabled={actionInProgress === host.id}
-                                >
-                                  <ThumbsDown className="mr-2 h-4 w-4" /> Reject
-                                </DropdownMenuItem>
-                              )}
-                            {host.status === "approved" &&
-                              host.accountStatus !== "SUSPENDED" && (
-                                <DropdownMenuItem
-                                  onClick={() => openSuspendDialog(host)}
-                                  className="text-orange-600 focus:text-orange-600"
-                                  disabled={actionInProgress === host.id}
-                                >
-                                  <AlertTriangle className="mr-2 h-4 w-4" />{" "}
-                                  Suspend
-                                </DropdownMenuItem>
-                              )}
-                            {host.accountStatus === "SUSPENDED" && (
-                              <DropdownMenuItem
-                                onClick={() => openReactivateDialog(host)}
-                                className="text-green-600 focus:text-green-600"
-                                disabled={actionInProgress === host.id}
-                              >
-                                <CheckCircle2 className="mr-2 h-4 w-4" />{" "}
-                                Reactivate
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      <TableCell className="align-top">
+                        {renderHostActions(
+                          host,
+                          "group-hover:opacity-100 focus-visible:opacity-100",
+                        )}
                       </TableCell>
                     </TableRow>
                   ))
                 )}
               </TableBody>
             </Table>
+            </div>
           </div>
 
           {hostsData.pagination.totalPages > 1 && (

@@ -97,7 +97,7 @@ const dashboardRoutes: Route[] = [
     id: "P2P Hosts",
     title: "P2P Hosts",
     icon: <Handshake className="size-4" />,
-    link: "/sysadmin/p2p",
+    link: "/sysadmin/P2P",
     badge: <SidebarBadge entityType="P2P_HOST" />,
     entityType: "P2P_HOST",
   },
