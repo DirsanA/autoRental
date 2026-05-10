@@ -84,16 +84,21 @@ const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
     link: "/peerhost/booking-history",
   },
   {
+    id: "messages",
+    title: "Messages",
+    icon: (
+      <div className="relative">
+        <MessageSquareText className="size-4" />
+        <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
+      </div>
+    ),
+    link: "/peerhost/messages",
+  },
+  {
     id: "reviews",
     title: "Reviews",
     icon: <Star className="size-4" />,
     link: "/peerhost/reviews",
-  },
-  {
-    id: "messages",
-    title: "Messages",
-    icon: <MessageSquareText className="size-4" />,
-    link: "/peerhost/messages",
   },
   // Show "Add Vehicle" if user has vehicles, otherwise show "Become a Host"
   hasVehicles

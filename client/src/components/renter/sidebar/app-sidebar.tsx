@@ -108,7 +108,10 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
                   isCollapsed && "justify-center",
                 )}
               >
-                <MessageSquareText className="size-4" />
+                <div className="relative">
+                  <MessageSquareText className="size-4" />
+                  <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
+                </div>
                 {!isCollapsed && (
                   <span className="ml-2 text-sm font-medium">
                     Messages
