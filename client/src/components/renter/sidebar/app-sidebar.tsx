@@ -129,7 +129,7 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
           <SidebarMenuItem>
             <SidebarMenuButton tooltip="Security Deposits" asChild>
               <Link
-                href="/renter/deposits"
+                href="/renter/wallet"
                 prefetch={true}
                 className={cn(
                   "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",

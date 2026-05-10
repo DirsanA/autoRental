@@ -331,7 +331,7 @@ export function UserAccountMenuContent({
 
         {shouldShowBecomePeerHost && (
           <DropdownMenuItem asChild>
-            <Link href="/peerhost/become-host">
+            <Link href="/renter/become-host">
               <Car className="mr-2 h-4 w-4" />
               Become a Peer Host
             </Link>
