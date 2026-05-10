@@ -24,7 +24,8 @@ import {
   Plus,
   AlertCircle,
 } from "lucide-react";
-import { Logo } from "@/components/peer-host/sidebar-02/logo";
+import Link from "next/link";
+import { Logo } from "@/components/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/peer-host/sidebar-02/nav-main";
 import { NotificationsPopover } from "@/components/peer-host/sidebar-02/nav-notifications";
@@ -191,14 +192,12 @@ export function PeerToPeerSidebar({ isLoading = false }: { isLoading?: boolean }
             : "flex-row items-center justify-between",
         )}
       >
-        <a href="#" className="flex items-center gap-2">
-          <Logo className="w-8 h-8" />
-          {!isCollapsed && (
-            <span className="font-semibold text-black dark:text-white">
-              AutoRent
-            </span>
-          )}
-        </a>
+        <Link href="/" className="flex items-center gap-2">
+          <Logo
+            className={cn(isCollapsed ? "h-10 w-10" : "h-11 w-[144px]")}
+            textWeight="800"
+          />
+        </Link>
 
         <motion.div
           key={isCollapsed ? "header-collapsed" : "header-expanded"}
