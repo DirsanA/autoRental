@@ -179,7 +179,6 @@ export function WalletPage({
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
-      <Header />
       <Main className="gap-6 p-6 md:p-8">
         <div className="flex sm:flex-row flex-col sm:justify-between sm:items-start gap-2">
           <div>
@@ -226,7 +225,8 @@ export function WalletPage({
                     )}
                   </div>
                   <p className="mt-1 text-muted-foreground text-xs">
-                    Held until refund, safe return settlement, or admin decision.
+                    Held until refund, safe return settlement, or admin
+                    decision.
                   </p>
                 </div>
               )}
