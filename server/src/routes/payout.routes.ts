@@ -20,7 +20,11 @@ export function createPayoutRoutes(auth: Auth): Router {
   router.post(
     "/",
     authenticate,
-    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    requireAccountType(
+      AccountType.USER,
+      AccountType.COMPANY,
+      AccountType.ADMIN,
+    ),
     validate({ body: createPayoutSchema }),
     payoutController.createPayout,
   );
@@ -28,7 +32,11 @@ export function createPayoutRoutes(auth: Auth): Router {
   router.get(
     "/me",
     authenticate,
-    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    requireAccountType(
+      AccountType.USER,
+      AccountType.COMPANY,
+      AccountType.ADMIN,
+    ),
     validate({ query: payoutListQuerySchema }),
     payoutController.listMyPayouts,
   );
@@ -54,7 +62,11 @@ export function createPayoutRoutes(auth: Auth): Router {
   router.get(
     "/banks",
     authenticate,
-    requireAccountType(AccountType.USER, AccountType.COMPANY),
+    requireAccountType(
+      AccountType.USER,
+      AccountType.COMPANY,
+      AccountType.ADMIN,
+    ),
     payoutController.getBanks,
   );
 

@@ -15,6 +15,7 @@ import {
   Handshake,
   Landmark,
   LayoutDashboard,
+  Wallet,
   MessageCircleCheckIcon,
   ShoppingCart,
   Store,
@@ -117,6 +118,12 @@ const dashboardRoutes: Route[] = [
         link: "/sysadmin/revenue/transactions",
       },
     ],
+  },
+  {
+    id: "Wallet",
+    title: "Wallet",
+    icon: <Wallet className="size-4" />,
+    link: "/sysadmin/wallet",
   },
   // {
   //   id: "Disputes",

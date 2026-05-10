@@ -1,5 +1,6 @@
 import mongoose, { type ClientSession } from "mongoose";
 import { Booking, type BookingDocument } from "../models/Booking.js";
+import { AccountType, User } from "../models/User.js";
 import { Transaction } from "../models/Transaction.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Wallet, type WalletDocument, type WalletOwnerType } from "../models/Wallet.js";
@@ -15,6 +16,16 @@ type WalletOwner = {
   ownerId: mongoose.Types.ObjectId;
   ownerType: WalletOwnerType;
   currency: string;
+};
+
+export type WalletSnapshot = {
+  ownerType: WalletOwnerType;
+  currency: string;
+  pendingBalance: number;
+  availableBalance: number;
+  lifetimeEarned: number;
+  lifetimePaidOut: number;
+  lifetimeRefunded: number;
 };
 
 export class WalletService {
@@ -472,6 +483,63 @@ export class WalletService {
 
   async getWalletByOwner(ownerId: mongoose.Types.ObjectId, ownerType: WalletOwnerType) {
     return Wallet.findOne({ ownerId, ownerType }).lean();
+  }
+
+  async getSystemWalletSnapshot(): Promise<WalletSnapshot> {
+    const [commissionAgg, adminUsers] = await Promise.all([
+      Transaction.aggregate<{ _id: null; total: number }>([
+        {
+          $match: {
+            type: "COMMISSION",
+            status: "COMPLETED",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" },
+          },
+        },
+      ]),
+      User.find({ accountType: AccountType.ADMIN }).select("_id").lean(),
+    ]);
+
+    const adminIds = adminUsers
+      .map((user) => user?._id)
+      .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
+
+    const payoutAgg =
+      adminIds.length > 0
+        ? await Payout.aggregate<{ _id: null; total: number }>([
+            {
+              $match: {
+                ownerType: "User",
+                ownerId: { $in: adminIds },
+                status: { $in: ["PROCESSING", "PAID"] },
+              },
+            },
+            {
+              $group: {
+                _id: null,
+                total: { $sum: "$amount" },
+              },
+            },
+          ])
+        : [];
+
+    const totalCommission = roundMoney(commissionAgg?.[0]?.total ?? 0);
+    const totalPaidOut = roundMoney(payoutAgg?.[0]?.total ?? 0);
+    const availableBalance = roundMoney(Math.max(totalCommission - totalPaidOut, 0));
+
+    return {
+      ownerType: "User",
+      currency: "ETB",
+      pendingBalance: 0,
+      availableBalance,
+      lifetimeEarned: totalCommission,
+      lifetimePaidOut: totalPaidOut,
+      lifetimeRefunded: 0,
+    };
   }
 
   async getLedgerByOwner(ownerId: mongoose.Types.ObjectId, ownerType: WalletOwnerType) {

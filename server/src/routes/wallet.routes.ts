@@ -11,7 +11,13 @@ export function createWalletRoutes(auth: Auth): Router {
   const authenticate = createAuthMiddleware(auth);
 
   router.use(authenticate);
-  router.use(requireAccountType(AccountType.USER, AccountType.COMPANY));
+  router.use(
+    requireAccountType(
+      AccountType.USER,
+      AccountType.COMPANY,
+      AccountType.ADMIN,
+    ),
+  );
 
   router.get(
     "/me",
