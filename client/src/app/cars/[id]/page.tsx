@@ -83,75 +83,68 @@ const Index = () => {
   const [similarCars, setSimilarCars] = useState<Vehicle[]>([]);
   const [loadingSimilar, setLoadingSimilar] = useState(false);
 
-  useEffect(() => {
-    if (!vehicle?.id) return;
+ useEffect(() => {
+  if (!vehicle?.id) return;
 
-    let cancelled = false;
+  let cancelled = false;
 
-    async function loadSimilarCars() {
-      try {
-        setLoadingSimilar(true);
+  async function loadSimilarCars() {
+    try {
+      setLoadingSimilar(true);
 
-        const res = await fetch(`${API_BASE_URL}/vehicles/marketplace`, {
-          cache: "no-store",
-          credentials: "include",
-        });
+      const res = await fetch(`${API_BASE_URL}/vehicles/marketplace`, {
+        cache: "no-store",
+        credentials: "include",
+      });
 
-        if (!res.ok) return;
+      if (!res.ok) return;
 
-        const data = await res.json();
-        const vehicles: Vehicle[] =
-          data?.data?.vehicles || data?.vehicles || [];
+      const data = await res.json();
+      const vehicles: Vehicle[] = data?.data?.vehicles || data?.vehicles || [];
 
-        const filtered = vehicles
-          .filter((v) => {
-            if (!v) return false;
+      const filtered = vehicles
+        .filter((v) => {
+          if (!v) return false;
+          
+          // exclude current vehicle
+          if ((v.id || v._id) === (vehicle.id || vehicle._id)) return false;
+          
+          // only AVAILABLE vehicles
+          if (v.status?.toUpperCase() !== "AVAILABLE") return false;
+          
+          // Calculate similarity score
+          let score = 0;
+          if (v.make?.toLowerCase() === vehicle.make?.toLowerCase()) score++;
+          if (v.fuel?.toLowerCase() === vehicle.fuel?.toLowerCase()) score++;
+          if (v.transmission?.toLowerCase() === vehicle.transmission?.toLowerCase()) score++;
+          if (Math.abs((v.price || 0) - (vehicle.price || 0)) <= 800) score++;
+          
+          return score >= 1; // At least one matching criteria
+        })
+        .sort((a, b) => {
+          // Sort by price proximity to current vehicle
+          const priceDiffA = Math.abs((a.price || 0) - (vehicle.price || 0));
+          const priceDiffB = Math.abs((b.price || 0) - (vehicle.price || 0));
+          return priceDiffA - priceDiffB;
+        })
+        .slice(0, 4);
 
-            // exclude current vehicle
-            if ((v.id || v._id) === (vehicle.id || vehicle._id)) return false;
-
-            // only available
-            if (v.status?.toLowerCase() !== "available") return false;
-
-            const score = [
-              v.make?.toLowerCase() === vehicle.make?.toLowerCase(),
-              v.fuel?.toLowerCase() === vehicle.fuel?.toLowerCase(),
-              v.transmission?.toLowerCase() ===
-                vehicle.transmission?.toLowerCase(),
-              v.category?.toLowerCase() === vehicle.category?.toLowerCase(),
-              Math.abs((v.dailyRate || 0) - (vehicle.dailyRate || 0)) <= 800,
-            ].filter(Boolean).length;
-
-            return score >= 2; // similarity rule
-          })
-          .sort((a, b) => {
-            const priceDiffA = Math.abs(
-              (a.dailyRate || 0) - (vehicle.dailyRate || 0),
-            );
-            const priceDiffB = Math.abs(
-              (b.dailyRate || 0) - (vehicle.dailyRate || 0),
-            );
-
-            return priceDiffA - priceDiffB;
-          })
-          .slice(0, 4);
-
-        if (!cancelled) {
-          setSimilarCars(filtered);
-        }
-      } catch (err) {
-        if (!cancelled) setSimilarCars([]);
-      } finally {
-        if (!cancelled) setLoadingSimilar(false);
+      if (!cancelled) {
+        setSimilarCars(filtered);
       }
+    } catch (err) {
+      if (!cancelled) setSimilarCars([]);
+    } finally {
+      if (!cancelled) setLoadingSimilar(false);
     }
+  }
 
-    loadSimilarCars();
+  loadSimilarCars();
 
-    return () => {
-      cancelled = true;
-    };
-  }, [vehicle?.id]);
+  return () => {
+    cancelled = true;
+  };
+}, [vehicle?.id, API_BASE_URL]);
 
   useEffect(() => {
     let cancelled = false;
@@ -586,87 +579,101 @@ const Index = () => {
 
         {/* Similar Cars */}
         {/* Similar Cars */}
-        <div className="mt-10">
-          <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 mb-6" />
+      {/* Similar Cars */}
+<div className="mt-10">
+  <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 mb-6" />
 
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
-              Similar Cars You Might Like
-            </h2>
+  <div className="flex items-center justify-between mb-6">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+      Similar Cars You Might Like
+    </h2>
 
-            {similarCars.length > 0 && (
-              <span className="text-sm text-gray-500 dark:text-gray-400">
-                {similarCars.length} available cars
-              </span>
-            )}
-          </div>
+    {similarCars.length > 0 && (
+      <span className="text-sm text-gray-500 dark:text-gray-400">
+        {similarCars.length} available cars
+      </span>
+    )}
+  </div>
 
-          {loadingSimilar ? (
-            <div className="flex items-center justify-center py-10">
-              <CarLoadingState message="Loading similar cars..." />
+  {loadingSimilar ? (
+    <div className="flex items-center justify-center py-10">
+      <CarLoadingState message="Loading similar cars..." />
+    </div>
+  ) : similarCars.length === 0 ? (
+    <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
+      <p className="text-gray-500 dark:text-gray-400">
+        No similar available cars found.
+      </p>
+    </div>
+  ) : (
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+      {similarCars.map((sc, index) => {
+        // Get the first available image from gallery or front
+        const getImageUrl = (vehicle: Vehicle) => {
+          if (vehicle.photos?.gallery?.length > 0) {
+            return vehicle.photos.gallery[0];
+          }
+          if (vehicle.photos?.front) {
+            return vehicle.photos.front;
+          }
+          if (vehicle.imageUrl) {
+            return vehicle.imageUrl;
+          }
+          return FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
+        };
+        
+        const imageUrl = getImageUrl(sc);
+        const displayPrice = sc.price || sc.dailyRate || 0;
+        const rating = sc.ratingAvg || sc.averageRating || 0;
+        
+        return (
+          <Link href={`/cars/${sc.id || sc._id}`} key={sc.id || sc._id}>
+            <div className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800">
+              {/* IMAGE */}
+              <div className="relative aspect-[4/3] overflow-hidden">
+                <Image
+                  src={imageUrl}
+                  alt={`${sc.make} ${sc.model}`}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110"
+                  unoptimized
+                />
+
+                <span className="absolute right-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow">
+                  ETB {displayPrice}/day
+                </span>
+              </div>
+
+              {/* CONTENT */}
+              <div className="space-y-3 p-4">
+                <div>
+                  <h3 className="line-clamp-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
+                    {sc.make} {sc.model}
+                  </h3>
+
+                  <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                    {sc.year} • {sc.location || "Addis Ababa"}
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1 text-sm font-semibold">
+                    <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
+                    {rating > 0 ? rating.toFixed(1) : "4.9"}
+                  </div>
+
+                  <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
+                    View details
+                  </div>
+                </div>
+              </div>
             </div>
-          ) : similarCars.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-gray-300 dark:border-gray-700 p-10 text-center">
-              <p className="text-gray-500 dark:text-gray-400">
-                No similar available cars found.
-              </p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-              {similarCars.map((sc, index) => {
-                const image =
-                  sc.imageUrl ||
-                  sc.galleryImages?.[0] ||
-                  FALLBACK_IMAGES[index % FALLBACK_IMAGES.length];
-
-                return (
-                  <Link href={`/cars/${sc.id}`} key={sc.id}>
-                    <div className="group h-full overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-xl dark:border-gray-700 dark:bg-gray-800">
-                      {/* IMAGE */}
-                      <div className="relative aspect-[4/3] overflow-hidden">
-                        <Image
-                          src={image}
-                          alt={`${sc.make} ${sc.model}`}
-                          fill
-                          className="object-cover transition-transform duration-500 group-hover:scale-110"
-                          unoptimized
-                        />
-
-                        <span className="absolute right-2 top-2 rounded-full bg-blue-600 px-3 py-1 text-xs font-bold text-white shadow">
-                          ETB {sc.price}/day
-                        </span>
-                      </div>
-
-                      {/* CONTENT */}
-                      <div className="space-y-3 p-4">
-                        <div>
-                          <h3 className="line-clamp-1 text-lg font-bold text-gray-900 transition-colors group-hover:text-primary dark:text-white">
-                            {sc.make} {sc.model}
-                          </h3>
-
-                          <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
-                            {sc.year} • {sc.location || "Addis Ababa"}
-                          </p>
-                        </div>
-
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1 text-sm font-semibold">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            {sc.ratingAvg?.toFixed(1) || "4.9"}
-                          </div>
-
-                          <div className="text-sm font-semibold text-blue-600 dark:text-blue-400">
-                            View details
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </Link>
-                );
-              })}
-            </div>
-          )}
-        </div>
+          </Link>
+        );
+      })}
+    </div>
+  )}
+</div>
 
         {/* Browse Cars CTA */}
         <div className="mt-10 flex items-center justify-between p-6 rounded-2xl border  dark:bg-gray-800 dark:border-gray-700 border-gray-200 bg-white shadow hover:shadow-lg transition-shadow">
