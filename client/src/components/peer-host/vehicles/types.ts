@@ -64,6 +64,8 @@ export type Vehicle = {
   seats?: number;
   features?: string[];
   description?: string;
+  allowSelfDrive?: boolean;
+  securityDepositAmount?: number;
   ratingAvg: number;
   ratingCount: number;
 

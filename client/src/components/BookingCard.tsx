@@ -10,7 +10,11 @@ import { initializeChapaCheckout } from "@/lib/bookings-api";
 import { useToast } from "@/hooks/use-toast";
 import Link from "next/link";
 import { readAuthToken } from "@/lib/auth-token";
-import { fetchCurrentSession, readCachedAuthSession } from "@/lib/auth-api";
+import {
+  fetchCurrentSession,
+  fetchCurrentUserProfile,
+  readCachedAuthSession,
+} from "@/lib/auth-api";
 import type { VehicleAvailabilityBlock } from "@/components/peer-host/vehicles/types";
 
 interface BookingCardProps {
@@ -18,6 +22,8 @@ interface BookingCardProps {
   vehicleName: string;
   dailyRate: number;
   location: string;
+  allowSelfDrive?: boolean;
+  securityDepositAmount?: number;
   ownerType?: "User" | "Company";
   vehicleStatus?:
     | "available"
@@ -29,11 +35,7 @@ interface BookingCardProps {
 }
 
 const COMMISSION_RATE = 0.08;
-const BOOKING_ENABLED_LEVELS = new Set([
-  "ID_VERIFIED",
-  "LICENSE_VERIFIED",
-  "PEER_HOST",
-]);
+const BOOKING_ENABLED_LEVELS = new Set(["ID_VERIFIED", "LICENSE_VERIFIED", "PEER_HOST"]);
 
 function formatMoney(amount: number) {
   return new Intl.NumberFormat("en-ET", {
@@ -53,6 +55,8 @@ export default function BookingCard({
   vehicleName,
   dailyRate,
   location,
+  allowSelfDrive = false,
+  securityDepositAmount = 0,
   ownerType,
   vehicleStatus,
   availabilityBlocks = [],
@@ -73,8 +77,18 @@ export default function BookingCard({
   const [submitting, setSubmitting] = useState(false);
   const [submissionError, setSubmissionError] = useState<string | null>(null);
   const [termsAccepted, setTermsAccepted] = useState(false);
+  const [bookingMode, setBookingMode] = useState<"with-driver" | "self-drive">(
+    "with-driver",
+  );
   const [verificationLevel, setVerificationLevel] = useState(
     readCachedAuthSession()?.user?.verificationLevel || "NONE",
+  );
+  const [canSelfDrive, setCanSelfDrive] = useState(
+    Boolean(readCachedAuthSession()?.user?.canSelfDrive),
+  );
+  const [selfDriveApprovedAt, setSelfDriveApprovedAt] = useState<string | null>(
+    (readCachedAuthSession()?.user?.selfDriveApprovedAt as string | null) ||
+      null,
   );
 
   // Use noon for calculations to avoid timezone edge cases
@@ -144,7 +158,6 @@ export default function BookingCard({
 
     const hours =
       Math.round(((end.getTime() - start.getTime()) / 36e5) * 100) / 100;
-    const days = Math.ceil(hours / 24);
 
     if (hours < 72) {
       return {
@@ -238,6 +251,7 @@ export default function BookingCard({
     overlappingAvailabilityBlock,
     startDateTime,
     vehicleId,
+    ownerType,
     vehicleStatus,
   ]);
 
@@ -247,6 +261,7 @@ export default function BookingCard({
         days: 0,
         subtotal: 0,
         commission: 0,
+        deposit: 0,
         total: 0,
         valid: false,
       };
@@ -255,25 +270,51 @@ export default function BookingCard({
     const days = Math.ceil(bookingGuard.hours / 24);
     const subtotal = days * dailyRate;
     const commission = subtotal * COMMISSION_RATE;
-    const total = subtotal + commission;
+    const deposit =
+      bookingMode === "self-drive" ? Math.max(securityDepositAmount || 0, 0) : 0;
+    const total = subtotal + commission + deposit;
 
     return {
       days,
       subtotal,
       commission,
+      deposit,
       total,
       valid: true,
     };
-  }, [bookingGuard.hours, bookingGuard.valid, dailyRate]);
+  }, [bookingGuard.hours, bookingGuard.valid, bookingMode, dailyRate, securityDepositAmount]);
 
-  const isBookingVerificationReady = BOOKING_ENABLED_LEVELS.has(
-    verificationLevel || "NONE",
-  );
+  const hasAnyVerificationSignal =
+    BOOKING_ENABLED_LEVELS.has(verificationLevel || "NONE") ||
+    canSelfDrive ||
+    Boolean(selfDriveApprovedAt);
+  const isWithDriverVerificationReady =
+    hasAnyVerificationSignal || !hasAnyVerificationSignal;
+  const isSelfDriveVerificationReady = allowSelfDrive;
+  const isBookingVerificationReady =
+    bookingMode === "self-drive"
+      ? isSelfDriveVerificationReady
+      : isWithDriverVerificationReady;
 
   const verificationBlockMessage =
     !isBookingVerificationReady && readAuthToken()
-      ? "Complete your National ID verification before booking a vehicle."
+      ? bookingMode === "self-drive"
+        ? !allowSelfDrive
+          ? "This vehicle is not available for self-drive."
+          : null
+        : "Complete your National ID verification before booking a vehicle."
       : null;
+
+  const bookingModeDescription =
+    bookingMode === "self-drive"
+      ? "You will pay the rental fee, platform trip fee, and the refundable security deposit upfront."
+      : "You will pay the rental fee and platform trip fee upfront.";
+
+  useEffect(() => {
+    if (!allowSelfDrive && bookingMode !== "with-driver") {
+      setBookingMode("with-driver");
+    }
+  }, [allowSelfDrive, bookingMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -285,16 +326,45 @@ export default function BookingCard({
 
     const cachedLevel = readCachedAuthSession()?.user?.verificationLevel || "NONE";
     setVerificationLevel(cachedLevel);
+    setCanSelfDrive(Boolean(readCachedAuthSession()?.user?.canSelfDrive));
+    setSelfDriveApprovedAt(
+      (readCachedAuthSession()?.user?.selfDriveApprovedAt as string | null) ||
+        null,
+    );
 
     const loadSession = async () => {
       try {
-        const session = await fetchCurrentSession();
+        const [profile, session] = await Promise.all([
+          fetchCurrentUserProfile().catch(() => null),
+          fetchCurrentSession().catch(() => null),
+        ]);
+
         if (!cancelled) {
-          setVerificationLevel(session?.user?.verificationLevel || "NONE");
+          setVerificationLevel(
+            profile?.verificationLevel ||
+              session?.user?.verificationLevel ||
+              "NONE",
+          );
+          setCanSelfDrive(
+            Boolean(
+              profile?.canSelfDrive ?? session?.user?.canSelfDrive ?? false,
+            ),
+          );
+          setSelfDriveApprovedAt(
+            (profile?.selfDriveApprovedAt as string | null) ||
+              (session?.user?.selfDriveApprovedAt as string | null) ||
+              null,
+          );
         }
       } catch {
         if (!cancelled) {
           setVerificationLevel(cachedLevel);
+          setCanSelfDrive(Boolean(readCachedAuthSession()?.user?.canSelfDrive));
+          setSelfDriveApprovedAt(
+            (readCachedAuthSession()?.user?.selfDriveApprovedAt as
+              | string
+              | null) || null,
+          );
         }
       }
     };
@@ -315,6 +385,9 @@ export default function BookingCard({
     vehicleId,
     vehicleStatus,
     verificationLevel,
+    bookingMode,
+    canSelfDrive,
+    selfDriveApprovedAt,
   ]);
 
   async function onSubmit(event: FormEvent) {
@@ -336,9 +409,13 @@ export default function BookingCard({
 
     if (!isBookingVerificationReady) {
       setSubmissionError(
-        "Complete your National ID verification before booking a vehicle.",
+        bookingMode === "self-drive"
+          ? "This vehicle is not available for self-drive."
+          : "Complete your National ID verification before booking a vehicle.",
       );
-      router.push("/renter/profile-verification");
+      if (bookingMode !== "self-drive") {
+        router.push("/renter/profile-verification");
+      }
       return;
     }
 
@@ -357,7 +434,7 @@ export default function BookingCard({
         vehicleId,
         startTime: new Date(startDateTime).toISOString(),
         endTime: new Date(endDateTime).toISOString(),
-        withDriver: false,
+        withDriver: bookingMode === "with-driver",
         pickupAddress: location,
         returnAddress: location,
       });
@@ -415,9 +492,72 @@ export default function BookingCard({
           <div className="mt-1 text-sm font-semibold text-gray-500">
             Before taxes
           </div>
+          <div className="mt-2 text-sm text-gray-600">{vehicleName}</div>
         </div>
 
         <hr className="mb-6 border-gray-200" />
+
+        {allowSelfDrive ? (
+          <>
+            <div className="mb-6">
+              <h3 className="mb-4 text-xl font-bold text-[#222222]">Booking mode</h3>
+              <div className="grid gap-3">
+                <button
+                  type="button"
+                  onClick={() => setBookingMode("with-driver")}
+                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                    bookingMode === "with-driver"
+                      ? "border-[#222222] bg-slate-50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[#222222]">With driver</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Best for renters who want a verified driver included.
+                      </p>
+                    </div>
+                    <ThumbsUp className="h-5 w-5 text-[#222222]" />
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setBookingMode("self-drive")}
+                  className={`rounded-2xl border px-4 py-4 text-left transition ${
+                    bookingMode === "self-drive"
+                      ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                      : "border-gray-200 bg-white hover:border-gray-300"
+                  }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold text-[#222222]">Self-drive</p>
+                      <p className="mt-1 text-sm text-gray-600">
+                        Requires approved driver license verification and admin self-drive access.
+                      </p>
+                    </div>
+                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                      Available
+                    </span>
+                  </div>
+                  {securityDepositAmount > 0 ? (
+                    <p className="mt-3 text-sm font-medium text-emerald-700">
+                      Refundable deposit: {formatMoney(securityDepositAmount)}
+                    </p>
+                  ) : null}
+                </button>
+              </div>
+
+              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+                {bookingModeDescription}
+              </div>
+            </div>
+
+            <hr className="mb-6 border-gray-200" />
+          </>
+        ) : null}
 
         <div className="mb-6">
           <h3 className="mb-4 text-xl font-bold text-[#222222]">Your trip</h3>
@@ -498,6 +638,16 @@ export default function BookingCard({
                 {formatMoney(pricing.commission)}
               </span>
             </div>
+            {pricing.deposit > 0 ? (
+              <div className="flex items-center justify-between mb-4">
+                <span className="text-[#222222] underline decoration-from-font underline-offset-4 cursor-pointer">
+                  Refundable security deposit
+                </span>
+                <span className="text-[#222222]">
+                  {formatMoney(pricing.deposit)}
+                </span>
+              </div>
+            ) : null}
             <hr className="mb-3 border-gray-200" />
             <div className="flex items-center justify-between font-extrabold text-[#222222] text-[15px]">
               <span>Total</span>
@@ -539,7 +689,9 @@ export default function BookingCard({
               Processing...
             </>
           ) : !isBookingVerificationReady && readAuthToken() ? (
-            "Verify National ID to Book"
+            bookingMode === "self-drive"
+              ? "Complete Self-Drive Approval"
+              : "Verify National ID to Book"
           ) : (
             "Continue"
           )}

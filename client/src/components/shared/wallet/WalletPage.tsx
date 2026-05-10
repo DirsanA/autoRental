@@ -71,11 +71,13 @@ export function WalletPage({
   ownerType,
   description,
   showEscrowBalance = true,
+  payoutRedirectPath,
 }: {
   title: string;
   ownerType: WalletOwnerType;
   description?: string;
   showEscrowBalance?: boolean;
+  payoutRedirectPath?: string;
 }) {
   const [wallet, setWallet] = useState<WalletSnapshot | null>(null);
   const [payouts, setPayouts] = useState<Payout[]>([]);
@@ -153,6 +155,13 @@ export function WalletPage({
         amount: parsedAmount,
         payoutMethod: "CHAPA",
         ownerType,
+        ...(payoutRedirectPath
+          ? {
+              metadata: {
+                redirectPath: payoutRedirectPath,
+              },
+            }
+          : {}),
       });
 
       if (result.checkoutUrl) {
@@ -217,7 +226,7 @@ export function WalletPage({
                     )}
                   </div>
                   <p className="mt-1 text-muted-foreground text-xs">
-                    Funds locked until completion or admin release.
+                    Held until refund, safe return settlement, or admin decision.
                   </p>
                 </div>
               )}

@@ -58,6 +58,8 @@ export type AuthSessionUser = {
   roles?: AuthSessionRole[];
   verificationLevel?: string;
   status?: string;
+  canSelfDrive?: boolean;
+  selfDriveApprovedAt?: string | null;
 } & Record<string, unknown>;
 
 export type AuthSessionRole =
@@ -192,6 +194,44 @@ export async function fetchCurrentSession() {
     writeCachedAuthSession(data);
     return data;
   });
+}
+
+export async function fetchCurrentUserProfile() {
+  const response = await fetch(`${API_BASE_URL}/users/me`, {
+    method: "GET",
+    credentials: "include",
+    headers: {
+      ...buildAuthHeader(),
+    },
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    if (response.status === 401) {
+      clearStoredAuthState();
+    }
+    await throwAuthApiError(response);
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { user?: AuthSessionUser | null };
+  };
+
+  const user = payload?.data?.user || null;
+  const cachedSession = readCachedAuthSession();
+
+  if (user) {
+    writeCachedAuthSession({
+      ...cachedSession,
+      user: {
+        ...(cachedSession?.user || {}),
+        ...user,
+      },
+    });
+  }
+
+  return user;
 }
 
 export async function logout() {

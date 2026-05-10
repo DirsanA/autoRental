@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { BookOpen, Car, Home, User, AlertCircle } from "lucide-react";
+import { BookOpen, Car, Home, User, AlertCircle, Wallet } from "lucide-react";
 
 import {
   Sidebar,
@@ -93,6 +93,24 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
                   <span className="ml-2 text-sm font-medium">
                     Booking History
                   </span>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Wallet" asChild>
+              <Link
+                href="/renter/wallet"
+                prefetch={true}
+                className={cn(
+                  "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <Wallet className="size-4" />
+                {!isCollapsed && (
+                  <span className="ml-2 text-sm font-medium">Wallet</span>
                 )}
               </Link>
             </SidebarMenuButton>

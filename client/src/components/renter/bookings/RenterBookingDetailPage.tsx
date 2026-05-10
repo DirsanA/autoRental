@@ -48,11 +48,26 @@ interface BookingDetail {
   returnAddress: string | null;
   pricing: {
     pricePerHour: number;
+    rentalSubtotal: number;
     totalHours: number;
     systemCommission: number;
     totalAmount: number;
     currency: string;
   };
+  securityDepositAmount: number;
+  depositStatus:
+    | "NOT_REQUIRED"
+    | "HELD_IN_ESCROW"
+    | "REFUNDED_TO_RENTER"
+    | "RELEASED_TO_OWNER"
+    | "UNDER_REVIEW";
+  pickupVerifiedAt: string | null;
+  pickupVerifiedBy: string | null;
+  originalDocsChecked: boolean;
+  manualDocumentHoldNote: string | null;
+  returnConfirmedAt: string | null;
+  returnConfirmedBy: string | null;
+  returnCondition: "CLEAN" | "ISSUE_REPORTED" | null;
   payment: {
     method: string | null;
     status: string;
@@ -189,6 +204,21 @@ function paymentStateClasses(state: BookingPaymentState) {
       return "border-rose-200 bg-rose-50 text-rose-700";
     default:
       return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+}
+
+function depositStatusLabel(status: BookingDetail["depositStatus"]) {
+  switch (status) {
+    case "HELD_IN_ESCROW":
+      return "Held in escrow";
+    case "REFUNDED_TO_RENTER":
+      return "Refunded to renter wallet";
+    case "RELEASED_TO_OWNER":
+      return "Released to owner";
+    case "UNDER_REVIEW":
+      return "Under review";
+    default:
+      return "Not required";
   }
 }
 
@@ -591,9 +621,9 @@ export function RenterBookingDetailPage() {
                 booking.pricing.currency,
               )}
               note={`${formatCurrency(
-                booking.pricing.pricePerHour,
+                booking.pricing.rentalSubtotal,
                 booking.pricing.currency,
-              )} per hour`}
+              )} rental subtotal`}
               icon={CreditCard}
             />
           </div>
@@ -693,10 +723,18 @@ export function RenterBookingDetailPage() {
                       </div>
                       <div>
                         <p className="text-xs text-muted-foreground">
-                          Driver requested
+                          Booking mode
                         </p>
                         <p className="mt-1 text-sm font-medium">
-                          {booking.withDriver ? "Yes" : "No"}
+                          {booking.withDriver ? "With driver" : "Self-drive"}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Deposit status
+                        </p>
+                        <p className="mt-1 text-sm font-medium">
+                          {depositStatusLabel(booking.depositStatus)}
                         </p>
                       </div>
                     </div>
@@ -748,6 +786,56 @@ export function RenterBookingDetailPage() {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
+                    <CalendarDays className="h-5 w-5" />
+                    Pickup and Return Verification
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="grid gap-4 md:grid-cols-2">
+                  <div className="rounded-2xl border bg-muted/10 p-5">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      Pickup
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <DetailRow
+                        label="Verified at"
+                        value={formatDateTime(booking.pickupVerifiedAt)}
+                      />
+                      <DetailRow
+                        label="Original documents checked"
+                        value={booking.originalDocsChecked ? "Yes" : "No"}
+                      />
+                      <DetailRow
+                        label="Document hold note"
+                        value={booking.manualDocumentHoldNote || "-"}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border bg-muted/10 p-5">
+                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
+                      Return
+                    </p>
+                    <div className="mt-4 space-y-3">
+                      <DetailRow
+                        label="Confirmed at"
+                        value={formatDateTime(booking.returnConfirmedAt)}
+                      />
+                      <DetailRow
+                        label="Return condition"
+                        value={booking.returnCondition || "-"}
+                      />
+                      <DetailRow
+                        label="Deposit status"
+                        value={depositStatusLabel(booking.depositStatus)}
+                      />
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
                     <CreditCard className="h-5 w-5" />
                     Payment Breakdown
                   </CardTitle>
@@ -756,11 +844,11 @@ export function RenterBookingDetailPage() {
                   <div className="grid gap-4 md:grid-cols-3">
                     <div className="rounded-xl border bg-muted/20 p-4">
                       <p className="text-sm text-muted-foreground">
-                        Hourly rate
+                        Rental subtotal
                       </p>
                       <p className="mt-2 text-lg font-semibold">
                         {formatCurrency(
-                          booking.pricing.pricePerHour,
+                          booking.pricing.rentalSubtotal,
                           booking.pricing.currency,
                         )}
                       </p>
@@ -786,11 +874,29 @@ export function RenterBookingDetailPage() {
 
                   <div className="rounded-2xl border p-5">
                     <DetailRow
+                      label="Rental subtotal"
+                      value={formatCurrency(
+                        booking.pricing.rentalSubtotal,
+                        booking.pricing.currency,
+                      )}
+                    />
+                    <DetailRow
                       label="System commission"
                       value={formatCurrency(
                         booking.pricing.systemCommission,
                         booking.pricing.currency,
                       )}
+                    />
+                    <DetailRow
+                      label="Security deposit"
+                      value={formatCurrency(
+                        booking.securityDepositAmount || 0,
+                        booking.pricing.currency,
+                      )}
+                    />
+                    <DetailRow
+                      label="Deposit status"
+                      value={depositStatusLabel(booking.depositStatus)}
                     />
                     <DetailRow
                       label="Payment method"

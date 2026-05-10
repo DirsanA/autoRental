@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import {
   fetchAdminTransactionDetail,
   refundEscrowToSystemWallet,
+  settleHeldSecurityDeposit,
   type AdminTransactionDetail,
 } from "@/lib/admin-transactions-api";
 
@@ -96,7 +97,7 @@ export function TransactionDetailPage({
   const [isLoading, setIsLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [refundReason, setRefundReason] = useState("");
-  const [isRefunding, setIsRefunding] = useState(false);
+  const [isProcessingAction, setIsProcessingAction] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -127,7 +128,7 @@ export function TransactionDetailPage({
   async function handleRefundToSystemWallet() {
     if (!detail?.actions.canRefundToSystemWallet) return;
 
-    setIsRefunding(true);
+    setIsProcessingAction(true);
     try {
       const result = await refundEscrowToSystemWallet({
         transactionId,
@@ -147,7 +148,48 @@ export function TransactionDetailPage({
           err instanceof Error ? err.message : "Unable to refund this escrow transaction.",
         variant: "destructive",
       });
-      setIsRefunding(false);
+      setIsProcessingAction(false);
+    }
+  }
+
+  async function handleDepositSettlement(
+    action: "REFUND_TO_RENTER" | "RELEASE_TO_OWNER",
+  ) {
+    if (
+      (action === "REFUND_TO_RENTER" && !detail?.actions.canRefundDepositToRenter) ||
+      (action === "RELEASE_TO_OWNER" && !detail?.actions.canReleaseDepositToOwner)
+    ) {
+      return;
+    }
+
+    setIsProcessingAction(true);
+    try {
+      const result = await settleHeldSecurityDeposit({
+        transactionId,
+        action,
+        reason: refundReason,
+      });
+
+      toast({
+        title:
+          action === "REFUND_TO_RENTER"
+            ? "Deposit refunded"
+            : "Deposit released",
+        description:
+          action === "REFUND_TO_RENTER"
+            ? `${fmtMoney(result.amount, result.currency)} was returned to the renter wallet.`
+            : `${fmtMoney(result.amount, result.currency)} was released to the owner wallet.`,
+      });
+
+      router.push("/sysadmin/wallet");
+    } catch (err) {
+      toast({
+        title: "Settlement failed",
+        description:
+          err instanceof Error ? err.message : "Unable to settle this deposit dispute.",
+        variant: "destructive",
+      });
+      setIsProcessingAction(false);
     }
   }
 
@@ -348,44 +390,93 @@ export function TransactionDetailPage({
                 <div className="max-w-2xl">
                   <div className="flex items-center gap-2 text-base font-semibold">
                     <Wallet className="h-4 w-4" />
-                    Refund to System Wallet
+                    Platform recovery actions
                   </div>
                   <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                    Use this only when the escrow should be recovered from a
-                    peer host or company and credited to the system admin wallet.
+                    Use the matching recovery action below based on whether this transaction is a host/company escrow recovery or a held self-drive deposit dispute.
                   </p>
                 </div>
-                {detail.actions.canRefundToSystemWallet ? (
-                  <Badge className="w-fit bg-emerald-600 text-white hover:bg-emerald-600">
-                    Eligible
+                <div className="flex flex-wrap gap-2">
+                  <Badge
+                    className={cn(
+                      "w-fit",
+                      detail.actions.canRefundToSystemWallet
+                        ? "bg-emerald-600 text-white hover:bg-emerald-600"
+                        : "border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300",
+                    )}
+                    variant={
+                      detail.actions.canRefundToSystemWallet ? "default" : "outline"
+                    }
+                  >
+                    System wallet
                   </Badge>
-                ) : (
-                  <Badge variant="outline" className="w-fit border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300">
-                    Not Eligible
+                  <Badge
+                    className={cn(
+                      "w-fit",
+                      detail.actions.canRefundDepositToRenter
+                        ? "bg-sky-600 text-white hover:bg-sky-600"
+                        : "border-amber-300 text-amber-700 dark:border-amber-800 dark:text-amber-300",
+                    )}
+                    variant={
+                      detail.actions.canRefundDepositToRenter ? "default" : "outline"
+                    }
+                  >
+                    Deposit refund
                   </Badge>
-                )}
+                </div>
               </div>
 
-              {detail.actions.canRefundToSystemWallet ? (
-                <div className="mt-4 space-y-3">
-                  <Textarea
-                    className="min-h-28 resize-none rounded-2xl bg-background"
-                    value={refundReason}
-                    onChange={(e) => setRefundReason(e.target.value)}
-                    placeholder="Optional reason for the recovery action"
-                    maxLength={300}
-                  />
-                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-3 text-xs leading-5 text-emerald-800 dark:border-emerald-900/40 dark:bg-emerald-950/20 dark:text-emerald-300">
-                    This will debit the owner&apos;s escrow balance and then
-                    redirect you to the system admin wallet after the refund succeeds.
+              <div className="mt-4 space-y-4">
+                <Textarea
+                  className="min-h-28 resize-none rounded-2xl bg-background"
+                  value={refundReason}
+                  onChange={(e) => setRefundReason(e.target.value)}
+                  placeholder="Optional internal note for this recovery or dispute decision"
+                  maxLength={300}
+                />
+
+                <div className="grid gap-4 xl:grid-cols-2">
+                  <div className="rounded-2xl border border-emerald-200 bg-emerald-50/70 p-4 dark:border-emerald-900/40 dark:bg-emerald-950/20">
+                    <p className="font-medium text-emerald-900 dark:text-emerald-200">
+                      Refund escrow to system wallet
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-emerald-800 dark:text-emerald-300">
+                      Use this when a host or company escrow balance should be recovered into the platform wallet.
+                    </p>
+                    {detail.actions.canRefundToSystemWallet ? (
+                      <p className="mt-3 text-xs text-emerald-800 dark:text-emerald-300">
+                        After success, you will be redirected to the system admin wallet.
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">
+                        {detail.actions.ineligibleReason ||
+                          "This transaction is not eligible for a system wallet refund."}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="rounded-2xl border border-sky-200 bg-sky-50/70 p-4 dark:border-sky-900/40 dark:bg-sky-950/20">
+                    <p className="font-medium text-sky-900 dark:text-sky-200">
+                      Self-drive security deposit
+                    </p>
+                    <p className="mt-2 text-sm leading-6 text-sky-800 dark:text-sky-300">
+                      Refund the held deposit to the renter wallet, or release it to the owner only when the booking is under dispute review.
+                    </p>
+                    {detail.actions.canRefundDepositToRenter ||
+                    detail.actions.canReleaseDepositToOwner ? (
+                      <p className="mt-3 text-xs text-sky-800 dark:text-sky-300">
+                        After success, you will be redirected to the system admin wallet.
+                      </p>
+                    ) : (
+                      <p className="mt-3 text-xs text-amber-800 dark:text-amber-300">
+                        {detail.actions.refundDepositIneligibleReason ||
+                          detail.actions.releaseDepositIneligibleReason ||
+                          "This transaction is not eligible for deposit settlement."}
+                      </p>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 p-3 text-sm leading-6 text-amber-800 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
-                  {detail.actions.ineligibleReason ||
-                    "This transaction is not eligible for a system wallet refund."}
-                </div>
-              )}
+              </div>
             </DetailCard>
 
             <div className="flex flex-col-reverse gap-3 rounded-3xl border bg-background p-4 shadow-sm sm:flex-row sm:justify-end">
@@ -393,16 +484,37 @@ export function TransactionDetailPage({
                 variant="outline"
                 className="w-full sm:w-auto"
                 onClick={() => router.push("/sysadmin/revenue/transactions")}
-                disabled={isRefunding}
+                disabled={isProcessingAction}
               >
                 Back to Transactions
               </Button>
               <Button
                 className="w-full sm:w-auto"
                 onClick={handleRefundToSystemWallet}
-                disabled={isRefunding || !detail.actions.canRefundToSystemWallet}
+                disabled={
+                  isProcessingAction || !detail.actions.canRefundToSystemWallet
+                }
               >
-                {isRefunding ? "Refunding..." : "Refund to System Wallet"}
+                {isProcessingAction ? "Processing..." : "Refund to System Wallet"}
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => void handleDepositSettlement("REFUND_TO_RENTER")}
+                disabled={
+                  isProcessingAction || !detail.actions.canRefundDepositToRenter
+                }
+              >
+                Refund Deposit to Renter
+              </Button>
+              <Button
+                className="w-full sm:w-auto"
+                onClick={() => void handleDepositSettlement("RELEASE_TO_OWNER")}
+                disabled={
+                  isProcessingAction || !detail.actions.canReleaseDepositToOwner
+                }
+              >
+                Release Deposit to Owner
               </Button>
             </div>
           </div>

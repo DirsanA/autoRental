@@ -20,6 +20,27 @@ type OwnerContext = {
 };
 
 export class PayoutService {
+  private resolveReturnPath(
+    owner: OwnerContext,
+    accountType: AccountType | undefined,
+    metadata?: Record<string, unknown>,
+  ) {
+    const requestedPath = metadata?.redirectPath;
+    if (typeof requestedPath === "string" && requestedPath.startsWith("/")) {
+      return requestedPath;
+    }
+
+    if (owner.ownerType === "Company") {
+      return "/company/wallet";
+    }
+
+    if (accountType === AccountType.ADMIN) {
+      return "/sysadmin/wallet";
+    }
+
+    return "/peerhost/wallet";
+  }
+
   private async resolveOwnerByAuthUser(
     authUserId: string,
     input?: { ownerType?: "User" | "Company" },
@@ -123,13 +144,8 @@ export class PayoutService {
     });
 
     try {
-      const routePrefix =
-        owner.ownerType === "Company"
-          ? "company"
-          : user?.accountType === AccountType.ADMIN
-            ? "sysadmin"
-            : "peerhost";
-      const returnUrl = `http://localhost:3000/${routePrefix}/wallet`;
+      const returnPath = this.resolveReturnPath(owner, user?.accountType, input.metadata);
+      const returnUrl = `http://localhost:3000${returnPath}`;
 
       const chapaResult = await chapaService.initializeTransaction({
         amount: input.amount.toFixed(2),

@@ -38,6 +38,18 @@ export const bookingController = {
     });
   }),
 
+  listCompanyBookings: asyncHandler(async (req: Request, res: Response) => {
+    const data = await bookingService.listCompanyBookings(
+      requireRequestUser(req, "Please sign in to view your company booking history"),
+      req.query as RenterBookingListQueryInput,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
   initializeChapaCheckout: asyncHandler(async (req: Request, res: Response) => {
     const forwardedProtoRaw = req.headers["x-forwarded-proto"];
     const forwardedProto =
@@ -174,6 +186,42 @@ export const bookingController = {
     const data = await bookingService.getBookingReviews(
       requireRequestUser(req, "Please sign in to view reviews"),
       bookingId as string,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
+  activateOwnedBooking: asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const caller = requireRequestUser(req, "Please sign in to activate this booking");
+    const ownerType = caller.accountType === "COMPANY" ? "Company" : "User";
+
+    const data = await bookingService.activateOwnedBooking(
+      caller,
+      bookingId as string,
+      ownerType,
+      req.body,
+    );
+
+    res.json({
+      success: true,
+      data,
+    });
+  }),
+
+  confirmOwnedBookingReturn: asyncHandler(async (req: Request, res: Response) => {
+    const { bookingId } = req.params;
+    const caller = requireRequestUser(req, "Please sign in to confirm booking return");
+    const ownerType = caller.accountType === "COMPANY" ? "Company" : "User";
+
+    const data = await bookingService.confirmOwnedBookingReturn(
+      caller,
+      bookingId as string,
+      ownerType,
+      req.body,
     );
 
     res.json({

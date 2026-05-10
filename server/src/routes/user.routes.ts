@@ -11,6 +11,7 @@ import { AccountType } from "../models/User.js";
 import {
   adminUserListQuerySchema,
   adminUserParamsSchema,
+  adminUserSelfDriveAccessSchema,
   adminUserStatusSchema,
   adminUserVerificationLevelSchema,
 } from "../validators/user.admin.validator.js";
@@ -68,6 +69,17 @@ export function createUserRoutes(auth: Auth): Router {
       body: adminUserVerificationLevelSchema,
     }),
     userController.updateVerificationLevel,
+  );
+
+  router.patch(
+    "/:id/self-drive-access",
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "User"),
+    validate({
+      params: adminUserParamsSchema,
+      body: adminUserSelfDriveAccessSchema,
+    }),
+    userController.updateSelfDriveAccess,
   );
 
   router.delete(

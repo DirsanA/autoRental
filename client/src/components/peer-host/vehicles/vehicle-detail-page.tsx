@@ -46,7 +46,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { EditVehicleDialog } from "./edit-vehicle-dialog";
 import { createEditableDetails } from "./edit-vehicle-data";
 import type { EditableVehicleDetails } from "./edit-vehicle-types";
-import { updatePeerHostVehicleAvailability } from "./api";
+import {
+  updatePeerHostVehicleAvailability,
+  updatePeerHostVehicleById,
+} from "./api";
 
 function formatStatus(status: VehicleStatus) {
   switch (status) {
@@ -97,6 +100,7 @@ export function PeerHostVehicleDetailPage({
   const [notice, setNotice] = useState<string | null>(null);
   const [isUpdatingAvailability, setIsUpdatingAvailability] = useState(false);
   const [isSavingDetails, setIsSavingDetails] = useState(false);
+  const [isSavingSelfDrive, setIsSavingSelfDrive] = useState(false);
   const [isRemovingVehicle, setIsRemovingVehicle] = useState(false);
   const [currentStatus, setCurrentStatus] = useState<VehicleStatus>(vehicle.status);
   const [acceptingBookings, setAcceptingBookings] = useState(
@@ -172,9 +176,48 @@ export function PeerHostVehicleDetailPage({
     setIsSavingDetails(true);
     try {
       if (!onSaveDetails) {
-        await new Promise((resolve) => setTimeout(resolve, 400));
-        setEditableDetails(updatedDetails);
-        setEditableRate(updatedDetails.dailyRate);
+        const updatedVehicle = await updatePeerHostVehicleById(vehicle.id, {
+          make: updatedDetails.make,
+          model: updatedDetails.model,
+          year: updatedDetails.year,
+          mileage:
+            Number.parseInt(
+              updatedDetails.specifications.mileage.replace(/[^\d]/g, ""),
+              10,
+            ) || undefined,
+          fuel:
+            updatedDetails.specifications.fuelType.toLowerCase() === "diesel" ||
+            updatedDetails.specifications.fuelType.toLowerCase() === "hybrid" ||
+            updatedDetails.specifications.fuelType.toLowerCase() === "electric"
+              ? (updatedDetails.specifications.fuelType.toLowerCase() as
+                  | "diesel"
+                  | "hybrid"
+                  | "electric")
+              : "petrol",
+          transmission:
+            updatedDetails.specifications.transmission.toLowerCase() ===
+              "manual" ||
+            updatedDetails.specifications.transmission.toLowerCase() === "cvt"
+              ? (updatedDetails.specifications.transmission.toLowerCase() as
+                  | "manual"
+                  | "cvt")
+              : "automatic",
+          seats: updatedDetails.specifications.seats,
+          features: updatedDetails.features,
+          condition: updatedDetails.description,
+          price: updatedDetails.dailyRate,
+          allowSelfDrive: updatedDetails.allowSelfDrive,
+          securityDepositAmount: updatedDetails.allowSelfDrive
+            ? updatedDetails.securityDepositAmount
+            : 0,
+          delivery: updatedDetails.location,
+        });
+        setEditableDetails(createEditableDetails(updatedVehicle));
+        setEditableRate(updatedVehicle.dailyRate);
+        setCurrentStatus(updatedVehicle.status);
+        setAcceptingBookings(
+          updatedVehicle.acceptingBookings ?? updatedVehicle.status === "available",
+        );
         pushNotice("Vehicle details updated successfully.");
         return;
       }
@@ -272,6 +315,24 @@ export function PeerHostVehicleDetailPage({
       dailyRate: editableRate,
     };
     await handleSaveDetails(payload);
+  };
+
+  const handleSaveSelfDriveSettings = async () => {
+    if (
+      editableDetails.allowSelfDrive &&
+      (!Number.isFinite(editableDetails.securityDepositAmount) ||
+        editableDetails.securityDepositAmount <= 0)
+    ) {
+      pushNotice("Set a security deposit greater than 0 to enable self-drive.");
+      return;
+    }
+
+    setIsSavingSelfDrive(true);
+    try {
+      await handleSaveDetails(editableDetails);
+    } finally {
+      setIsSavingSelfDrive(false);
+    }
   };
 
   const availabilityTone = acceptingBookings
@@ -622,6 +683,77 @@ export function PeerHostVehicleDetailPage({
                     className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600"
                   />
                 </div>
+
+                <div className="space-y-3 bg-slate-50 dark:bg-slate-800/70 p-3 border dark:border-slate-700 rounded-xl">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <p className="font-medium dark:text-slate-200 text-sm">
+                          Allow self-drive
+                        </p>
+                        <Badge
+                          className={cn(
+                            "border-0",
+                            editableDetails.allowSelfDrive
+                              ? "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300"
+                              : "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300",
+                          )}
+                        >
+                          {editableDetails.allowSelfDrive ? "On" : "Off"}
+                        </Badge>
+                      </div>
+                      <p className="mt-1 text-muted-foreground dark:text-slate-400 text-xs leading-5">
+                        When on, renters can choose self-drive and must pay the refundable security deposit at checkout.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={editableDetails.allowSelfDrive}
+                      onCheckedChange={(checked) =>
+                        setEditableDetails((current) => ({
+                          ...current,
+                          allowSelfDrive: checked,
+                          securityDepositAmount: checked
+                            ? current.securityDepositAmount || 500
+                            : 0,
+                        }))
+                      }
+                      aria-label="Toggle self-drive availability"
+                      className="data-[state=checked]:bg-emerald-500 data-[state=unchecked]:bg-slate-300 dark:data-[state=unchecked]:bg-slate-600"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-muted-foreground dark:text-slate-400 text-xs">
+                      Minimum security deposit (ETB)
+                    </label>
+                    <Input
+                      type="number"
+                      min={0}
+                      disabled={!editableDetails.allowSelfDrive}
+                      value={editableDetails.securityDepositAmount}
+                      onChange={(e) =>
+                        setEditableDetails((current) => ({
+                          ...current,
+                          securityDepositAmount: Number(e.target.value) || 0,
+                        }))
+                      }
+                      className="dark:bg-slate-800 dark:border-slate-700 h-9 dark:text-slate-200 disabled:opacity-60"
+                    />
+                    <p className="text-muted-foreground dark:text-slate-400 text-xs leading-5">
+                      Rental earnings still settle to the owner wallet. The deposit is held by the platform and refunded to the renter wallet after a clean return.
+                    </p>
+                  </div>
+
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={handleSaveSelfDriveSettings}
+                    disabled={isSavingSelfDrive || isSavingDetails}
+                  >
+                    {isSavingSelfDrive ? "Saving self-drive settings..." : "Save Self-Drive Settings"}
+                  </Button>
+                </div>
+
                 <Button
                   variant="outline"
                   className="justify-start dark:hover:bg-slate-800 dark:border-slate-700 w-full text-destructive dark:text-red-400"

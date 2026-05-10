@@ -7,6 +7,7 @@ import { validate } from "../middlewares/validate.js";
 import { AccountType } from "../models/User.js";
 import { transactionController } from "../controllers/transaction.controller.js";
 import {
+  transactionDepositSettlementSchema,
   transactionIdParamsSchema,
   transactionListQuerySchema,
   transactionSystemWalletRefundSchema,
@@ -23,6 +24,15 @@ export function createTransactionRoutes(auth: Auth): Router {
     authorize("read", "Transaction"),
     validate({ query: transactionListQuerySchema }),
     transactionController.listAdminTransactions,
+  );
+
+  router.get(
+    "/admin/deposit-refunds",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("read", "Transaction"),
+    validate({ query: transactionListQuerySchema }),
+    transactionController.listAdminDepositRefunds,
   );
 
   router.get(
@@ -44,6 +54,18 @@ export function createTransactionRoutes(auth: Auth): Router {
       body: transactionSystemWalletRefundSchema,
     }),
     transactionController.refundEscrowToSystemWallet,
+  );
+
+  router.patch(
+    "/admin/:transactionId/settle-deposit",
+    authenticate,
+    requireAccountType(AccountType.ADMIN),
+    authorize("update", "Transaction"),
+    validate({
+      params: transactionIdParamsSchema,
+      body: transactionDepositSettlementSchema,
+    }),
+    transactionController.settleHeldSecurityDeposit,
   );
 
   return router;

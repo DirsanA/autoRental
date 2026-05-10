@@ -29,6 +29,59 @@ export type WalletSnapshot = {
 };
 
 export class WalletService {
+  private buildRenterWalletOwner(booking: Pick<BookingDocument, "renterId" | "priceSnapshot">): WalletOwner {
+    return {
+      ownerId: booking.renterId as unknown as mongoose.Types.ObjectId,
+      ownerType: "User",
+      currency: booking.priceSnapshot.currency || "ETB",
+    };
+  }
+
+  private async releaseHeldDepositFromRenterPendingWallet(input: {
+    booking: Pick<BookingDocument, "_id" | "bookingId" | "renterId" | "priceSnapshot" | "securityDepositAmount">;
+    transactionId: mongoose.Types.ObjectId;
+    idempotencyKey: string;
+    metadata?: Record<string, unknown>;
+    session: ClientSession;
+  }) {
+    const depositAmount = roundMoney(input.booking.securityDepositAmount || 0);
+    if (depositAmount <= 0) {
+      return;
+    }
+
+    const renterOwner = this.buildRenterWalletOwner(input.booking);
+    const wallet = await this.getOrCreateWallet(renterOwner, input.session);
+    if (!wallet) {
+      throw ApiError.internal("Renter wallet resolution failed");
+    }
+
+    const beforePending = wallet.pendingBalance;
+    const pendingDebit = Math.min(roundMoney(wallet.pendingBalance), depositAmount);
+
+    if (pendingDebit <= 0) {
+      return;
+    }
+
+    wallet.pendingBalance = roundMoney(wallet.pendingBalance - pendingDebit);
+    await wallet.save({ session: input.session });
+
+    await new WalletEntry({
+      walletId: wallet._id,
+      ownerId: renterOwner.ownerId,
+      ownerType: renterOwner.ownerType,
+      bookingId: input.booking._id,
+      transactionId: input.transactionId,
+      entryType: "DEPOSIT_RELEASE",
+      currency: renterOwner.currency,
+      amount: pendingDebit,
+      balanceField: "pendingBalance",
+      before: beforePending,
+      after: wallet.pendingBalance,
+      idempotencyKey: input.idempotencyKey,
+      metadata: input.metadata,
+    }).save({ session: input.session });
+  }
+
   /**
    * Backfills missing escrow holds for any PAID bookings
    * belonging to the given owner (User/Company).
@@ -70,6 +123,38 @@ export class WalletService {
         .lean();
 
       await this.holdEscrowForPaidBooking(booking);
+
+      if (!before) {
+        updated += 1;
+      }
+    }
+
+    return { scanned: bookings.length, updated };
+  }
+
+  async reconcileHeldSecurityDepositsForRenter(input: {
+    renterId: mongoose.Types.ObjectId;
+    limit?: number;
+  }) {
+    const bookings = await Booking.find({
+      renterId: input.renterId,
+      "payment.status": "PAID",
+      securityDepositAmount: { $gt: 0 },
+      depositStatus: { $in: ["HELD_IN_ESCROW", "UNDER_REVIEW"] },
+      status: { $in: ["CONFIRMED", "ACTIVE", "COMPLETED", "DISPUTED"] },
+    })
+      .sort({ createdAt: -1 })
+      .limit(input.limit ?? 50);
+
+    let updated = 0;
+    for (const booking of bookings) {
+      const before = await WalletEntry.findOne({
+        idempotencyKey: `booking:${booking.id}:deposit-hold`,
+      })
+        .select("_id")
+        .lean();
+
+      await this.holdSecurityDepositForPaidBooking(booking);
 
       if (!before) {
         updated += 1;
@@ -150,9 +235,7 @@ export class WalletService {
         if (!wallet) {
           throw ApiError.internal("Wallet resolution failed");
         }
-        const hostEarning = roundMoney(
-          booking.priceSnapshot.totalAmount - booking.priceSnapshot.systemCommission,
-        );
+        const hostEarning = roundMoney(booking.priceSnapshot.rentalSubtotal || 0);
         if (hostEarning < 0) {
           throw ApiError.unprocessable("Host earning cannot be negative");
         }
@@ -236,9 +319,7 @@ export class WalletService {
         if (!wallet) {
           throw ApiError.internal("Wallet resolution failed");
         }
-        const hostEarning = roundMoney(
-          booking.priceSnapshot.totalAmount - booking.priceSnapshot.systemCommission,
-        );
+        const hostEarning = roundMoney(booking.priceSnapshot.rentalSubtotal || 0);
 
         const beforePending = wallet.pendingBalance;
         const beforeAvailable = wallet.availableBalance;
@@ -331,9 +412,7 @@ export class WalletService {
         if (!wallet) {
           throw ApiError.internal("Wallet resolution failed");
         }
-        const hostEarning = roundMoney(
-          booking.priceSnapshot.totalAmount - booking.priceSnapshot.systemCommission,
-        );
+        const hostEarning = roundMoney(booking.priceSnapshot.rentalSubtotal || 0);
         const isPending = source === "PENDING";
         const field = isPending ? "pendingBalance" : "availableBalance";
         const before = wallet[field];
@@ -375,6 +454,320 @@ export class WalletService {
           idempotencyKey,
         }).save({ session });
       });
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async holdSecurityDepositForPaidBooking(booking: BookingDocument) {
+    if ((booking.securityDepositAmount || 0) <= 0) {
+      return;
+    }
+
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const idempotencyKey = `booking:${booking.id}:deposit-hold`;
+        if (await this.hasWalletEntry(idempotencyKey, session)) {
+          return;
+        }
+
+        const renterOwner = this.buildRenterWalletOwner(booking);
+        const wallet = await this.getOrCreateWallet(renterOwner, session);
+        if (!wallet) {
+          throw ApiError.internal("Renter wallet resolution failed");
+        }
+
+        const depositAmount = roundMoney(booking.securityDepositAmount || 0);
+        const beforePending = wallet.pendingBalance;
+        wallet.pendingBalance = roundMoney(wallet.pendingBalance + depositAmount);
+        await wallet.save({ session });
+
+        let depositTx = await Transaction.findOne({
+          bookingId: booking._id,
+          type: "COLLATERAL_DEPOSIT",
+          paymentGatewayId: booking.payment.tx_ref,
+        }).session(session);
+
+        if (!depositTx?._id) {
+          depositTx = await new Transaction({
+            bookingId: booking._id,
+            payerId: booking.renterId,
+            receiverModel: "System",
+            amount: depositAmount,
+            currency: booking.priceSnapshot.currency || "ETB",
+            type: "COLLATERAL_DEPOSIT",
+            status: "HELD_IN_ESCROW",
+            paymentGatewayId: booking.payment.tx_ref,
+            metadata: {
+              bookingId: booking.bookingId,
+              reason: "Self-drive security deposit held in escrow",
+            },
+          }).save({ session });
+        }
+
+        if (!depositTx?._id) {
+          throw ApiError.internal("Failed to create deposit hold transaction");
+        }
+
+        await new WalletEntry({
+          walletId: wallet._id,
+          ownerId: renterOwner.ownerId,
+          ownerType: renterOwner.ownerType,
+          bookingId: booking._id,
+          transactionId: depositTx._id,
+          entryType: "DEPOSIT_HOLD",
+          currency: renterOwner.currency,
+          amount: depositAmount,
+          balanceField: "pendingBalance",
+          before: beforePending,
+          after: wallet.pendingBalance,
+          idempotencyKey,
+          metadata: {
+            bookingId: booking.bookingId,
+            reason: "Security deposit held by the platform",
+          },
+        }).save({ session });
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async refundSecurityDepositToRenterWallet(
+    bookingId: string,
+    source:
+      | "CLEAN_RETURN"
+      | "ADMIN_COMPLETION"
+      | "BOOKING_CANCELLED"
+      | "ADMIN_DISPUTE_REFUND"
+      | "ADMIN_MANUAL_REFUND",
+  ) {
+    const session = await mongoose.startSession();
+    try {
+      await session.withTransaction(async () => {
+        const booking = await Booking.findById(bookingId).session(session);
+        if (!booking) {
+          throw ApiError.notFound("Booking not found");
+        }
+
+        const depositAmount = roundMoney(booking.securityDepositAmount || 0);
+        if (depositAmount <= 0) {
+          return;
+        }
+
+        const idempotencyKey = `booking:${booking.id}:deposit-refund`;
+        const existing = await WalletEntry.findOne({ idempotencyKey })
+          .select("_id")
+          .session(session)
+          .lean();
+
+        if (existing?._id) {
+          return;
+        }
+
+        const renterOwner = {
+          ownerId: booking.renterId as unknown as mongoose.Types.ObjectId,
+          ownerType: "User" as const,
+          currency: booking.priceSnapshot.currency || "ETB",
+        };
+        const wallet = await this.getOrCreateWallet(renterOwner, session);
+        if (!wallet) {
+          throw ApiError.internal("Renter wallet resolution failed");
+        }
+
+        const refundTx = await new Transaction({
+          bookingId: booking._id,
+          payerId: booking.renterId,
+          receiverId: booking.renterId,
+          receiverModel: "User",
+          amount: depositAmount,
+          currency: renterOwner.currency,
+          type: "REFUND",
+          status: "COMPLETED",
+          paymentGatewayId: booking.payment.tx_ref,
+          metadata: {
+            bookingId: booking.bookingId,
+            reason: "Security deposit refunded to renter wallet",
+            source,
+          },
+        }).save({ session });
+
+        if (!refundTx?._id) {
+          throw ApiError.internal("Failed to create deposit refund transaction");
+        }
+
+        await this.releaseHeldDepositFromRenterPendingWallet({
+          booking,
+          transactionId: refundTx._id,
+          idempotencyKey: `${idempotencyKey}:pending-debit`,
+          metadata: {
+            source,
+            movement: "DEPOSIT_PENDING_RELEASE",
+          },
+          session,
+        });
+
+        const beforeAvailable = wallet.availableBalance;
+        wallet.availableBalance = roundMoney(wallet.availableBalance + depositAmount);
+        await wallet.save({ session });
+
+        await new WalletEntry({
+          walletId: wallet._id,
+          ownerId: renterOwner.ownerId,
+          ownerType: renterOwner.ownerType,
+          bookingId: booking._id,
+          transactionId: refundTx._id,
+          entryType: "DEPOSIT_REFUND",
+          currency: renterOwner.currency,
+          amount: depositAmount,
+          balanceField: "availableBalance",
+          before: beforeAvailable,
+          after: wallet.availableBalance,
+          idempotencyKey,
+          metadata: { source },
+        }).save({ session });
+
+        await Transaction.updateMany(
+          {
+            bookingId: booking._id,
+            type: "COLLATERAL_DEPOSIT",
+            status: "HELD_IN_ESCROW",
+          },
+          {
+            $set: {
+              status: "REFUNDED",
+            },
+          },
+          { session },
+        );
+      });
+    } finally {
+      await session.endSession();
+    }
+  }
+
+  async releaseSecurityDepositToOwner(input: {
+    bookingId: string;
+    reason?: string;
+    initiatedBy?: string;
+  }) {
+    const session = await mongoose.startSession();
+    try {
+      let response:
+        | {
+            bookingId: string;
+            amount: number;
+            currency: string;
+            ownerType: WalletOwnerType;
+          }
+        | null = null;
+
+      await session.withTransaction(async () => {
+        const booking = await Booking.findById(input.bookingId).session(session);
+        if (!booking) {
+          throw ApiError.notFound("Booking not found");
+        }
+
+        const depositAmount = roundMoney(booking.securityDepositAmount || 0);
+        if (depositAmount <= 0) {
+          throw ApiError.unprocessable("This booking does not have a held security deposit");
+        }
+
+        const idempotencyKey = `booking:${booking.id}:deposit-release-owner`;
+        const existing = await WalletEntry.findOne({ idempotencyKey })
+          .select("_id")
+          .session(session)
+          .lean();
+        if (existing?._id) {
+          throw ApiError.unprocessable("Security deposit was already released to the owner");
+        }
+
+        const owner = await this.resolveOwnerForBooking(booking, session);
+        const wallet = await this.getOrCreateWallet(owner, session);
+        if (!wallet) {
+          throw ApiError.internal("Wallet resolution failed");
+        }
+
+        const releaseTx = await new Transaction({
+          bookingId: booking._id,
+          payerId: booking.renterId,
+          receiverId: owner.ownerId,
+          receiverModel: owner.ownerType,
+          amount: depositAmount,
+          currency: owner.currency,
+          type: "DEPOSIT_RELEASE_TO_OWNER",
+          status: "COMPLETED",
+          paymentGatewayId: booking.payment.tx_ref,
+          metadata: {
+            bookingId: booking.bookingId,
+            reason: input.reason || "Security deposit released to owner by admin",
+            initiatedBy: input.initiatedBy || null,
+          },
+        }).save({ session });
+
+        if (!releaseTx?._id) {
+          throw ApiError.internal("Failed to create owner deposit release transaction");
+        }
+
+        await this.releaseHeldDepositFromRenterPendingWallet({
+          booking,
+          transactionId: releaseTx._id,
+          idempotencyKey: `${idempotencyKey}:pending-debit`,
+          metadata: {
+            movement: "DEPOSIT_OWNER_RELEASE",
+            reason: input.reason || null,
+          },
+          session,
+        });
+
+        const beforeAvailable = wallet.availableBalance;
+        wallet.availableBalance = roundMoney(wallet.availableBalance + depositAmount);
+        await wallet.save({ session });
+
+        await new WalletEntry({
+          walletId: wallet._id,
+          ownerId: owner.ownerId,
+          ownerType: owner.ownerType,
+          bookingId: booking._id,
+          transactionId: releaseTx._id,
+          entryType: "DEPOSIT_RELEASE",
+          currency: owner.currency,
+          amount: depositAmount,
+          balanceField: "availableBalance",
+          before: beforeAvailable,
+          after: wallet.availableBalance,
+          idempotencyKey,
+          metadata: { reason: input.reason || null },
+        }).save({ session });
+
+        await Transaction.updateMany(
+          {
+            bookingId: booking._id,
+            type: "COLLATERAL_DEPOSIT",
+            status: "HELD_IN_ESCROW",
+          },
+          {
+            $set: {
+              status: "COMPLETED",
+            },
+          },
+          { session },
+        );
+
+        response = {
+          bookingId: booking.bookingId,
+          amount: depositAmount,
+          currency: owner.currency,
+          ownerType: owner.ownerType,
+        };
+      });
+
+      if (!response) {
+        throw ApiError.internal("Deposit release completed without a response payload");
+      }
+
+      return response;
     } finally {
       await session.endSession();
     }
@@ -486,12 +879,26 @@ export class WalletService {
   }
 
   async getSystemWalletSnapshot(): Promise<WalletSnapshot> {
-    const [commissionAgg, adminUsers] = await Promise.all([
+    const [commissionAgg, heldDepositAgg, adminUsers] = await Promise.all([
       Transaction.aggregate<{ _id: null; total: number }>([
         {
           $match: {
             type: { $in: ["COMMISSION", "SYSTEM_WALLET_REFUND"] },
             status: "COMPLETED",
+          },
+        },
+        {
+          $group: {
+            _id: null,
+            total: { $sum: "$amount" },
+          },
+        },
+      ]),
+      Transaction.aggregate<{ _id: null; total: number }>([
+        {
+          $match: {
+            type: "COLLATERAL_DEPOSIT",
+            status: "HELD_IN_ESCROW",
           },
         },
         {
@@ -528,13 +935,14 @@ export class WalletService {
         : [];
 
     const totalCommission = roundMoney(commissionAgg?.[0]?.total ?? 0);
+    const totalHeldDeposits = roundMoney(heldDepositAgg?.[0]?.total ?? 0);
     const totalPaidOut = roundMoney(payoutAgg?.[0]?.total ?? 0);
     const availableBalance = roundMoney(Math.max(totalCommission - totalPaidOut, 0));
 
     return {
       ownerType: "User",
       currency: "ETB",
-      pendingBalance: 0,
+      pendingBalance: totalHeldDeposits,
       availableBalance,
       lifetimeEarned: totalCommission,
       lifetimePaidOut: totalPaidOut,
@@ -594,9 +1002,7 @@ export class WalletService {
           throw ApiError.internal("Wallet resolution failed");
         }
 
-        const hostEarning = roundMoney(
-          booking.priceSnapshot.totalAmount - booking.priceSnapshot.systemCommission,
-        );
+        const hostEarning = roundMoney(booking.priceSnapshot.rentalSubtotal || 0);
 
         if (wallet.pendingBalance < hostEarning) {
           throw ApiError.unprocessable("Owner escrow balance is no longer sufficient for this refund");

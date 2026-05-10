@@ -42,6 +42,10 @@ export function CompanyVehicleDetailPage({ vehicle }: { vehicle: Vehicle }) {
       features: details.features,
       condition: details.description,
       price: details.dailyRate,
+      allowSelfDrive: details.allowSelfDrive,
+      securityDepositAmount: details.allowSelfDrive
+        ? details.securityDepositAmount
+        : 0,
       delivery: details.location,
     });
     upsertCompanyFleetVehicle(updated);

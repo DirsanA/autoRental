@@ -2,6 +2,7 @@ import { Booking, type BookingDocument } from "../models/Booking.js";
 import { Transaction } from "../models/Transaction.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Review } from "../models/Review.js";
+import { Company } from "../models/Company.js";
 import { User } from "../models/User.js";
 import { isValidObjectId } from "mongoose";
 import { userPersistenceService } from "./user.persistence.service.js";
@@ -12,6 +13,9 @@ import { ENV } from "../config/env.js";
 import type { RequestUser } from "../utils/requestContext.js";
 import type {
   BookingReviewCreateInput,
+  BookingDepositSettlementInput,
+  BookingPickupVerificationInput,
+  BookingReturnConfirmationInput,
   BookingReviewUpdateInput,
   ChapaCheckoutInput,
   RenterBookingListQueryInput,
@@ -19,6 +23,7 @@ import type {
 
 const COMMISSION_RATE = 0.08;
 const PAYMENT_WINDOW_MINUTES = 30;
+const CHAPA_MINIMUM_CHECKOUT_AMOUNT_ETB = 1000;
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
@@ -140,11 +145,21 @@ function mapBookingResponse(booking: BookingDocument) {
     returnAddress: booking.returnAddress || null,
     pricing: {
       pricePerHour: booking.priceSnapshot.pricePerHour,
+      rentalSubtotal: booking.priceSnapshot.rentalSubtotal,
       totalHours: booking.priceSnapshot.totalHours,
       systemCommission: booking.priceSnapshot.systemCommission,
       totalAmount: booking.priceSnapshot.totalAmount,
       currency: booking.priceSnapshot.currency,
     },
+    securityDepositAmount: booking.securityDepositAmount || 0,
+    depositStatus: booking.depositStatus,
+    pickupVerifiedAt: booking.pickupVerifiedAt || null,
+    pickupVerifiedBy: booking.pickupVerifiedBy?.toString?.() ?? null,
+    originalDocsChecked: Boolean(booking.originalDocsChecked),
+    manualDocumentHoldNote: booking.manualDocumentHoldNote || null,
+    returnConfirmedAt: booking.returnConfirmedAt || null,
+    returnConfirmedBy: booking.returnConfirmedBy?.toString?.() ?? null,
+    returnCondition: booking.returnCondition || null,
     payment: {
       method: booking.payment.method || null,
       status: booking.payment.status,
@@ -247,11 +262,21 @@ function mapBookingListItem(booking: Record<string, any>) {
 
     pricing: {
       pricePerHour: booking.priceSnapshot?.pricePerHour ?? 0,
+      rentalSubtotal: booking.priceSnapshot?.rentalSubtotal ?? 0,
       totalHours: booking.priceSnapshot?.totalHours ?? 0,
       systemCommission: booking.priceSnapshot?.systemCommission ?? 0,
       totalAmount: booking.priceSnapshot?.totalAmount ?? 0,
       currency: booking.priceSnapshot?.currency ?? "ETB",
     },
+    securityDepositAmount: booking.securityDepositAmount ?? 0,
+    depositStatus: booking.depositStatus ?? "NOT_REQUIRED",
+    pickupVerifiedAt: booking.pickupVerifiedAt ?? null,
+    pickupVerifiedBy: booking.pickupVerifiedBy?.toString?.() ?? null,
+    originalDocsChecked: Boolean(booking.originalDocsChecked),
+    manualDocumentHoldNote: booking.manualDocumentHoldNote ?? null,
+    returnConfirmedAt: booking.returnConfirmedAt ?? null,
+    returnConfirmedBy: booking.returnConfirmedBy?.toString?.() ?? null,
+    returnCondition: booking.returnCondition ?? null,
 
     payment: {
       method: payment.method ?? null,
@@ -435,10 +460,14 @@ export class BookingService {
     const receiverModel = vehicle?.ownerType === "Company" ? "Company" : "User";
     const receiverId = vehicle?.ownerId;
 
-    const amount = booking.priceSnapshot.totalAmount;
+    const amount = roundMoney(
+      booking.priceSnapshot.rentalSubtotal + booking.priceSnapshot.systemCommission,
+    );
     const metadata = {
       bookingId: booking.bookingId,
       withDriver: booking.withDriver,
+      securityDepositAmount: booking.securityDepositAmount || 0,
+      depositStatus: booking.depositStatus,
       checkoutUrl: booking.payment.checkoutUrl,
       referenceId: booking.payment.referenceId,
     };
@@ -509,6 +538,23 @@ export class BookingService {
       );
     }
 
+    let securityDepositAmount = 0;
+
+    if (!input.withDriver) {
+      if (!vehicle.allowSelfDrive) {
+        throw ApiError.unprocessable(
+          "This vehicle is not enabled for self-drive bookings",
+        );
+      }
+
+      securityDepositAmount = roundMoney(vehicle.securityDepositAmount || 0);
+      if (securityDepositAmount <= 0) {
+        throw ApiError.unprocessable(
+          "This self-drive vehicle is missing a valid security deposit amount",
+        );
+      }
+    }
+
     const startTime = new Date(input.startTime);
     const endTime = new Date(input.endTime);
     const now = new Date();
@@ -536,9 +582,20 @@ export class BookingService {
     await this.assertVehicleAvailability(vehicle.id, startTime, endTime);
 
     const pricePerHour = roundMoney(vehicle.price / 24);
-    const subtotal = roundMoney(pricePerHour * totalHours);
-    const systemCommission = roundMoney(subtotal * COMMISSION_RATE);
-    const totalAmount = roundMoney(subtotal + systemCommission);
+    const rentalSubtotal = roundMoney(pricePerHour * totalHours);
+    const systemCommission = roundMoney(rentalSubtotal * COMMISSION_RATE);
+    const totalAmount = roundMoney(
+      rentalSubtotal + systemCommission + securityDepositAmount,
+    );
+
+    // Chapa checkout rejects very small totals in some payment flows and can
+    // surface a broken hosted page instead of a clean API error.
+    if (totalAmount < CHAPA_MINIMUM_CHECKOUT_AMOUNT_ETB) {
+      throw ApiError.unprocessable(
+        `Minimum payable amount for online checkout is ${CHAPA_MINIMUM_CHECKOUT_AMOUNT_ETB} ETB. Increase the trip total or security deposit before proceeding.`,
+      );
+    }
+
     const txRef = `${Date.now()}-${vehicle.id.slice(-6)}-${Math.random()
       .toString(36)
       .slice(2, 8)}`;
@@ -576,6 +633,8 @@ export class BookingService {
       endTime,
       totalHours,
       pricePerHour,
+      rentalSubtotal,
+      securityDepositAmount,
       systemCommission,
       totalAmount,
       txRef,
@@ -601,6 +660,7 @@ export class BookingService {
       vehicleId: context.vehicle._id,
       priceSnapshot: {
         pricePerHour: context.pricePerHour,
+        rentalSubtotal: context.rentalSubtotal,
         totalHours: context.totalHours,
         systemCommission: context.systemCommission,
         totalAmount: context.totalAmount,
@@ -609,6 +669,9 @@ export class BookingService {
       startTime: context.startTime,
       endTime: context.endTime,
       withDriver: input.withDriver,
+      securityDepositAmount: context.securityDepositAmount,
+      depositStatus:
+        context.securityDepositAmount > 0 ? "HELD_IN_ESCROW" : "NOT_REQUIRED",
       status: "PENDING",
       pickupAddress:
         input.pickupAddress?.trim() ||
@@ -628,6 +691,7 @@ export class BookingService {
         tx_ref: context.txRef,
         checkoutExpiresAt: context.paymentExpiresAt,
       },
+      originalDocsChecked: false,
     });
 
     const serverBaseUrl = (
@@ -651,6 +715,14 @@ export class BookingService {
 
     let chapa;
     try {
+      const checkoutTitle = fitForChapa(
+        `${context.vehicle.make} ${context.vehicle.model}`,
+        16,
+      );
+      const checkoutDescription = fitForChapa(
+        `Booking ${booking.bookingId} for ${context.totalHours} rental hours`,
+        120,
+      );
       const chapaPayload = {
         amount: context.totalAmount.toFixed(2),
         currency: "ETB",
@@ -659,17 +731,18 @@ export class BookingService {
         last_name: context.lastName,
         phone_number: context.phoneForChapa,
         tx_ref: context.txRef,
-        customization: {
-          title: fitForChapa(
-            `${context.vehicle.make} ${context.vehicle.model}`,
-            16,
-          ),
-          description: `Booking ${booking.bookingId} for ${context.totalHours} rental hours`,
-        },
+        ...(checkoutTitle || checkoutDescription
+          ? {
+              customization: {
+                ...(checkoutTitle ? { title: checkoutTitle } : {}),
+                ...(checkoutDescription
+                  ? { description: checkoutDescription }
+                  : {}),
+              },
+            }
+          : {}),
         meta: {
-          bookingId: booking.bookingId,
-          vehicleId: context.vehicle.id,
-          withDriver: input.withDriver,
+          payment_reason: `Vehicle booking ${booking.bookingId}`,
         },
         ...(shouldSendCallbackUrl ? { callback_url: callbackUrl } : {}),
         ...(shouldSendReturnUrl ? { return_url: returnUrl } : {}),
@@ -908,6 +981,274 @@ export class BookingService {
     };
   }
 
+  async listCompanyBookings(
+    caller: RequestUser,
+    query: RenterBookingListQueryInput,
+  ) {
+    const authUserId =
+      typeof caller.authUserId === "string" ? caller.authUserId : caller.id;
+    const company = await Company.findOne({ authUserId }).select("_id").lean();
+
+    if (!company?._id) {
+      throw ApiError.notFound("Company account was not found");
+    }
+
+    const ownedVehicles = await Vehicle.find({
+      ownerId: company._id,
+      ownerType: "Company",
+    })
+      .select("_id")
+      .lean();
+
+    const ownedVehicleIds = ownedVehicles.map((vehicle) => vehicle._id);
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
+
+    if (ownedVehicleIds.length === 0) {
+      return {
+        bookings: [],
+        pagination: {
+          page,
+          limit,
+          total: 0,
+          totalPages: 1,
+        },
+      };
+    }
+
+    const filter: Record<string, unknown> = {
+      vehicleId: { $in: ownedVehicleIds },
+    };
+
+    if (query.status) {
+      filter.status = query.status;
+    }
+
+    const paymentStatus = mapPaymentStateToStatus(query.paymentState);
+    if (paymentStatus) {
+      filter["payment.status"] = paymentStatus;
+    }
+
+    const search = query.search?.trim();
+    if (search) {
+      const regex = new RegExp(escapeRegExp(search), "i");
+      const [matchingVehicles, matchingRenters] = await Promise.all([
+        Vehicle.find({
+          ownerId: company._id,
+          ownerType: "Company",
+          $or: [{ make: regex }, { model: regex }, { plate: regex }],
+        })
+          .select("_id")
+          .lean(),
+        User.find({
+          $or: [
+            { name: regex },
+            { firstName: regex },
+            { lastName: regex },
+            { email: regex },
+            { phoneNumber: regex },
+          ],
+        })
+          .select("_id")
+          .lean(),
+      ]);
+
+      const matchingVehicleIds = matchingVehicles.map((vehicle) => vehicle._id);
+      const matchingRenterIds = matchingRenters.map((renter) => renter._id);
+      const orFilters: Array<Record<string, unknown>> = [
+        { bookingId: regex },
+        { pickupAddress: regex },
+        { returnAddress: regex },
+      ];
+
+      if (matchingVehicleIds.length > 0) {
+        orFilters.push({ vehicleId: { $in: matchingVehicleIds } });
+      }
+
+      if (matchingRenterIds.length > 0) {
+        orFilters.push({ renterId: { $in: matchingRenterIds } });
+      }
+
+      filter.$or = orFilters;
+    }
+
+    const skip = (page - 1) * limit;
+    const [bookings, total] = await Promise.all([
+      Booking.find(filter as any)
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit)
+        .populate({
+          path: "vehicleId",
+          select:
+            "make model year plate availability delivery photos ownerType pickupAddress returnAddress pickupGeo returnGeo allowSelfDrive securityDepositAmount",
+        })
+        .populate({
+          path: "renterId",
+          select: "name firstName lastName email phoneNumber profilePicture",
+        })
+        .lean(),
+      Booking.countDocuments(filter as any),
+    ]);
+
+    return {
+      bookings: bookings.map((booking) =>
+        mapBookingListItem(booking as Record<string, any>),
+      ),
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.max(1, Math.ceil(total / limit)),
+      },
+    };
+  }
+
+  private async resolveOwnedBooking(
+    caller: RequestUser,
+    bookingId: string,
+    ownerType: "User" | "Company",
+  ) {
+    const authUserId =
+      typeof caller.authUserId === "string" ? caller.authUserId : caller.id;
+
+    const ownerContext =
+      ownerType === "Company"
+        ? await Company.findOne({ authUserId }).select("_id").lean()
+        : await userPersistenceService.findByAuthId(authUserId);
+
+    if (!ownerContext?._id) {
+      throw ApiError.notFound(
+        ownerType === "Company" ? "Company account not found" : "User account not found",
+      );
+    }
+
+    const booking = await Booking.findOne(buildBookingLookupCriteria(bookingId))
+      .populate({
+        path: "vehicleId",
+        select:
+          "make model year plate photos availability delivery ownerType ownerId pickupAddress returnAddress pickupGeo returnGeo allowSelfDrive securityDepositAmount",
+      })
+      .populate({
+        path: "renterId",
+        select: "name firstName lastName email phoneNumber profilePicture",
+      });
+
+    if (!booking) {
+      throw ApiError.notFound("Booking not found");
+    }
+
+    const vehicle = booking.vehicleId as unknown as Record<string, any> | null;
+    if (
+      !vehicle ||
+      String(vehicle.ownerId) !== String(ownerContext._id) ||
+      vehicle.ownerType !== ownerType
+    ) {
+      throw ApiError.forbidden("You can only manage bookings for your own vehicles");
+    }
+
+    return booking;
+  }
+
+  async activateOwnedBooking(
+    caller: RequestUser,
+    bookingId: string,
+    ownerType: "User" | "Company",
+    input: BookingPickupVerificationInput,
+  ) {
+    const booking = await this.resolveOwnedBooking(caller, bookingId, ownerType);
+
+    if (booking.payment.status !== "PAID") {
+      throw ApiError.unprocessable("Cannot activate a booking before payment is completed");
+    }
+
+    if (booking.status !== "CONFIRMED") {
+      throw ApiError.unprocessable("Only confirmed bookings can be activated");
+    }
+
+    if (!booking.withDriver && !input.originalDocsChecked) {
+      throw ApiError.unprocessable(
+        "Original documents must be checked before starting a self-drive booking",
+      );
+    }
+
+    const actorId = isValidObjectId(String(caller.id)) ? String(caller.id) : undefined;
+
+    booking.originalDocsChecked = Boolean(input.originalDocsChecked);
+    booking.manualDocumentHoldNote = input.manualDocumentHoldNote?.trim() || undefined;
+    booking.pickupVerifiedAt = new Date();
+    if (actorId) {
+      booking.pickupVerifiedBy = actorId as any;
+    }
+    booking.status = "ACTIVE";
+    await booking.save();
+    await this.syncVehicleStatus(booking.vehicleId.toString());
+
+    return { booking: mapBookingResponse(booking) };
+  }
+
+  async confirmOwnedBookingReturn(
+    caller: RequestUser,
+    bookingId: string,
+    ownerType: "User" | "Company",
+    input: BookingReturnConfirmationInput,
+  ) {
+    const booking = await this.resolveOwnedBooking(caller, bookingId, ownerType);
+
+    if (booking.payment.status !== "PAID") {
+      throw ApiError.unprocessable("Cannot settle a booking before payment is completed");
+    }
+
+    if (booking.status !== "ACTIVE") {
+      throw ApiError.unprocessable("Only active bookings can be settled from return confirmation");
+    }
+
+    const actorId = isValidObjectId(String(caller.id)) ? String(caller.id) : undefined;
+    booking.returnConfirmedAt = new Date();
+    if (actorId) {
+      booking.returnConfirmedBy = actorId as any;
+    }
+    booking.actualReturnTime = booking.actualReturnTime || new Date();
+    booking.returnCondition = input.returnCondition;
+
+    if (input.returnCondition === "ISSUE_REPORTED") {
+      booking.status = "DISPUTED";
+      booking.depositStatus =
+        booking.securityDepositAmount > 0 ? "UNDER_REVIEW" : booking.depositStatus;
+      booking.cancelReason = input.reason?.trim() || booking.cancelReason;
+      await booking.save();
+      await this.syncVehicleStatus(booking.vehicleId.toString());
+      return {
+        booking: mapBookingResponse(booking),
+        settlement: {
+          released: false,
+          disputed: true,
+        },
+      };
+    }
+
+    booking.status = "COMPLETED";
+    await booking.save();
+    await walletService.releaseEscrowForBooking(booking.id, "COMPLETED");
+    if ((booking.securityDepositAmount || 0) > 0) {
+      await walletService.refundSecurityDepositToRenterWallet(
+        booking.id,
+        "CLEAN_RETURN",
+      );
+      booking.depositStatus = "REFUNDED_TO_RENTER";
+      await booking.save();
+    }
+    await this.syncVehicleStatus(booking.vehicleId.toString());
+
+    return {
+      booking: mapBookingResponse(booking),
+      settlement: {
+        released: true,
+        disputed: false,
+      },
+    };
+  }
+
   private async verifyAndSyncBooking(booking: BookingDocument) {
     if (!booking.payment.tx_ref) {
       throw ApiError.unprocessable(
@@ -992,6 +1333,9 @@ export class BookingService {
     if (verificationStatus === "success") {
       console.log("[Wallet Escrow] holding escrow for booking=%s", booking.id);
       await walletService.holdEscrowForPaidBooking(booking);
+      if ((booking.securityDepositAmount || 0) > 0) {
+        await walletService.holdSecurityDepositForPaidBooking(booking);
+      }
     }
     await this.syncVehicleStatus(booking.vehicleId.toString());
 
@@ -1261,6 +1605,15 @@ export class BookingService {
     booking.actualReturnTime = booking.actualReturnTime || new Date();
     await booking.save();
     await walletService.releaseEscrowForBooking(booking.id, "COMPLETED");
+    if ((booking.securityDepositAmount || 0) > 0) {
+      await walletService.refundSecurityDepositToRenterWallet(
+        booking.id,
+        "ADMIN_COMPLETION",
+      );
+      booking.depositStatus = "REFUNDED_TO_RENTER";
+      await booking.save();
+    }
+    await this.syncVehicleStatus(booking.vehicleId.toString());
 
     return {
       booking: mapBookingResponse(booking),
@@ -1314,6 +1667,18 @@ export class BookingService {
     const refundSource =
       booking.actualReturnTime || wasCompleted ? "AVAILABLE" : "PENDING";
     await walletService.applyRefundReversal(booking.id, refundSource);
+    if (
+      (booking.securityDepositAmount || 0) > 0 &&
+      booking.depositStatus === "HELD_IN_ESCROW"
+    ) {
+      await walletService.refundSecurityDepositToRenterWallet(
+        booking.id,
+        "BOOKING_CANCELLED",
+      );
+      booking.depositStatus = "REFUNDED_TO_RENTER";
+      await booking.save();
+    }
+    await this.syncVehicleStatus(booking.vehicleId.toString());
 
     return {
       booking: mapBookingResponse(booking),

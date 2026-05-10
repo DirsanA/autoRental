@@ -88,13 +88,23 @@ export class AuthService {
   /**
    * Rejects registration when the user login email already exists.
    */
-  private async assertUserRegistrationAvailability(email: string): Promise<void> {
-    const existingUser = await userPersistenceService.findByEmail(
-      this.normalizeEmail(email),
-    );
+  private async assertUserRegistrationAvailability(input: {
+    email: string;
+    phoneNumber: string;
+  }): Promise<void> {
+    const [existingUserByEmail, existingUserByPhone] = await Promise.all([
+      userPersistenceService.findByEmail(this.normalizeEmail(input.email)),
+      userPersistenceService.findByPhoneNumber(input.phoneNumber),
+    ]);
 
-    if (existingUser) {
-      throw ApiError.conflict("User already exists");
+    if (existingUserByEmail) {
+      throw ApiError.conflict("An account with this email already exists");
+    }
+
+    if (existingUserByPhone) {
+      throw ApiError.conflict(
+        "An account with this phone number already exists",
+      );
     }
   }
 
@@ -147,20 +157,44 @@ export class AuthService {
       message: string;
     }>
   > {
-    await this.assertUserRegistrationAvailability(data.email);
-
-    const result = await this.auth.api.signUpEmail({
-      headers,
-      body: {
-        email: data.email,
-        password: data.password,
-        name: `${data.firstName} ${data.lastName}`,
-        firstName: data.firstName,
-        lastName: data.lastName,
-        phoneNumber: data.phoneNumber,
-        callbackURL: `${ENV.FRONTEND_URL}/verify-email`,
-      },
+    await this.assertUserRegistrationAvailability({
+      email: data.email,
+      phoneNumber: data.phoneNumber,
     });
+
+    let result: Awaited<ReturnType<typeof this.auth.api.signUpEmail>>;
+
+    try {
+      result = await this.auth.api.signUpEmail({
+        headers,
+        body: {
+          email: data.email,
+          password: data.password,
+          name: `${data.firstName} ${data.lastName}`,
+          firstName: data.firstName,
+          lastName: data.lastName,
+          phoneNumber: data.phoneNumber,
+          callbackURL: `${ENV.FRONTEND_URL}/verify-email`,
+        },
+      });
+    } catch (error) {
+      const [existingUserByEmail, existingUserByPhone] = await Promise.all([
+        userPersistenceService.findByEmail(this.normalizeEmail(data.email)),
+        userPersistenceService.findByPhoneNumber(data.phoneNumber),
+      ]);
+
+      if (existingUserByEmail) {
+        throw ApiError.conflict("An account with this email already exists");
+      }
+
+      if (existingUserByPhone) {
+        throw ApiError.conflict(
+          "An account with this phone number already exists",
+        );
+      }
+
+      throw error;
+    }
 
     await userPersistenceService.updateAccountType(
       result.user.id,
@@ -343,6 +377,25 @@ export class AuthService {
 
     if (!resolvedUser) {
       throw ApiError.unauthorized("No active session");
+    }
+
+    const persistedUser = await userPersistenceService.findByAuthId(
+      String((resolvedUser as { id?: string }).id || ""),
+    );
+
+    if (persistedUser && resolvedUser && typeof resolvedUser === "object") {
+      Object.assign(resolvedUser as Record<string, unknown>, {
+        name: persistedUser.name,
+        firstName: persistedUser.firstName,
+        lastName: persistedUser.lastName,
+        phoneNumber: persistedUser.phoneNumber,
+        accountType: persistedUser.accountType,
+        verificationLevel: persistedUser.verificationLevel,
+        status: persistedUser.status,
+        walletBalance: persistedUser.walletBalance,
+        canSelfDrive: persistedUser.canSelfDrive,
+        selfDriveApprovedAt: persistedUser.selfDriveApprovedAt ?? null,
+      });
     }
 
     const companyDoc = await companyService.getByAuthUserId(

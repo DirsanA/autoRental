@@ -55,6 +55,8 @@ export interface IVehicle {
 
   // Become Host: Pricing
   price: number;
+  allowSelfDrive: boolean;
+  securityDepositAmount: number;
   weeklyDiscount?: number | undefined;
   monthlyDiscount?: number | undefined;
 
@@ -141,6 +143,8 @@ const vehicleSchema = new Schema<IVehicle>(
     condition: { type: String, trim: true },
 
     price: { type: Number, required: true, min: 0 },
+    allowSelfDrive: { type: Boolean, default: false },
+    securityDepositAmount: { type: Number, default: 0, min: 0 },
     weeklyDiscount: { type: Number, min: 0, max: 100 },
     monthlyDiscount: { type: Number, min: 0, max: 100 },
 

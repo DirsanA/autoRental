@@ -4,6 +4,9 @@ import { WALLET_OWNER_TYPES, type WalletOwnerType } from "./Wallet.js";
 export const WALLET_ENTRY_TYPES = [
   "ESCROW_HOLD",
   "ESCROW_RELEASE",
+  "DEPOSIT_HOLD",
+  "DEPOSIT_REFUND",
+  "DEPOSIT_RELEASE",
   "PAYOUT_DEBIT",
   "REFUND_DEBIT",
   "ADJUSTMENT",

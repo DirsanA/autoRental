@@ -29,6 +29,9 @@ export interface IUser {
   verificationLevel: VerificationLevel;
   status: "PENDING" | "ACTIVE" | "SUSPENDED";
   walletBalance: number;
+  canSelfDrive: boolean;
+  selfDriveApprovedAt?: Date | undefined;
+  selfDriveApprovedBy?: Types.ObjectId | undefined;
 
   // Identity Verification
   idNumber?: string | undefined;
@@ -117,6 +120,12 @@ const userSchema = new Schema<IUser>(
       default: 0,
       min: [0, "Wallet balance cannot be negative"],
     },
+    canSelfDrive: {
+      type: Boolean,
+      default: false,
+    },
+    selfDriveApprovedAt: { type: Date },
+    selfDriveApprovedBy: { type: Schema.Types.ObjectId, ref: "User" },
     idNumber: { type: String, trim: true },
     idImageUrl: { type: String, trim: true },
     address: { type: String, trim: true },

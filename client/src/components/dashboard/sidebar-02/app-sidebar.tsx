@@ -16,9 +16,6 @@ import {
   Landmark,
   LayoutDashboard,
   Wallet,
-  MessageCircleCheckIcon,
-  ShoppingCart,
-  Store,
   UserCheck,
   AlertCircle,
   Bell,
@@ -116,6 +113,10 @@ const dashboardRoutes: Route[] = [
       {
         title: "Transaction Log",
         link: "/sysadmin/revenue/transactions",
+      },
+      {
+        title: "Deposit Refunds",
+        link: "/sysadmin/revenue/deposit-refunds",
       },
     ],
   },

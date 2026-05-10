@@ -34,6 +34,8 @@ type ApiVehicle = {
   condition?: string;
   status?: string;
   price?: number;
+  allowSelfDrive?: boolean;
+  securityDepositAmount?: number;
   availability?: string;
   delivery?: string;
   photos?: {
@@ -94,6 +96,11 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     seats: vehicle.seats,
     features: Array.isArray(vehicle.features) ? vehicle.features : [],
     description: vehicle.condition,
+    allowSelfDrive: Boolean(vehicle.allowSelfDrive),
+    securityDepositAmount:
+      typeof vehicle.securityDepositAmount === "number"
+        ? vehicle.securityDepositAmount
+        : 0,
     dailyRate: typeof vehicle.price === "number" ? vehicle.price : 0,
     status: mappedStatus,
     location: vehicle.delivery || vehicle.availability || "Ethiopia",
@@ -387,6 +394,62 @@ export async function updatePeerHostVehicleAvailability(
   const vehicle = payload.data?.vehicle;
   if (!vehicle) {
     throw new Error("Vehicle status updated but response was empty.");
+  }
+
+  return mapApiVehicleToCard(vehicle);
+}
+
+export async function updatePeerHostVehicleById(
+  id: string,
+  updates: Partial<{
+    make: string;
+    model: string;
+    year: number;
+    mileage: number;
+    fuel: "petrol" | "diesel" | "hybrid" | "electric";
+    transmission: "manual" | "automatic" | "cvt";
+    seats: number;
+    features: string[];
+    condition: string;
+    price: number;
+    allowSelfDrive: boolean;
+    securityDepositAmount: number;
+    delivery: string;
+  }>,
+) {
+  let response: Response;
+  try {
+    response = await fetch(`${API_BASE_URL}/vehicles/${id}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+        ...buildAuthHeader(),
+      },
+      credentials: "include",
+      body: JSON.stringify(updates),
+    });
+  } catch {
+    throw new Error("Could not reach backend API at http://localhost:5000");
+  }
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as
+      | { error?: { message?: string } }
+      | null;
+    throw new Error(
+      payload?.error?.message ||
+        `Failed to update vehicle (HTTP ${response.status})`,
+    );
+  }
+
+  const payload = (await response.json()) as {
+    success?: boolean;
+    data?: { vehicle?: ApiVehicle };
+  };
+
+  const vehicle = payload.data?.vehicle;
+  if (!vehicle) {
+    throw new Error("Vehicle updated but no vehicle data was returned.");
   }
 
   return mapApiVehicleToCard(vehicle);

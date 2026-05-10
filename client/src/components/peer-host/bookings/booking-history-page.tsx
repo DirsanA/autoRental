@@ -42,6 +42,8 @@ import {
 } from "@/components/ui/table";
 import { BookingHistoryPageSkeleton } from "@/components/shared/bookings/booking-history-skeleton";
 import {
+  activateOwnedBooking,
+  confirmOwnedBookingReturn,
   fetchPeerHostBookings,
   type PeerHostBookingListItem,
   type RenterBookingsPagination,
@@ -255,6 +257,7 @@ export function PeerHostBookingHistoryPage() {
   const [lastCompletedRequestKey, setLastCompletedRequestKey] = useState("");
   const [selectedBooking, setSelectedBooking] =
     useState<PeerHostBookingListItem | null>(null);
+  const [isMutatingBooking, setIsMutatingBooking] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -328,6 +331,78 @@ export function PeerHostBookingHistoryPage() {
       pageRevenue,
     };
   }, [bookings]);
+
+  const handleActivateBooking = async (booking: PeerHostBookingListItem) => {
+    const originalDocsChecked = booking.withDriver
+      ? false
+      : window.confirm(
+          "Confirm that you physically checked the renter's original ID and driving license before starting this self-drive trip.",
+        );
+
+    if (!booking.withDriver && !originalDocsChecked) {
+      return;
+    }
+
+    try {
+      setIsMutatingBooking(true);
+      await activateOwnedBooking({
+        bookingId: booking.bookingId,
+        ownerType: "User",
+        originalDocsChecked,
+      });
+      setSelectedBooking((current) =>
+        current
+          ? {
+              ...current,
+              status: "ACTIVE",
+              originalDocsChecked,
+              pickupVerifiedAt: new Date().toISOString(),
+            }
+          : current,
+      );
+      refreshBookings();
+    } finally {
+      setIsMutatingBooking(false);
+    }
+  };
+
+  const handleReturnConfirmation = async (
+    booking: PeerHostBookingListItem,
+    returnCondition: "CLEAN" | "ISSUE_REPORTED",
+  ) => {
+    const reason =
+      returnCondition === "ISSUE_REPORTED"
+        ? window.prompt("Describe the issue reported for this return.") || undefined
+        : undefined;
+
+    try {
+      setIsMutatingBooking(true);
+      await confirmOwnedBookingReturn({
+        bookingId: booking.bookingId,
+        ownerType: "User",
+        returnCondition,
+        reason,
+      });
+      setSelectedBooking((current) =>
+        current
+          ? {
+              ...current,
+              status:
+                returnCondition === "CLEAN" ? "COMPLETED" : "DISPUTED",
+              returnCondition,
+              returnConfirmedAt: new Date().toISOString(),
+              depositStatus:
+                returnCondition === "CLEAN"
+                  ? "REFUNDED_TO_RENTER"
+                  : "UNDER_REVIEW",
+            }
+          : current,
+      );
+      refreshBookings();
+    } finally {
+      setIsMutatingBooking(false);
+    }
+  };
 
   return (
     <div className="relative flex w-full h-dvh">
@@ -602,6 +677,21 @@ export function PeerHostBookingHistoryPage() {
                   value={selectedBooking.returnAddress || "Not provided"}
                 />
                 <DetailRow
+                  label="Booking mode"
+                  value={selectedBooking.withDriver ? "With driver" : "Self-drive"}
+                />
+                <DetailRow
+                  label="Deposit"
+                  value={formatCurrency(
+                    selectedBooking.securityDepositAmount || 0,
+                    selectedBooking.pricing.currency,
+                  )}
+                />
+                <DetailRow
+                  label="Deposit status"
+                  value={selectedBooking.depositStatus.replaceAll("_", " ")}
+                />
+                <DetailRow
                   label="Guest email"
                   value={selectedBooking.renter?.email || "Not provided"}
                 />
@@ -616,6 +706,42 @@ export function PeerHostBookingHistoryPage() {
                   <MapPin className="w-4 h-4" />
                   {selectedBooking.pickupAddress || "Pickup address not provided"}
                 </div>
+              </div>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+                {selectedBooking.status === "CONFIRMED" &&
+                selectedBooking.paymentState === "paid" ? (
+                  <Button
+                    onClick={() => void handleActivateBooking(selectedBooking)}
+                    disabled={isMutatingBooking}
+                  >
+                    {isMutatingBooking ? "Starting..." : "Verify Pickup & Start Trip"}
+                  </Button>
+                ) : null}
+                {selectedBooking.status === "ACTIVE" ? (
+                  <>
+                    <Button
+                      variant="outline"
+                      onClick={() =>
+                        void handleReturnConfirmation(
+                          selectedBooking,
+                          "ISSUE_REPORTED",
+                        )
+                      }
+                      disabled={isMutatingBooking}
+                    >
+                      Report Issue
+                    </Button>
+                    <Button
+                      onClick={() =>
+                        void handleReturnConfirmation(selectedBooking, "CLEAN")
+                      }
+                      disabled={isMutatingBooking}
+                    >
+                      {isMutatingBooking ? "Saving..." : "Confirm Clean Return"}
+                    </Button>
+                  </>
+                ) : null}
               </div>
             </div>
           </DialogContent>

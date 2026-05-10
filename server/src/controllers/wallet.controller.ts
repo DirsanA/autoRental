@@ -75,6 +75,13 @@ export const walletController = {
       limit: 50,
     });
 
+    if (owner.ownerType === "User") {
+      await walletService.reconcileHeldSecurityDepositsForRenter({
+        renterId: owner.ownerId,
+        limit: 50,
+      });
+    }
+
     const wallet = await walletService.getWalletByOwner(
       owner.ownerId,
       owner.ownerType,

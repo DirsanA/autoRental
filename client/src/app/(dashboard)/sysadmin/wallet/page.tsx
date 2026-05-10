@@ -5,8 +5,9 @@ export default function SystemAdminWalletPage() {
     <WalletPage
       title="System Wallet"
       ownerType="User"
-      showEscrowBalance={false}
-      description="Track platform commission balance and request system withdrawals."
+      payoutRedirectPath="/sysadmin/wallet"
+      showEscrowBalance
+      description="Track withdrawable platform commission separately from security deposits currently held in escrow."
     />
   );
 }

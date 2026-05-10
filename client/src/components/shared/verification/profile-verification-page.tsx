@@ -31,7 +31,12 @@ import { cn } from "@/lib/utils";
 import { resolveApiBaseUrl } from "@/lib/api-base-url";
 import { buildAuthHeader } from "@/lib/auth-token";
 import { coalesceRequest } from "@/lib/api-coalesce";
-import { updateProfile, fetchCurrentSession, changePassword } from "@/lib/auth-api";
+import {
+  updateProfile,
+  fetchCurrentSession,
+  fetchCurrentUserProfile,
+  changePassword,
+} from "@/lib/auth-api";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { ProfileVerificationSkeleton } from "./profile-verification-skeleton";
 
@@ -360,6 +365,10 @@ export function ProfileVerificationPage({
   const [passwordSuccessMessage, setPasswordSuccessMessage] = useState<string | null>(null);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
+  const [canSelfDrive, setCanSelfDrive] = useState(false);
+  const [selfDriveApprovedAt, setSelfDriveApprovedAt] = useState<string | null>(
+    null,
+  );
   const [requestVersion, setRequestVersion] = useState(0);
   const [completedRequestVersion, setCompletedRequestVersion] = useState(-1);
 
@@ -458,9 +467,26 @@ export function ProfileVerificationPage({
         setSubmitError(null);
         setLoadError(null);
 
-        const session = await fetchCurrentSession().catch(() => null);
-        if (session?.user?.image && !cancelled) {
-          setAvatarPreview(session.user.image);
+        const [profile, session] = await Promise.all([
+          fetchCurrentUserProfile().catch(() => null),
+          fetchCurrentSession().catch(() => null),
+        ]);
+        if (!cancelled) {
+          if (profile?.image || session?.user?.image) {
+            setAvatarPreview(
+              String(profile?.image || session?.user?.image || ""),
+            );
+          }
+          setCanSelfDrive(
+            Boolean(profile?.canSelfDrive ?? session?.user?.canSelfDrive),
+          );
+          setSelfDriveApprovedAt(
+            String(
+              profile?.selfDriveApprovedAt ||
+                session?.user?.selfDriveApprovedAt ||
+                "",
+            ) || null,
+          );
         }
       } catch (error) {
         if (cancelled) {
@@ -646,7 +672,7 @@ export function ProfileVerificationPage({
     try {
       const preview = await readFileAsDataUrl(file);
       setAvatarPreview(preview);
-    } catch (error) {
+    } catch {
       toast({
         title: "Error",
         description: "Failed to read image file",
@@ -933,6 +959,62 @@ export function ProfileVerificationPage({
           <div className="mb-6 rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
             {loadError}
           </div>
+        ) : null}
+
+        {isRenter ? (
+          <Card className="mb-6 border-0 bg-white/85 shadow-xl backdrop-blur dark:border dark:border-slate-800 dark:bg-slate-900/80">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base dark:text-slate-200">
+                <CarFront className="h-4 w-4" />
+                Self-Drive Readiness
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/70">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  ID or passport
+                </p>
+                <p className="mt-2 font-semibold dark:text-slate-100">
+                  {idStatus === "approved"
+                    ? "Approved"
+                    : idStatus === "pending"
+                      ? "Pending review"
+                      : idStatus === "rejected"
+                        ? "Needs resubmission"
+                        : "Not submitted"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/70">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Driver license
+                </p>
+                <p className="mt-2 font-semibold dark:text-slate-100">
+                  {licenseStatus === "approved"
+                    ? "Approved"
+                    : licenseStatus === "pending"
+                      ? "Pending review"
+                      : licenseStatus === "rejected"
+                        ? "Needs resubmission"
+                        : "Not submitted"}
+                </p>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-800/70">
+                <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                  Admin self-drive access
+                </p>
+                <p className="mt-2 font-semibold dark:text-slate-100">
+                  {canSelfDrive ? "Approved" : "Awaiting approval"}
+                </p>
+                <p className="mt-1 text-xs text-muted-foreground dark:text-slate-400">
+                  {selfDriveApprovedAt
+                    ? `Approved ${formatDateTime(selfDriveApprovedAt)}`
+                    : "This is granted manually after both documents are approved."}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
         ) : null}
 
         <Card className="mb-8 border-0 bg-white/85 shadow-xl backdrop-blur dark:border dark:border-slate-800 dark:bg-slate-900/80">

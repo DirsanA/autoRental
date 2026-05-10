@@ -20,6 +20,7 @@ export const transactionListQuerySchema = z.object({
       "REFUND",
       "PAYOUT",
       "COMMISSION",
+      "DEPOSIT_RELEASE_TO_OWNER",
       "SYSTEM_WALLET_REFUND",
       "ESCROW_HOLD",
       "ESCROW_RELEASE",
@@ -44,8 +45,18 @@ export const transactionSystemWalletRefundSchema = z
   })
   .strict();
 
+export const transactionDepositSettlementSchema = z
+  .object({
+    action: z.enum(["REFUND_TO_RENTER", "RELEASE_TO_OWNER"]),
+    reason: z.string().trim().max(300).optional(),
+  })
+  .strict();
+
 export type TransactionListQueryInput = z.infer<typeof transactionListQuerySchema>;
 export type TransactionSystemWalletRefundInput = z.infer<
   typeof transactionSystemWalletRefundSchema
+>;
+export type TransactionDepositSettlementInput = z.infer<
+  typeof transactionDepositSettlementSchema
 >;
 

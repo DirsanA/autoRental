@@ -117,9 +117,17 @@ export default function TransactionLogPage() {
                 View and filter platform transactions (live).
               </p>
             </div>
-            <Button variant="outline" onClick={loadTransactions} disabled={isLoading}>
-              Refresh
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/sysadmin/revenue/deposit-refunds")}
+              >
+                Deposit Refunds
+              </Button>
+              <Button variant="outline" onClick={loadTransactions} disabled={isLoading}>
+                Refresh
+              </Button>
+            </div>
           </div>
 
           {error && (

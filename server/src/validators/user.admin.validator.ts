@@ -14,7 +14,13 @@ export const adminUserStatusSchema = z
 
 export const adminUserVerificationLevelSchema = z
   .object({
-    verificationLevel: z.enum(["PEER_HOST"]),
+    verificationLevel: z.enum(["ID_VERIFIED", "LICENSE_VERIFIED", "PEER_HOST"]),
+  })
+  .strict();
+
+export const adminUserSelfDriveAccessSchema = z
+  .object({
+    canSelfDrive: z.boolean(),
   })
   .strict();
 
@@ -33,5 +39,8 @@ export type AdminUserParamsInput = z.infer<typeof adminUserParamsSchema>;
 export type AdminUserStatusInput = z.infer<typeof adminUserStatusSchema>;
 export type AdminUserVerificationLevelInput = z.infer<
   typeof adminUserVerificationLevelSchema
+>;
+export type AdminUserSelfDriveAccessInput = z.infer<
+  typeof adminUserSelfDriveAccessSchema
 >;
 export type AdminUserListQueryInput = z.infer<typeof adminUserListQuerySchema>;

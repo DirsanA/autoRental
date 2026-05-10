@@ -471,6 +471,8 @@ const Index = () => {
               vehicleName={car.name}
               dailyRate={vehicle?.dailyRate ?? 0}
               location={car.location}
+              allowSelfDrive={vehicle?.allowSelfDrive}
+              securityDepositAmount={vehicle?.securityDepositAmount}
               ownerType={vehicle?.ownerType}
               vehicleStatus={vehicle?.status}
               availabilityBlocks={availabilityBlocks}

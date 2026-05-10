@@ -473,6 +473,9 @@ export class UserService {
         image: (user as UserViewSource).image,
         phoneNumber: (user as UserViewSource).phoneNumber,
         walletBalance: (user as UserViewSource).walletBalance,
+        canSelfDrive: Boolean((user as UserViewSource).canSelfDrive),
+        selfDriveApprovedAt:
+          (user as UserViewSource).selfDriveApprovedAt ?? null,
         idNumber: (user as UserViewSource).idNumber,
         idImageUrl: (user as UserViewSource).idImageUrl,
         address: (user as UserViewSource).address,
@@ -1000,10 +1003,6 @@ export class UserService {
       );
     }
 
-    if (data.verificationLevel !== VerificationLevel.PEER_HOST) {
-      throw ApiError.badRequest("Unsupported verification level change");
-    }
-
     const user = await User.findById(userId).populate({
       path: "roles",
       select: "name",
@@ -1013,38 +1012,43 @@ export class UserService {
       throw ApiError.notFound("User not found");
     }
 
-    if (
-      ![
-        VerificationLevel.ID_VERIFIED,
-        VerificationLevel.LICENSE_VERIFIED,
-        VerificationLevel.PEER_HOST,
-      ].includes(user.verificationLevel)
-    ) {
-      throw ApiError.unprocessable(
-        "User must be ID verified or license verified before becoming a peer host",
-      );
+    if (data.verificationLevel === VerificationLevel.PEER_HOST) {
+      if (
+        ![
+          VerificationLevel.ID_VERIFIED,
+          VerificationLevel.LICENSE_VERIFIED,
+          VerificationLevel.PEER_HOST,
+        ].includes(user.verificationLevel)
+      ) {
+        throw ApiError.unprocessable(
+          "User must be ID verified or license verified before becoming a peer host",
+        );
+      }
+
+      const ownedVehicleCount = await Vehicle.countDocuments({
+        ownerId: user._id,
+        ownerType: "User",
+      });
+
+      if (ownedVehicleCount === 0) {
+        throw ApiError.unprocessable(
+          "User must upload at least one vehicle with its images and details before peer-host promotion",
+        );
+      }
+
+      user.verificationLevel = VerificationLevel.PEER_HOST;
+      await user.save();
+
+      const peerHostRoleId = await this.getPeerHostRoleId();
+      if (!peerHostRoleId) {
+        throw ApiError.internal('Role "peerhost" is not available');
+      }
+
+      await userPersistenceService.addRoleByMongoId(user._id, peerHostRoleId);
+    } else {
+      user.verificationLevel = data.verificationLevel;
+      await user.save();
     }
-
-    const ownedVehicleCount = await Vehicle.countDocuments({
-      ownerId: user._id,
-      ownerType: "User",
-    });
-
-    if (ownedVehicleCount === 0) {
-      throw ApiError.unprocessable(
-        "User must upload at least one vehicle with its images and details before peer-host promotion",
-      );
-    }
-
-    user.verificationLevel = VerificationLevel.PEER_HOST;
-    await user.save();
-
-    const peerHostRoleId = await this.getPeerHostRoleId();
-    if (!peerHostRoleId) {
-      throw ApiError.internal('Role "peerhost" is not available');
-    }
-
-    await userPersistenceService.addRoleByMongoId(user._id, peerHostRoleId);
 
     const refreshed = await User.findById(userId)
       .populate({ path: "roles", select: "name" })
@@ -1056,6 +1060,66 @@ export class UserService {
 
     return {
       user: toAdminUserSummary(refreshed as UserViewSource),
+    };
+  }
+
+  async updateSelfDriveAccess(
+    caller: RequestUser,
+    id: string,
+    data: { canSelfDrive: boolean },
+  ) {
+    const userId = this.requireUserId(id);
+
+    if (userId === caller.id) {
+      throw ApiError.badRequest("You cannot change your own self-drive access");
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      throw ApiError.notFound("User not found");
+    }
+
+    if (data.canSelfDrive) {
+      const approvedVerifications = await Verification.find({
+        userId: user._id,
+        status: "APPROVED",
+        documentType: { $in: ["NATIONAL_ID", "PASSPORT", "DRIVER_LICENSE"] },
+      })
+        .select("documentType")
+        .lean();
+
+      const approvedTypes = new Set(
+        approvedVerifications.map((item) => item.documentType),
+      );
+      const hasApprovedId =
+        approvedTypes.has("NATIONAL_ID") || approvedTypes.has("PASSPORT");
+      const hasApprovedLicense = approvedTypes.has("DRIVER_LICENSE");
+
+      if (!hasApprovedId || !hasApprovedLicense) {
+        throw ApiError.unprocessable(
+          "User must have both approved ID/passport and driver license verifications before self-drive approval",
+        );
+      }
+
+      user.canSelfDrive = true;
+      user.selfDriveApprovedAt = new Date();
+      if (mongoose.Types.ObjectId.isValid(String(caller.id))) {
+        user.selfDriveApprovedBy = new mongoose.Types.ObjectId(String(caller.id));
+      }
+    } else {
+      user.canSelfDrive = false;
+      user.selfDriveApprovedAt = undefined;
+      user.selfDriveApprovedBy = undefined;
+    }
+
+    await user.save();
+
+    return {
+      user: {
+        id: user.id,
+        canSelfDrive: user.canSelfDrive,
+        selfDriveApprovedAt: user.selfDriveApprovedAt ?? null,
+      },
     };
   }
 
