@@ -14,6 +14,7 @@ export class AuthApiError extends Error {
   constructor(
     message: string,
     public readonly status: number,
+    public readonly payload?: any,
   ) {
     super(message);
     this.name = "AuthApiError";
@@ -25,20 +26,26 @@ export function isUnauthorizedError(error: unknown): boolean {
 }
 
 async function parseError(response: Response) {
+  let payload: any = null;
   try {
-    const payload = await response.json();
-    return (
-      payload?.error?.message ||
-      payload?.message ||
-      `Request failed (HTTP ${response.status})`
-    );
+    payload = await response.json();
   } catch {
-    return response.statusText || `Request failed (HTTP ${response.status})`;
+    // Ignore parsing errors
   }
+
+  const message =
+    payload?.error?.message ||
+    payload?.message ||
+    (response.statusText && response.statusText !== "OK"
+      ? response.statusText
+      : `Request failed (HTTP ${response.status})`);
+
+  return { message, payload };
 }
 
 async function throwAuthApiError(response: Response): Promise<never> {
-  throw new AuthApiError(await parseError(response), response.status);
+  const { message, payload } = await parseError(response);
+  throw new AuthApiError(message, response.status, payload);
 }
 
 function clearStoredAuthState() {
@@ -193,6 +200,7 @@ export async function fetchCurrentSession() {
     if (!response.ok) {
       if (response.status === 401) {
         clearStoredAuthState();
+        return null;
       }
       await throwAuthApiError(response);
     }

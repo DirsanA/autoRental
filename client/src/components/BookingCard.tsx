@@ -288,9 +288,12 @@ export default function BookingCard({
     BOOKING_ENABLED_LEVELS.has(verificationLevel || "NONE") ||
     canSelfDrive ||
     Boolean(selfDriveApprovedAt);
-  const isWithDriverVerificationReady =
-    hasAnyVerificationSignal || !hasAnyVerificationSignal;
-  const isSelfDriveVerificationReady = allowSelfDrive;
+  const isWithDriverVerificationReady = hasAnyVerificationSignal;
+  const isSelfDriveVerificationReady =
+    allowSelfDrive &&
+    (canSelfDrive ||
+      Boolean(selfDriveApprovedAt) ||
+      verificationLevel === "LICENSE_VERIFIED");
   const isBookingVerificationReady =
     bookingMode === "self-drive"
       ? isSelfDriveVerificationReady
@@ -301,7 +304,7 @@ export default function BookingCard({
       ? bookingMode === "self-drive"
         ? !allowSelfDrive
           ? "This vehicle is not available for self-drive."
-          : null
+          : "Complete your Driver's License verification and get admin approval for self-drive."
         : "Complete your National ID verification before booking a vehicle."
       : null;
 

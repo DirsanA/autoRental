@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Car, Mail, Lock, User, Phone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
-import { registerUser } from "@/lib/auth-api";
+import { registerUser, AuthApiError } from "@/lib/auth-api";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 
@@ -56,29 +56,27 @@ const SignUp = () => {
     } catch (err: unknown) {
       let errorMessage = "Please fix the highlighted fields";
 
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message);
-          const backendMessage = parsed?.error?.message || "Registration failed";
-          const details = parsed?.error?.details;
-          errorMessage = backendMessage;
+      if (err instanceof AuthApiError) {
+        const payload = err.payload;
+        const backendMessage = payload?.error?.message || "Registration failed";
+        const details = payload?.error?.details;
+        errorMessage = backendMessage;
 
-          if (Array.isArray(details)) {
-            const mappedErrors: Record<string, string> = {};
+        if (Array.isArray(details)) {
+          const mappedErrors: Record<string, string> = {};
 
-            details.forEach((item: { field: string; message: string }) => {
-              mappedErrors[item.field] = item.message;
-            });
+          details.forEach((item: { field: string; message: string }) => {
+            mappedErrors[item.field] = item.message;
+          });
 
-            setFieldErrors(mappedErrors);
-            setError(backendMessage);
-          } else {
-            setError(backendMessage);
-          }
-        } catch {
-          errorMessage = err.message;
-          setError(err.message);
+          setFieldErrors(mappedErrors);
+          setError(backendMessage);
+        } else {
+          setError(backendMessage);
         }
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+        setError(err.message);
       } else {
         errorMessage = "Registration failed";
         setError("Registration failed");

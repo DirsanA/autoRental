@@ -254,7 +254,7 @@ export class AdminNotificationService {
           .select("_id make model")
           .lean(),
         Verification.find({ status: "PENDING" })
-          .select("_id documentType userId")
+          .select("_id documentType userId extractedData")
           .lean(),
         Company.find({ pendingChanges: { $exists: true, $ne: null } })
           .select("_id name")
@@ -352,25 +352,34 @@ export class AdminNotificationService {
 
     // 4. Verifications (Renter or Peerhost)
     for (const v of pendingVerifications) {
-      const isPeerhostApp = v.documentType === "DRIVER_LICENSE"; // Simplified check for auto-gen
-      const activityType = isPeerhostApp ? "PEERHOST_APPLICATION" : "RENTER_VERIFICATION";
+      const storedActivityType = (v.extractedData as any)?.activityType;
+      // Default to RENTER_VERIFICATION for license checks if not explicitly a peerhost upgrade request
+      const activityType = storedActivityType || "RENTER_VERIFICATION";
+      const isPeerhostApp = activityType === "PEERHOST_APPLICATION";
       const key = `VERIFICATION-${v._id.toString()}-${activityType}`;
       
       if (!existingMap.has(key)) {
+        const docType = v.documentType === "NATIONAL_ID" ? "National ID" : "Driver's License";
+        const title = isPeerhostApp ? "New Peerhost Application" : `Renter ${docType} Verification`;
+        const message = isPeerhostApp 
+          ? "A new host application is waiting for review." 
+          : `A renter ${docType.toLowerCase()} is waiting for review.`;
+        const targetUrl = isPeerhostApp ? `/sysadmin/P2P/${v._id}` : `/sysadmin/users/${v.userId}`;
+
         docs.push({
           recipientId: adminId as any,
-          title: isPeerhostApp ? "New Peerhost Application" : "Renter Profile Verification",
-          message: `A verification document is waiting for review.`,
+          title,
+          message,
           category: "VERIFICATION_ACTIVITY" as AdminNotificationCategory,
           priority: isPeerhostApp ? "HIGH" : "MEDIUM",
           isRead: false,
           relatedEntity: { id: v._id, entityType: "VERIFICATION" },
-          actionUrl: isPeerhostApp ? `/sysadmin/p2p/${v._id}` : `/sysadmin/users/${v.userId}`,
+          actionUrl: targetUrl,
           metadata: {
             entityType: "VERIFICATION",
             entityId: v._id.toString(),
             activityType,
-            targetUrl: isPeerhostApp ? `/sysadmin/p2p/${v._id}` : `/sysadmin/users/${v.userId}`,
+            targetUrl,
             sentToAdmin: true,
           },
         });

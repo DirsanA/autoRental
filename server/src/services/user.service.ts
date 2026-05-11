@@ -377,8 +377,9 @@ export class UserService {
       Verification.find({ userId: mongoUserId })
         .sort({ createdAt: -1 })
         .select(
-          "documentType status adminComment verifiedAt documentFrontUrl documentBackUrl createdAt extractedData",
+          "documentType status adminComment verifiedAt verifiedBy documentFrontUrl documentBackUrl createdAt extractedData",
         )
+        .populate({ path: "verifiedBy", select: "name" })
         .lean(),
       Vehicle.find({ ownerId: mongoUserId, ownerType: "User" })
         .sort({ createdAt: -1 })
@@ -541,6 +542,7 @@ export class UserService {
             ?.address ?? null,
         adminComment: verification.adminComment ?? null,
         verifiedAt: verification.verifiedAt ?? null,
+        verifiedBy: (verification.verifiedBy as any)?.name ?? null,
         documentFrontUrl: verification.documentFrontUrl,
         documentBackUrl: verification.documentBackUrl ?? null,
         createdAt: verification.createdAt ?? null,

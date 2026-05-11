@@ -4,7 +4,7 @@ import { SYSTEM_ROLES } from "../config/constants.js";
 // Reuses the browser date input format so date fields always arrive in a predictable shape.
 const htmlDateSchema = z
   .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Date must be in YYYY-MM-DD format");
+  .regex(/^(\d{4}-\d{2}-\d{2})?$/, "Date must be in YYYY-MM-DD format");
 
 // Accepts uploaded document references whether the client sends a full URL or an app-relative path.
 const uploadedDocumentRefSchema = z
@@ -21,7 +21,7 @@ export const submitRenterIdVerificationSchema = z.object({
   documentFrontUrl: uploadedDocumentRefSchema,
   documentBackUrl: uploadedDocumentRefSchema,
   documentNumber: z.string().trim().min(4, "ID number is required"),
-  dateOfBirth: htmlDateSchema,
+  dateOfBirth: htmlDateSchema.optional(),
 });
 
 // Canonical fields for License verification
@@ -29,7 +29,7 @@ export const submitRenterLicenseVerificationSchema = z.object({
   documentFrontUrl: uploadedDocumentRefSchema,
   documentBackUrl: uploadedDocumentRefSchema,
   licenseNumber: z.string().trim().min(4, "License number is required"),
-  dateOfBirth: htmlDateSchema,
+  dateOfBirth: htmlDateSchema.optional(),
   licenseExpiry: htmlDateSchema,
 });
 
@@ -79,9 +79,6 @@ function validateLegacyVerification(
   }
   if (!data.licenseNumber && !data.idNumber) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["licenseNumber"], message: "License number is required" });
-  }
-  if (!data.dateOfBirth) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["dateOfBirth"], message: "Date of birth is required" });
   }
   if (!data.licenseExpiry) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, path: ["licenseExpiry"], message: "License expiry is required" });

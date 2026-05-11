@@ -541,12 +541,6 @@ function SecondaryVerificationItem({
               </div>
             </div>
             <div>
-              <div className="text-muted-foreground">Date Of Birth</div>
-              <div className="font-medium">
-                {formatDate(verification.dateOfBirth)}
-              </div>
-            </div>
-            <div>
               <div className="text-muted-foreground">Expiry</div>
               <div className="font-medium">
                 {formatDate(verification.documentExpiry)}
@@ -555,7 +549,14 @@ function SecondaryVerificationItem({
             <div>
               <div className="text-muted-foreground">Reviewed</div>
               <div className="font-medium">
-                {formatDateTime(verification.verifiedAt)}
+                {verification.verifiedBy ? (
+                  <>
+                    <span className="block">{formatDateTime(verification.verifiedAt)}</span>
+                    <span className="text-xs text-muted-foreground">by {verification.verifiedBy}</span>
+                  </>
+                ) : (
+                  formatDateTime(verification.verifiedAt)
+                )}
               </div>
             </div>
           </div>
@@ -821,12 +822,6 @@ export function VerificationTab({ user, onUserRefresh }: VerificationTabProps) {
                     </div>
                   </div>
                   <div className="rounded-2xl bg-muted/20 p-4">
-                    <div className="text-muted-foreground">Date Of Birth</div>
-                    <div className="mt-1 font-medium">
-                      {formatDate(primaryVerification.dateOfBirth)}
-                    </div>
-                  </div>
-                  <div className="rounded-2xl bg-muted/20 p-4">
                     <div className="text-muted-foreground">Expiry</div>
                     <div className="mt-1 font-medium">
                       {formatDate(primaryVerification.documentExpiry)}
@@ -835,7 +830,14 @@ export function VerificationTab({ user, onUserRefresh }: VerificationTabProps) {
                   <div className="rounded-2xl bg-muted/20 p-4">
                     <div className="text-muted-foreground">Reviewed</div>
                     <div className="mt-1 font-medium">
-                      {formatDateTime(primaryVerification.verifiedAt)}
+                      {primaryVerification.verifiedBy ? (
+                        <>
+                          <span className="block">{formatDateTime(primaryVerification.verifiedAt)}</span>
+                          <span className="text-xs text-muted-foreground">by {primaryVerification.verifiedBy}</span>
+                        </>
+                      ) : (
+                        formatDateTime(primaryVerification.verifiedAt)
+                      )}
                     </div>
                   </div>
                 </div>

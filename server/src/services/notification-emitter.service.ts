@@ -141,6 +141,7 @@ export class NotificationEmitterService {
     switch (activityType) {
       case "COMPANY_REGISTRATION":
       case "PEERHOST_APPLICATION":
+      case "RENTER_VERIFICATION":
         return "HIGH";
       default:
         return "MEDIUM";
@@ -148,8 +149,9 @@ export class NotificationEmitterService {
   }
 
   private getNotificationTitle(activityType: string, metadata: Record<string, any>): string {
+    const docType = metadata.documentType === "NATIONAL_ID" ? "National ID" : "Driver's License";
     switch (activityType) {
-      case "RENTER_VERIFICATION": return "Renter Profile Verification";
+      case "RENTER_VERIFICATION": return `Renter ${docType} Verification`;
       case "PEERHOST_APPLICATION": return "New Peerhost Application";
       case "PEERHOST_VEHICLE_ADD": return "New Peerhost Vehicle";
       case "COMPANY_REGISTRATION": return "Company Registration Awaiting Approval";
@@ -160,8 +162,9 @@ export class NotificationEmitterService {
 
   private getNotificationMessage(activityType: string, metadata: Record<string, any>): string {
     const name = metadata.userName || metadata.companyName || metadata.vehicleName || "A new item";
+    const docType = metadata.documentType === "NATIONAL_ID" ? "National ID" : "Driver's License";
     switch (activityType) {
-      case "RENTER_VERIFICATION": return `${name} submitted documents for verification.`;
+      case "RENTER_VERIFICATION": return `${name} submitted ${docType} for verification.`;
       case "PEERHOST_APPLICATION": return `${name} applied to become a peerhost.`;
       case "PEERHOST_VEHICLE_ADD": return `${name} added a new vehicle for review.`;
       case "COMPANY_REGISTRATION": return `${name} registered as a company.`;
@@ -171,13 +174,14 @@ export class NotificationEmitterService {
   }
 
   private getActionUrl(activityType: string, entityId: string, metadata: Record<string, any>): string {
+    const userId = metadata.userId || entityId;
     switch (activityType) {
       case "RENTER_VERIFICATION":
-        return `/sysadmin/users/${metadata.userId || entityId}`;
+        return `/sysadmin/users/${userId}`;
       case "PEERHOST_APPLICATION":
-        return `/sysadmin/p2p/${metadata.userId || entityId}`;
+        return `/sysadmin/P2P/${userId}`;
       case "PEERHOST_VEHICLE_ADD":
-        return `/sysadmin/p2p/vehicles/${entityId}`;
+        return `/sysadmin/P2P/vehicles/${entityId}`;
       case "COMPANY_REGISTRATION":
       case "COMPANY_PROFILE_CHANGE":
         return `/sysadmin/companies/${entityId}`;

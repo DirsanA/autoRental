@@ -305,20 +305,25 @@ export class AuthService {
     }>
   > {
     const normalizedEmail = this.normalizeEmail(email);
-    if (expectedAccountType) {
-      const account = await User.findOne({ email: normalizedEmail })
-        .select("accountType")
-        .lean();
-
-      if (!account || account.accountType !== expectedAccountType) {
-        throw ApiError.unauthorized("Invalid credentials for this portal");
-      }
-    }
-
     const result = await this.auth.api.signInEmail({
       headers,
       body: { email: normalizedEmail, password },
     });
+
+    if (expectedAccountType && result.user) {
+      const account = await User.findOne({ email: normalizedEmail })
+        .select("accountType")
+        .lean();
+
+      // Allow ADMIN to log into any portal; otherwise require exact match
+      if (
+        account &&
+        account.accountType !== AccountType.ADMIN &&
+        account.accountType !== expectedAccountType
+      ) {
+        throw ApiError.unauthorized("Invalid credentials for this portal");
+      }
+    }
 
     if (result.user) {
       try {

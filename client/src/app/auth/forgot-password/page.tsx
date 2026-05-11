@@ -7,7 +7,7 @@ import { useRouter } from "next/navigation";
 import { Car, Mail, ArrowLeft, CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
-import { requestPasswordReset } from "@/lib/auth-api";
+import { requestPasswordReset, AuthApiError } from "@/lib/auth-api";
 import { useToast } from "@/hooks/use-toast";
 
 function ForgotPasswordContent() {
@@ -34,13 +34,10 @@ function ForgotPasswordContent() {
     } catch (err: unknown) {
       let errorMessage = "Failed to send reset email";
 
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message);
-          errorMessage = parsed?.error?.message || "Failed to send reset email";
-        } catch {
-          errorMessage = err.message;
-        }
+      if (err instanceof AuthApiError) {
+        errorMessage = err.payload?.error?.message || err.message || "Failed to send reset email";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
       }
 
       setError(errorMessage);

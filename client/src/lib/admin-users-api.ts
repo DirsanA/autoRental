@@ -83,6 +83,7 @@ export type AdminUserVerificationRecord = {
   submittedAddress: string | null;
   adminComment: string | null;
   verifiedAt: string | null;
+  verifiedBy: string | null;
   documentFrontUrl: string | null;
   documentBackUrl: string | null;
   createdAt: string | null;
@@ -234,6 +235,7 @@ type ApiVerificationRecord = {
   submittedAddress?: string | null;
   adminComment?: string | null;
   verifiedAt?: string | null;
+  verifiedBy?: string | null;
   documentFrontUrl?: string | null;
   documentBackUrl?: string | null;
   createdAt?: string | null;
@@ -527,6 +529,7 @@ function mapApiUserDetailResponse(payload: {
       submittedAddress: verification.submittedAddress || null,
       adminComment: verification.adminComment || null,
       verifiedAt: verification.verifiedAt || null,
+      verifiedBy: verification.verifiedBy || null,
       documentFrontUrl: verification.documentFrontUrl || null,
       documentBackUrl: verification.documentBackUrl || null,
       createdAt: verification.createdAt || null,
@@ -791,6 +794,7 @@ export async function updateAdminUserVerification(
     submittedAddress: verification.submittedAddress || null,
     adminComment: verification.adminComment || null,
     verifiedAt: verification.verifiedAt || null,
+    verifiedBy: verification.verifiedBy || null,
     documentFrontUrl: verification.documentFrontUrl || null,
     documentBackUrl: verification.documentBackUrl || null,
     createdAt: verification.createdAt || null,

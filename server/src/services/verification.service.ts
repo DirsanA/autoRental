@@ -20,7 +20,7 @@ type VerificationMetadata = {
     | VerificationLevel.ID_VERIFIED
     | VerificationLevel.LICENSE_VERIFIED;
   documentNumber: string;
-  dateOfBirth: string;
+  dateOfBirth?: string;
   documentExpiry: string;
   address?: string | undefined;
 };
@@ -90,7 +90,7 @@ export class VerificationService {
     return this.submitVerification(authUserId, data, {
       documentType: "NATIONAL_ID",
       targetVerificationLevel: VerificationLevel.ID_VERIFIED,
-    });
+    }, "RENTER_VERIFICATION");
   }
 
   /**
@@ -103,7 +103,7 @@ export class VerificationService {
     return this.submitVerification(authUserId, data, {
       documentType: "DRIVER_LICENSE",
       targetVerificationLevel: VerificationLevel.LICENSE_VERIFIED,
-    });
+    }, "RENTER_VERIFICATION");
   }
 
   /**
@@ -116,7 +116,7 @@ export class VerificationService {
     return this.submitVerification(authUserId, data, {
       documentType: "DRIVER_LICENSE",
       targetVerificationLevel: VerificationLevel.LICENSE_VERIFIED,
-    });
+    }, "PEERHOST_APPLICATION");
   }
 
   /**
@@ -271,15 +271,12 @@ export class VerificationService {
       targetVerificationLevel: submission.targetVerificationLevel,
       documentNumber:
         "documentNumber" in data ? data.documentNumber : data.licenseNumber,
-      dateOfBirth: data.dateOfBirth,
+      dateOfBirth: data.dateOfBirth || "",
       documentExpiry: "licenseExpiry" in data ? data.licenseExpiry : "",
       address: "address" in data ? data.address : undefined,
     };
   }
 
-  /**
-   * Creates a pending verification after duplicate checks.
-   */
   private async submitVerification(
     authUserId: string,
     data:
@@ -287,6 +284,7 @@ export class VerificationService {
       | SubmitRenterLicenseVerificationInput
       | SubmitPeerhostVerificationInput,
     submission: VerificationSubmission,
+    activityType: "RENTER_VERIFICATION" | "PEERHOST_APPLICATION"
   ): Promise<VerificationDocument> {
     const user = await this.findUserByAuthIdOrThrow(authUserId);
 
@@ -307,14 +305,14 @@ export class VerificationService {
       documentType: submission.documentType,
       documentFrontUrl: data.documentFrontUrl,
       documentBackUrl: data.documentBackUrl,
-      extractedData: this.buildVerificationMetadata(data, submission),
+      extractedData: {
+        ...this.buildVerificationMetadata(data, submission),
+        activityType,
+      },
       status: "PENDING",
     });
 
     // ✅ Emit real-time notification to all admins for major activity
-    const activityType = submission.targetVerificationLevel === VerificationLevel.LICENSE_VERIFIED 
-      ? "PEERHOST_APPLICATION" 
-      : "RENTER_VERIFICATION";
 
     await notificationEmitter.emitNewActionRequired({
       entityType: "VERIFICATION",

@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
-import { fetchCurrentSession, loginWithEmail } from "@/lib/auth-api";
+import { fetchCurrentSession, loginWithEmail, AuthApiError } from "@/lib/auth-api";
 import { writeAuthToken } from "@/lib/auth-token";
 import { buildUserRoleState, writeUserRoleState } from "@/lib/role-store";
 import { useToast } from "@/hooks/use-toast";
@@ -79,29 +79,27 @@ function SignInContent() {
     } catch (err: unknown) {
       let errorMessage = "Login failed";
 
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message);
-          const backendMessage = parsed?.error?.message || "Login failed";
-          const details = parsed?.error?.details;
+      if (err instanceof AuthApiError) {
+        const payload = err.payload;
+        const backendMessage = payload?.error?.message || err.message || "Login failed";
+        const details = payload?.error?.details;
 
-          errorMessage = backendMessage;
+        errorMessage = backendMessage;
 
-          if (Array.isArray(details)) {
-            const mappedErrors: Record<string, string> = {};
+        if (Array.isArray(details)) {
+          const mappedErrors: Record<string, string> = {};
 
-            details.forEach((item: { field: string; message: string }) => {
-              mappedErrors[item.field] = item.message;
-            });
+          details.forEach((item: { field: string; message: string }) => {
+            mappedErrors[item.field] = item.message;
+          });
 
-            setFieldErrors(mappedErrors);
-          }
-
-          setError(backendMessage);
-        } catch {
-          errorMessage = err.message;
-          setError(err.message);
+          setFieldErrors(mappedErrors);
         }
+
+        setError(backendMessage);
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+        setError(err.message);
       } else {
         setError("Login failed");
       }

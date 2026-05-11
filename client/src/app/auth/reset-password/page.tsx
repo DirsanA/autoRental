@@ -7,7 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Lock, ArrowLeft, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
-import { resetPassword } from "@/lib/auth-api";
+import { resetPassword, AuthApiError } from "@/lib/auth-api";
 import { useToast } from "@/hooks/use-toast";
 
 function ResetPasswordContent() {
@@ -64,13 +64,10 @@ function ResetPasswordContent() {
     } catch (err: unknown) {
       let errorMessage = "Failed to reset password";
 
-      if (err instanceof Error) {
-        try {
-          const parsed = JSON.parse(err.message);
-          errorMessage = parsed?.error?.message || "Failed to reset password";
-        } catch {
-          errorMessage = err.message;
-        }
+      if (err instanceof AuthApiError) {
+        errorMessage = err.payload?.error?.message || err.message || "Failed to reset password";
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
       }
 
       setError(errorMessage);

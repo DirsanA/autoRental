@@ -402,12 +402,12 @@ export function ProfileVerificationPage({
     }
 
     return (
-      licenseForm.dob.length > 0 &&
       licenseForm.licenseNumber.trim().length > 4 &&
+      licenseForm.dob.length > 0 &&
       licenseForm.expiry.length > 0 &&
       currentFiles.length === 2
     );
-  }, [currentFiles.length, idForm.dob, idForm.idNumber, isWithDriverMode, licenseForm.dob, licenseForm.expiry, licenseForm.licenseNumber]);
+  }, [currentFiles.length, idForm.dob, idForm.idNumber, isWithDriverMode, licenseForm.expiry, licenseForm.licenseNumber]);
 
   const canSubmit =
     !isLoading &&
@@ -1266,27 +1266,26 @@ export function ProfileVerificationPage({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground dark:text-slate-400">
-                  Date of Birth
-                </Label>
-                <Input
-                  type="date"
-                  value={isWithDriverMode ? idForm.dob : licenseForm.dob}
-                  onChange={(event) => {
-                    const value = event.target.value;
-
-                    if (isWithDriverMode) {
-                      setIdForm((previous) => ({ ...previous, dob: value }));
-                      return;
+              {isWithDriverMode && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground dark:text-slate-400">
+                    Date of Birth
+                  </Label>
+                  <Input
+                    type="date"
+                    value={idForm.dob}
+                    onChange={(event) =>
+                      setIdForm((previous) => ({
+                        ...previous,
+                        dob: event.target.value,
+                      }))
                     }
+                    disabled={!canEditCurrentSubmission}
+                    className="border-0 bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:[color-scheme:dark]"
+                  />
+                </div>
+              )}
 
-                    setLicenseForm((previous) => ({ ...previous, dob: value }));
-                  }}
-                  disabled={!canEditCurrentSubmission}
-                  className="border-0 bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:[color-scheme:dark]"
-                />
-              </div>
 
               {isWithDriverMode ? (
                 <div className="space-y-2">
@@ -1323,6 +1322,24 @@ export function ProfileVerificationPage({
                       placeholder="DL-123456"
                       disabled={!canEditCurrentSubmission}
                       className="border-0 bg-slate-100 dark:bg-slate-800 dark:placeholder:text-slate-500 dark:text-slate-200"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground dark:text-slate-400">
+                      Date of Birth
+                    </Label>
+                    <Input
+                      type="date"
+                      value={licenseForm.dob}
+                      onChange={(event) =>
+                        setLicenseForm((previous) => ({
+                          ...previous,
+                          dob: event.target.value,
+                        }))
+                      }
+                      disabled={!canEditCurrentSubmission}
+                      className="border-0 bg-slate-100 dark:bg-slate-800 dark:text-slate-200 dark:[color-scheme:dark]"
                     />
                   </div>
 
