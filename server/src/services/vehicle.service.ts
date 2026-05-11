@@ -122,7 +122,7 @@ export class VehicleService {
   async listPublic(filter?: "available" | "rented" | "maintenance") {
     const query = filter
       ? { status: VEHICLE_FILTER_STATUS[filter] }
-      : { status: "AVAILABLE" };
+      : { status: { $in: ["AVAILABLE", "BOOKED"] } };
     const vehicles = await Vehicle.find(query).sort({ createdAt: -1 }).lean();
 
     if (vehicles.length === 0) return [];
