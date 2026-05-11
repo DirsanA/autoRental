@@ -480,45 +480,45 @@ export default function BookingCard({
   }
 
   return (
-    <div className="sticky top-24 overflow-hidden rounded-xl border border-gray-200 bg-white p-6 shadow-sm w-full max-w-sm mr-auto ml-auto">
+    <div className="sticky top-24 overflow-hidden rounded-xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-6 shadow-sm w-full max-w-sm mr-auto ml-auto">
       <form onSubmit={onSubmit}>
         <div className="mb-6">
-          <div className="text-2xl font-extrabold text-[#222222] underline decoration-from-font underline-offset-4">
+          <div className="text-2xl font-extrabold text-[#222222] dark:text-gray-100 underline decoration-from-font underline-offset-4">
             {pricing.valid
               ? formatMoney(pricing.total)
               : formatMoney(dailyRate)}{" "}
             {pricing.valid ? "total" : "/ day"}
           </div>
-          <div className="mt-1 text-sm font-semibold text-gray-500">
+          <div className="mt-1 text-sm font-semibold text-gray-500 dark:text-gray-400">
             Before taxes
           </div>
-          <div className="mt-2 text-sm text-gray-600">{vehicleName}</div>
+          <div className="mt-2 text-sm text-gray-600 dark:text-gray-400">{vehicleName}</div>
         </div>
 
-        <hr className="mb-6 border-gray-200" />
+        <hr className="mb-6 border-gray-200 dark:border-gray-800" />
 
         {allowSelfDrive ? (
           <>
             <div className="mb-6">
-              <h3 className="mb-4 text-xl font-bold text-[#222222]">Booking mode</h3>
+              <h3 className="mb-4 text-xl font-bold text-[#222222] dark:text-gray-100">Booking mode</h3>
               <div className="grid gap-3">
                 <button
                   type="button"
                   onClick={() => setBookingMode("with-driver")}
                   className={`rounded-2xl border px-4 py-4 text-left transition ${
                     bookingMode === "with-driver"
-                      ? "border-[#222222] bg-slate-50 shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-[#222222] dark:border-gray-500 bg-slate-50 dark:bg-gray-800 shadow-sm"
+                      : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-[#222222]">With driver</p>
-                      <p className="mt-1 text-sm text-gray-600">
+                      <p className="font-semibold text-[#222222] dark:text-gray-100">With driver</p>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                         Best for renters who want a verified driver included.
                       </p>
                     </div>
-                    <ThumbsUp className="h-5 w-5 text-[#222222]" />
+                    <ThumbsUp className="h-5 w-5 text-[#222222] dark:text-gray-100" />
                   </div>
                 </button>
 
@@ -527,44 +527,44 @@ export default function BookingCard({
                   onClick={() => setBookingMode("self-drive")}
                   className={`rounded-2xl border px-4 py-4 text-left transition ${
                     bookingMode === "self-drive"
-                      ? "border-emerald-500 bg-emerald-50 shadow-sm"
-                      : "border-gray-200 bg-white hover:border-gray-300"
+                      ? "border-emerald-500 bg-emerald-50 dark:bg-emerald-900/30 shadow-sm"
+                      : "border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 hover:border-gray-300 dark:hover:border-gray-700"
                   }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div>
-                      <p className="font-semibold text-[#222222]">Self-drive</p>
-                      <p className="mt-1 text-sm text-gray-600">
+                      <p className="font-semibold text-[#222222] dark:text-gray-100">Self-drive</p>
+                      <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
                         Requires approved driver license verification and admin self-drive access.
                       </p>
                     </div>
-                    <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-semibold text-emerald-700">
+                    <span className="rounded-full bg-emerald-100 dark:bg-emerald-900/50 px-3 py-1 text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                       Available
                     </span>
                   </div>
                   {securityDepositAmount > 0 ? (
-                    <p className="mt-3 text-sm font-medium text-emerald-700">
+                    <p className="mt-3 text-sm font-medium text-emerald-700 dark:text-emerald-400">
                       Refundable deposit: {formatMoney(securityDepositAmount)}
                     </p>
                   ) : null}
                 </button>
               </div>
 
-              <div className="mt-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+              <div className="mt-3 rounded-2xl border border-slate-200 dark:border-gray-800 bg-slate-50 dark:bg-gray-800 px-4 py-3 text-sm text-slate-700 dark:text-gray-300">
                 {bookingModeDescription}
               </div>
             </div>
 
-            <hr className="mb-6 border-gray-200" />
+            <hr className="mb-6 border-gray-200 dark:border-gray-800" />
           </>
         ) : null}
 
         <div className="mb-6">
-          <h3 className="mb-4 text-xl font-bold text-[#222222]">Your trip</h3>
+          <h3 className="mb-4 text-xl font-bold text-[#222222] dark:text-gray-100">Your trip</h3>
 
           <div className="space-y-4">
             <div>
-              <div className="mb-2 text-[15px] font-semibold text-[#222222]">
+              <div className="mb-2 text-[15px] font-semibold text-[#222222] dark:text-gray-100">
                 Pickup date
               </div>
               <div className="relative">
@@ -577,13 +577,13 @@ export default function BookingCard({
                     10,
                   )}
                   max={maxDate}
-                  className="w-full rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
+                  className="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 py-6 px-4 font-semibold text-[#222222] dark:text-gray-100 shadow-sm focus-visible:ring-[#222222] dark:focus-visible:ring-gray-400 focus-visible:ring-offset-0"
                 />
               </div>
             </div>
 
             <div className="pt-2">
-              <div className="mb-2 text-[15px] font-semibold text-[#222222]">
+              <div className="mb-2 text-[15px] font-semibold text-[#222222] dark:text-gray-100">
                 Return date
               </div>
               <div className="relative">
@@ -593,27 +593,27 @@ export default function BookingCard({
                   onChange={(e) => setEndDate(e.target.value)}
                   min={startDate}
                   max={maxDate}
-                  className="w-full rounded-xl border-gray-300 py-6 px-4 font-semibold text-[#222222] shadow-sm focus-visible:ring-[#222222] focus-visible:ring-offset-0"
+                  className="w-full rounded-xl border-gray-300 dark:border-gray-700 dark:bg-gray-800 py-6 px-4 font-semibold text-[#222222] dark:text-gray-100 shadow-sm focus-visible:ring-[#222222] dark:focus-visible:ring-gray-400 focus-visible:ring-offset-0"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <hr className="mb-6 border-gray-200" />
+        <hr className="mb-6 border-gray-200 dark:border-gray-800" />
 
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h3 className="font-bold text-[15px] text-[#222222] mb-1">
+            <h3 className="font-bold text-[15px] text-[#222222] dark:text-gray-100 mb-1">
               Pickup & return location
             </h3>
-            <p className="text-[15px] text-gray-700">
+            <p className="text-[15px] text-gray-700 dark:text-gray-400">
               {location || "Will be specified later"}
             </p>
           </div>
           <button
             type="button"
-            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-[#222222]"
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-[#222222] dark:focus:ring-gray-400"
           >
             <Pencil className="h-[14px] w-[14px]" />
           </button>
@@ -621,35 +621,35 @@ export default function BookingCard({
 
         {pricing.valid && (
           <div className="mb-6">
-            <hr className="mb-6 border-gray-200" />
+            <hr className="mb-6 border-gray-200 dark:border-gray-800" />
             <div className="flex items-center justify-between mb-4">
-              <span className="text-[#222222] underline decoration-from-font underline-offset-4 cursor-pointer">
+              <span className="text-[#222222] dark:text-gray-100 underline decoration-from-font underline-offset-4 cursor-pointer">
                 {formatMoney(dailyRate)} x {pricing.days} days
               </span>
-              <span className="text-[#222222]">
+              <span className="text-[#222222] dark:text-gray-100">
                 {formatMoney(pricing.subtotal)}
               </span>
             </div>
             <div className="flex items-center justify-between mb-4">
-              <span className="text-[#222222] underline decoration-from-font underline-offset-4 cursor-pointer">
+              <span className="text-[#222222] dark:text-gray-100 underline decoration-from-font underline-offset-4 cursor-pointer">
                 Trip fee
               </span>
-              <span className="text-[#222222]">
+              <span className="text-[#222222] dark:text-gray-100">
                 {formatMoney(pricing.commission)}
               </span>
             </div>
             {pricing.deposit > 0 ? (
               <div className="flex items-center justify-between mb-4">
-                <span className="text-[#222222] underline decoration-from-font underline-offset-4 cursor-pointer">
+                <span className="text-[#222222] dark:text-gray-100 underline decoration-from-font underline-offset-4 cursor-pointer">
                   Refundable security deposit
                 </span>
-                <span className="text-[#222222]">
+                <span className="text-[#222222] dark:text-gray-100">
                   {formatMoney(pricing.deposit)}
                 </span>
               </div>
             ) : null}
-            <hr className="mb-3 border-gray-200" />
-            <div className="flex items-center justify-between font-extrabold text-[#222222] text-[15px]">
+            <hr className="mb-3 border-gray-200 dark:border-gray-800" />
+            <div className="flex items-center justify-between font-extrabold text-[#222222] dark:text-gray-100 text-[15px]">
               <span>Total</span>
               <span>{formatMoney(pricing.total)}</span>
             </div>
@@ -663,14 +663,14 @@ export default function BookingCard({
             checked={termsAccepted}
             onChange={(e) => setTermsAccepted(e.target.checked)}
             required
-            className="mt-1 h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary"
+            className="mt-1 h-4 w-4 rounded border-gray-300 dark:border-gray-700 dark:bg-gray-800 text-primary focus:ring-primary"
           />
-          <label htmlFor="terms" className="text-sm text-gray-700 leading-snug">
+          <label htmlFor="terms" className="text-sm text-gray-700 dark:text-gray-300 leading-snug">
             I agree to the{" "}
             <Link
               href="/terms"
               target="_blank"
-              className="font-semibold text-primary hover:underline"
+              className="font-semibold text-primary dark:text-blue-400 hover:underline"
             >
               Terms and Policies
             </Link>{" "}
@@ -681,7 +681,7 @@ export default function BookingCard({
         <Button
           type="submit"
           disabled={submitting || !termsAccepted || !isBookingVerificationReady}
-          className="mb-8 w-full rounded-xl bg-[#e5e5e5] px-4 py-[14px] text-base font-extrabold text-gray-800 hover:bg-[#d4d4d4] disabled:bg-[#f2f2f2] disabled:text-[#b4b4b4] disabled:opacity-100 transition-colors h-auto"
+          className="mb-8 w-full rounded-xl bg-[#e5e5e5] dark:bg-gray-800 px-4 py-[14px] text-base font-extrabold text-gray-800 dark:text-gray-100 hover:bg-[#d4d4d4] dark:hover:bg-gray-700 disabled:bg-[#f2f2f2] dark:disabled:bg-gray-800 disabled:text-[#b4b4b4] dark:disabled:text-gray-500 disabled:opacity-100 transition-colors h-auto"
         >
           {submitting ? (
             <>
@@ -698,7 +698,7 @@ export default function BookingCard({
         </Button>
 
         {(submissionError || verificationBlockMessage || bookingGuard.message) && (
-          <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+          <div className="mb-8 flex items-start gap-3 rounded-xl border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 text-sm text-amber-900 dark:text-amber-200">
             <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
               {submissionError || verificationBlockMessage || bookingGuard.message}
