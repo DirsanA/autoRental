@@ -1,10 +1,13 @@
 import mongoose from "mongoose";
 import { Company, type CompanyDocument } from "../models/Company.js";
-import { User } from "../models/User.js";
+import { AccountType, User } from "../models/User.js";
 import { Vehicle } from "../models/Vehicle.js";
 import { Booking } from "../models/Booking.js";
+import { Role } from "../models/Role.js";
+import { SYSTEM_ROLES } from "../config/constants.js";
 import { ApiError } from "../utils/ApiError.js";
 import { notificationEmitter } from "./notification-emitter.service.js";
+import { userPersistenceService } from "./user.persistence.service.js";
 import type {
   CreateCompanyInput,
   UpdateCompanyInput,
@@ -23,6 +26,18 @@ type CompanyRegistrationAvailabilityInput = {
  */
 function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+async function syncCompanyPortalAccess(authUserId: string) {
+  await userPersistenceService.updateAccountType(authUserId, AccountType.COMPANY);
+
+  const companyRole = await Role.findOne({ name: SYSTEM_ROLES.COMPANY })
+    .select("_id")
+    .lean();
+
+  if (companyRole?._id) {
+    await userPersistenceService.addRole(authUserId, companyRole._id);
+  }
 }
 
 export class CompanyService {
@@ -120,6 +135,8 @@ export class CompanyService {
 
     socialLinks: data.socialLinks,
   });
+
+  await syncCompanyPortalAccess(authUserId);
 
   // ✅ Emit real-time notification to admins when company registers
   await notificationEmitter.emitNewActionRequired({

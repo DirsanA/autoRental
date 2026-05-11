@@ -33,6 +33,13 @@ function getDefaultDashboard(
   return "/renter/dashboard";
 }
 
+function getPortalForRoles(allowedRoles?: ActiveRole[]) {
+  if (!allowedRoles || allowedRoles.length === 0) return "user";
+  if (allowedRoles.includes("admin")) return "admin";
+  if (allowedRoles.includes("company")) return "company";
+  return "user";
+}
+
 export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) {
   const router = useRouter();
   const { user, loading, isLoggedIn } = useAuth();
@@ -46,7 +53,14 @@ export function ProtectedRoute({ children, allowedRoles }: ProtectedRouteProps) 
 
     if (!isLoggedIn) {
       // Redirect to the login page if not authenticated
-      router.push("/auth/signin"); // Adjust the path to your login page
+      const portal = getPortalForRoles(allowedRoles);
+      const nextPath =
+        typeof window !== "undefined"
+          ? `${window.location.pathname}${window.location.search}`
+          : "/";
+      router.push(
+        `/auth/signin?portal=${portal}&next=${encodeURIComponent(nextPath)}`,
+      );
       return;
     }
 

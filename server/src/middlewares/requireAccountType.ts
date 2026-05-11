@@ -1,5 +1,6 @@
 import type { NextFunction, Request, Response } from "express";
 import { type AccountType } from "../models/User.js";
+import { Company } from "../models/Company.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
 import { userPersistenceService } from "../services/user.persistence.service.js";
 import { ApiError } from "../utils/ApiError.js";
@@ -16,6 +17,11 @@ async function requestUserHasAdminRole(authUserId: string): Promise<boolean> {
     const name = (role as { name?: string } | undefined)?.name;
     return String(name || "").toLowerCase() === SYSTEM_ROLES.ADMIN;
   });
+}
+
+async function requestUserHasCompanyProfile(authUserId: string): Promise<boolean> {
+  const company = await Company.findOne({ authUserId }).select("_id").lean();
+  return Boolean(company?._id);
 }
 
 /**
@@ -36,11 +42,27 @@ export function requireAccountType(...allowedAccountTypes: AccountType[]) {
       return;
     }
 
+    const companyRouteRequested = allowedAccountTypes.includes("COMPANY" as AccountType);
+    if (
+      companyRouteRequested &&
+      (await requestUserHasCompanyProfile(user.authUserId || user.id))
+    ) {
+      next();
+      return;
+    }
+
     const adminRouteRequested = allowedAccountTypes.includes("ADMIN" as AccountType);
     if (adminRouteRequested && (await requestUserHasAdminRole(user.id))) {
       next();
       return;
     }
+
+    console.warn("[PortalAccessDenied]", {
+      path: req.originalUrl,
+      accountType: user.accountType ?? null,
+      authUserId: user.authUserId || user.id,
+      allowedAccountTypes,
+    });
 
     next(ApiError.forbidden("This account cannot access the requested portal"));
   };

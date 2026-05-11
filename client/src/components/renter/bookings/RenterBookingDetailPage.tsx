@@ -37,7 +37,6 @@ import {
 } from "@/lib/booking-detail-api";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
-import { LifecycleActions } from "@/components/shared/bookings/LifecycleActions";
 
 interface BookingDetail {
   id: string;
@@ -935,22 +934,16 @@ export function RenterBookingDetailPage() {
               {booking.status === "CONFIRMED" ||
               booking.status === "ACTIVE" ||
               booking.status === "COMPLETED" ? (
-                <div className="grid gap-6 lg:grid-cols-[1.5fr_1fr] h-full overflow-hidden">
-                  <ChatWindow 
-                    bookingId={booking.id} 
+                <div className="h-full overflow-hidden">
+                  <ChatWindow
+                    bookingId={booking.id}
+                    className="h-full"
                     counterparty={{
                       name: "Vehicle Owner",
                       role: "HOST",
-                      avatar: booking.vehicle?.imageUrl || undefined // Use vehicle image if host avatar is missing
+                      avatar: booking.vehicle?.imageUrl || undefined,
                     }}
                   />
-                  <div className="space-y-6 overflow-y-auto pr-2">
-                    <LifecycleActions
-                      booking={booking}
-                      userType="renter"
-                      onRefresh={handleRefresh}
-                    />
-                  </div>
                 </div>
               ) : (
                 <Card className="border-2 border-dashed border-black p-12 text-center">
@@ -968,34 +961,6 @@ export function RenterBookingDetailPage() {
         </div>
 
             <div className="space-y-6">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Booking Snapshot</CardTitle>
-                </CardHeader>
-                <CardContent className="rounded-2xl border p-5">
-                  <DetailRow label="Booking ID" value={booking.bookingId} />
-                  <DetailRow label="Record ID" value={booking.id} />
-                  <DetailRow
-                    label="Booked on"
-                    value={formatDateTime(booking.createdAt)}
-                  />
-                  <DetailRow
-                    label="Last updated"
-                    value={formatDateTime(
-                      booking.updatedAt || booking.createdAt,
-                    )}
-                  />
-                  <DetailRow
-                    label="Vehicle"
-                    value={
-                      booking.vehicle
-                        ? `${booking.vehicle.make} ${booking.vehicle.model}`
-                        : "Unavailable"
-                    }
-                  />
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">

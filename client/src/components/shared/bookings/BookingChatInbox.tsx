@@ -1,52 +1,79 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Card } from "@/components/ui/card";
+import { useCallback, useState, useEffect } from "react";
 import { ChatWindow } from "./ChatWindow";
-import { LifecycleActions } from "./LifecycleActions";
-import { MessageSquareText, Search, User, Car, Calendar, ChevronRight } from "lucide-react";
+import { MessageSquareText, Search, User, Car, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 
+type BookingChatItem = {
+  id: string;
+  bookingId: string;
+  status: string;
+  startTime?: string | null;
+  startDate?: string | null;
+  vehicleName?: string | null;
+  customerName?: string | null;
+  contactPhone?: string | null;
+  renter?: {
+    name?: string | null;
+    profilePicture?: string | null;
+    avatarUrl?: string | null;
+  } | null;
+  company?: {
+    name?: string | null;
+    logoUrl?: string | null;
+    profilePicture?: string | null;
+  } | null;
+  vehicle?: {
+    make?: string | null;
+    model?: string | null;
+    imageUrl?: string | null;
+    host?: {
+      name?: string | null;
+      profilePicture?: string | null;
+      avatarUrl?: string | null;
+    } | null;
+  } | null;
+};
+
 interface BookingChatInboxProps {
   userType: "renter" | "provider";
-  fetchBookings: () => Promise<any[]>;
+  fetchBookings: () => Promise<BookingChatItem[]>;
 }
 
 export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxProps) {
-  const [bookings, setBookings] = useState<any[]>([]);
-  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [bookings, setBookings] = useState<BookingChatItem[]>([]);
+  const [selectedBooking, setSelectedBooking] = useState<BookingChatItem | null>(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [visitedBookingIds, setVisitedBookingIds] = useState<Set<string>>(new Set());
 
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async () => {
     try {
       const data = await fetchBookings();
       // Filter for chat-eligible bookings
-      const eligible = data.filter(b => 
+      const eligible = data.filter((b) =>
         ["CONFIRMED", "ACTIVE", "COMPLETED", "approved", "completed"].includes(b.status)
       );
       setBookings(eligible);
-      if (eligible.length > 0 && !selectedBooking) {
-        setSelectedBooking(eligible[0]);
-      }
+      setSelectedBooking((current) => current ?? eligible[0] ?? null);
     } catch (err) {
       console.error("Failed to load inbox bookings", err);
     } finally {
       setLoading(false);
     }
-  };
+  }, [fetchBookings]);
 
   useEffect(() => {
     loadBookings();
-  }, []);
+  }, [loadBookings]);
 
-  const filteredBookings = bookings.filter(b => {
+  const filteredBookings = bookings.filter((b) => {
     const searchStr = search.toLowerCase();
-    const vehicleName = (b.vehicleName || `${b.vehicle?.make} ${b.vehicle?.model}`).toLowerCase();
+    const vehicleName = (b.vehicleName || `${b.vehicle?.make || ""} ${b.vehicle?.model || ""}`).toLowerCase();
     const customerName = (b.customerName || b.renter?.name || "").toLowerCase();
     return vehicleName.includes(searchStr) || customerName.includes(searchStr) || b.bookingId.toLowerCase().includes(searchStr);
   });
@@ -60,21 +87,19 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
   }
 
   return (
-    <div className="flex-1 min-h-0 w-full h-full grid grid-cols-1 lg:grid-cols-[380px_1fr] border rounded-2xl overflow-hidden bg-background shadow-xl transition-all">
+    <div className="flex-1 min-h-0 w-full h-full grid grid-cols-1 lg:grid-cols-[340px_1fr] border rounded-lg overflow-hidden bg-background shadow-sm">
       {/* Sidebar List */}
-      <div className="border-r flex flex-col bg-muted/20 min-h-0">
-        <div className="p-6 border-b bg-background">
-          <h2 className="text-xl font-bold mb-6 tracking-tight flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <MessageSquareText className="w-5 h-5 text-primary" />
-            </div>
+      <div className="border-r flex flex-col bg-muted/10 min-h-0">
+        <div className="p-4 border-b bg-background">
+          <h2 className="text-lg font-semibold mb-4 tracking-tight flex items-center gap-2">
+            <MessageSquareText className="w-5 h-5 text-primary" />
             Messages
           </h2>
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input 
               placeholder="Search chats..." 
-              className="pl-12 border-muted-foreground/20 rounded-xl h-12 focus-visible:ring-primary/20 bg-background"
+              className="pl-10 h-10"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -96,18 +121,18 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
                     setVisitedBookingIds(prev => new Set(prev).add(booking.id));
                   }}
                   className={cn(
-                    "w-full p-6 text-left transition-all hover:bg-accent flex items-start gap-4 group relative border-b last:border-b-0",
-                    selectedBooking?.id === booking.id ? "bg-accent shadow-inner" : "bg-transparent"
+                    "w-full p-4 text-left transition-all hover:bg-accent flex items-start gap-3 group relative border-b last:border-b-0",
+                    selectedBooking?.id === booking.id ? "bg-accent" : "bg-transparent"
                   )}
                 >
                   {selectedBooking?.id === booking.id && (
                     <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
                   )}
-                  <div className="w-16 h-16 rounded-xl bg-muted border flex items-center justify-center shrink-0 overflow-hidden shadow-sm">
+                  <div className="w-12 h-12 rounded-lg bg-muted border flex items-center justify-center shrink-0 overflow-hidden">
                     {booking.vehicle?.imageUrl ? (
                       <img src={booking.vehicle.imageUrl} alt="Vehicle" className="w-full h-full object-cover" />
                     ) : (
-                      <Car className="w-8 h-8 text-muted-foreground" />
+                      <Car className="w-6 h-6 text-muted-foreground" />
                     )}
                   </div>
                   <div className="flex-1 min-w-0 py-1">
@@ -116,7 +141,9 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
                         {booking.vehicleName || `${booking.vehicle?.make} ${booking.vehicle?.model}`}
                       </h4>
                       <span className="text-[10px] font-medium text-muted-foreground">
-                        {format(new Date(booking.startTime || booking.startDate), "MMM d")}
+                        {booking.startTime || booking.startDate
+                          ? format(new Date(booking.startTime || booking.startDate || ""), "MMM d")
+                          : ""}
                       </span>
                     </div>
                     <div className="flex items-center gap-2 mt-1">
@@ -124,7 +151,7 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
                         <User className="w-3 h-3" />
                         {userType === "provider" ? (booking.customerName || booking.renter?.name) : "Vehicle Owner"}
                       </p>
-                      <span className="text-[10px] font-medium text-zinc-300">|</span>
+                      <span className="text-[10px] font-medium text-zinc-300">/</span>
                       <span className="text-[10px] font-bold text-primary/70 tracking-tighter">#{booking.bookingId}</span>
                     </div>
                     <div className="flex items-center justify-between mt-3">
@@ -152,21 +179,21 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
       </div>
 
       {/* Main Chat Area */}
-      <div className="flex flex-col min-h-0 bg-card/30 relative overflow-hidden">
+      <div className="flex flex-col min-h-0 bg-muted/5 relative overflow-hidden">
         {selectedBooking ? (
-          <div className="flex flex-col h-full overflow-hidden p-6 gap-6">
+          <div className="flex flex-col h-full overflow-hidden p-4 gap-4">
             {/* Header */}
-            <div className="p-6 border rounded-2xl bg-card shadow-sm flex justify-between items-center shrink-0">
+            <div className="p-4 border rounded-lg bg-background shadow-sm flex justify-between items-center shrink-0">
               <div className="flex items-center gap-4">
-                <div className="w-14 h-14 rounded-xl bg-muted border flex items-center justify-center shadow-sm">
-                  <Car className="w-7 h-7 text-primary" />
+                <div className="w-11 h-11 rounded-lg bg-muted border flex items-center justify-center">
+                  <Car className="w-6 h-6 text-primary" />
                 </div>
                 <div>
-                  <h3 className="font-bold text-xl leading-none tracking-tight text-foreground">
+                  <h3 className="font-semibold text-lg leading-none tracking-tight text-foreground">
                     {selectedBooking.vehicleName || `${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}
                   </h3>
                   <div className="flex gap-2 mt-2">
-                    <Badge variant="outline" className="text-[10px] font-medium tracking-widest px-2 py-0.5 bg-muted/50 border-none">
+                    <Badge variant="outline" className="text-[10px] font-medium px-2 py-0.5 bg-muted/50 border-none">
                       BOOKING #{selectedBooking.bookingId}
                     </Badge>
                   </div>
@@ -174,53 +201,30 @@ export function BookingChatInbox({ userType, fetchBookings }: BookingChatInboxPr
               </div>
             </div>
 
-            {/* Chat and Actions */}
-            <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_380px] gap-6 min-h-0">
-              <div className="flex flex-col h-full min-h-0">
-                <ChatWindow 
-                  bookingId={selectedBooking.id} 
-                  bookingDisplayId={selectedBooking.bookingId}
-                  vehicleName={selectedBooking.vehicleName || `${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}
-                  className="h-full border-none shadow-none" 
-                  counterparty={
-                    userType === "provider" 
-                      ? { 
-                          name: selectedBooking.customerName || selectedBooking.renter?.name || "Renter", 
-                          role: "RENTER",
-                          avatar: selectedBooking.renter?.profilePicture || selectedBooking.renter?.avatarUrl 
-                        }
-                      : { 
-                          name: selectedBooking.vehicle?.host?.name || selectedBooking.company?.name || "Host", 
-                          role: selectedBooking.company ? "COMPANY" : "PEERHOST",
-                          avatar: selectedBooking.company?.logoUrl || selectedBooking.company?.profilePicture || selectedBooking.vehicle?.host?.profilePicture || selectedBooking.vehicle?.host?.avatarUrl
-                        }
-                  }
-                />
-              </div>
-              <div className="hidden lg:flex flex-col gap-6 overflow-y-auto pr-2">
-                <LifecycleActions 
-                  booking={selectedBooking} 
-                  userType={userType} 
-                  onRefresh={loadBookings} 
-                />
-                
-                <Card className="p-6 border bg-muted/10 shadow-sm rounded-2xl">
-                  <h5 className="font-bold text-sm mb-4 flex items-center gap-2 text-foreground">
-                    <Calendar className="w-5 h-5 text-primary" />
-                    Trip Details
-                  </h5>
-                  <div className="space-y-4">
-                    <div className="bg-background p-3 rounded-lg border">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Pickup Schedule</p>
-                      <p className="text-sm font-semibold">{format(new Date(selectedBooking.startTime || selectedBooking.startDate), "PPP p")}</p>
-                    </div>
-                    <div className="bg-background p-3 rounded-lg border">
-                      <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-widest mb-1">Return Schedule</p>
-                      <p className="text-sm font-semibold">{format(new Date(selectedBooking.endTime || selectedBooking.endDate), "PPP p")}</p>
-                    </div>
-                  </div>
-                </Card>
-              </div>
+            <div className="flex-1 min-h-0">
+              <ChatWindow
+                bookingId={selectedBooking.id}
+                bookingDisplayId={selectedBooking.bookingId}
+                vehicleName={selectedBooking.vehicleName || `${selectedBooking.vehicle?.make} ${selectedBooking.vehicle?.model}`}
+                className="h-full rounded-lg shadow-none"
+                counterparty={
+                  userType === "provider"
+                    ? {
+                        name: selectedBooking.customerName || selectedBooking.renter?.name || "Renter",
+                        role: "RENTER",
+                        avatar: selectedBooking.renter?.profilePicture || selectedBooking.renter?.avatarUrl,
+                      }
+                    : {
+                        name: selectedBooking.vehicle?.host?.name || selectedBooking.company?.name || "Host",
+                        role: selectedBooking.company ? "COMPANY" : "HOST",
+                        avatar:
+                          selectedBooking.company?.logoUrl ||
+                          selectedBooking.company?.profilePicture ||
+                          selectedBooking.vehicle?.host?.profilePicture ||
+                          selectedBooking.vehicle?.host?.avatarUrl,
+                      }
+                }
+              />
             </div>
           </div>
         ) : (

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Card } from "@/components/ui/card";
-import { Send, Camera, Info, Search, CheckCheck, Loader2, ArrowDown } from "lucide-react";
+import { Send, Info, Search, CheckCheck, Loader2, ArrowDown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -202,14 +202,6 @@ export function ChatWindow({ bookingId, bookingDisplayId, vehicleName, className
         onSubmit={handleSend}
         className="p-6 border-t bg-card flex gap-4"
       >
-        <Button 
-          type="button" 
-          variant="outline" 
-          size="icon" 
-          className="w-12 h-12 border shadow-sm rounded-xl"
-        >
-          <Camera className="w-5 h-5 text-muted-foreground" />
-        </Button>
         <Input
           value={inputValue}
           onChange={(e) => setInputValue(e.target.value)}

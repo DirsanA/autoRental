@@ -1,29 +1,17 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   CalendarDays,
-  CarFront,
-  Clock3,
-  MapPin,
   Phone,
-  RefreshCcw,
   Search,
-  UserRound,
-  Wallet,
 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -42,23 +30,12 @@ import {
 } from "@/components/ui/table";
 import { BookingHistoryPageSkeleton } from "@/components/shared/bookings/booking-history-skeleton";
 import {
-  activateOwnedBooking,
-  confirmOwnedBookingReturn,
   fetchPeerHostBookings,
   type PeerHostBookingListItem,
   type RenterBookingsPagination,
   type RenterBookingStatus,
 } from "@/lib/bookings-api";
-import {
-  isChatAvailable,
-  getDepositStatusDisplay,
-  type UnifiedBookingStatus,
-} from "@/lib/booking-types-unified";
 import { cn } from "@/lib/utils";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { ChatWindow } from "@/components/shared/bookings/ChatWindow";
-import { LifecycleActions } from "@/components/shared/bookings/LifecycleActions";
-import { MessageSquareText } from "lucide-react";
 
 const PAGE_SIZE = 10;
 
@@ -72,15 +49,6 @@ function formatDateRange(start?: string | null, end?: string | null) {
   };
 
   return `${new Date(start).toLocaleDateString("en-US", options)} - ${new Date(end).toLocaleDateString("en-US", options)}`;
-}
-
-function formatDateTime(value?: string | null) {
-  if (!value) return "-";
-
-  return new Date(value).toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
 }
 
 function formatCurrency(amount: number, currency: string) {
@@ -116,59 +84,6 @@ function bookingStatusClasses(status: RenterBookingStatus) {
   }
 }
 
-function paymentStateLabel(state: PeerHostBookingListItem["paymentState"]) {
-  switch (state) {
-    case "paid":
-      return "Paid";
-    case "failed":
-      return "Failed";
-    default:
-      return "Pending";
-  }
-}
-
-function SummaryCard({
-  title,
-  value,
-  note,
-  icon: Icon,
-  accentClassName,
-}: {
-  title: string;
-  value: string;
-  note: string;
-  icon: React.ElementType;
-  accentClassName: string;
-}) {
-  return (
-    <Card className="bg-card/95 shadow-sm border-border/70 rounded-2xl overflow-hidden">
-      <CardHeader className="pb-3">
-        <div className="flex justify-between items-start gap-4">
-          <div>
-            <CardTitle className="font-medium text-muted-foreground text-sm">
-              {title}
-            </CardTitle>
-            <p className="mt-2 font-bold text-foreground text-2xl sm:text-3xl tracking-tight">
-              {value}
-            </p>
-          </div>
-          <div
-            className={cn(
-              "shadow-sm p-3 rounded-2xl text-white",
-              accentClassName,
-            )}
-          >
-            <Icon className="w-5 h-5" />
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="pt-0">
-        <p className="text-muted-foreground text-xs">{note}</p>
-      </CardContent>
-    </Card>
-  );
-}
-
 function vehicleName(booking: PeerHostBookingListItem) {
   const vehicle = booking.vehicle;
   if (!vehicle) return "Vehicle unavailable";
@@ -180,21 +95,12 @@ function guestName(booking: PeerHostBookingListItem) {
   return booking.renter?.name || "Guest unavailable";
 }
 
-function DetailRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex sm:flex-row flex-col sm:justify-between sm:items-center gap-1 py-3 border-border/60 border-b last:border-b-0">
-      <p className="text-muted-foreground text-xs">{label}</p>
-      <p className="font-medium text-sm">{value}</p>
-    </div>
-  );
-}
-
 function MobileBookingCard({
   booking,
-  onOpen,
+  detailHref,
 }: {
   booking: PeerHostBookingListItem;
-  onOpen: (booking: PeerHostBookingListItem) => void;
+  detailHref: string;
 }) {
   return (
     <div className="bg-card/95 shadow-sm p-4 border border-border/70 rounded-2xl">
@@ -243,18 +149,19 @@ function MobileBookingCard({
       </div>
 
       <Button
+        asChild
         variant="outline"
         size="sm"
-        onClick={() => onOpen(booking)}
         className="bg-background/70 mt-4 border-border/70 rounded-xl w-full h-10"
       >
-        Detail
+        <Link href={detailHref}>Detail</Link>
       </Button>
     </div>
   );
 }
 
 export function PeerHostBookingHistoryPage() {
+  const router = useRouter();
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<RenterBookingStatus | "all">(
@@ -271,9 +178,6 @@ export function PeerHostBookingHistoryPage() {
   });
   const [error, setError] = useState<string | null>(null);
   const [lastCompletedRequestKey, setLastCompletedRequestKey] = useState("");
-  const [selectedBooking, setSelectedBooking] =
-    useState<PeerHostBookingListItem | null>(null);
-  const [isMutatingBooking, setIsMutatingBooking] = useState(false);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
@@ -330,100 +234,8 @@ export function PeerHostBookingHistoryPage() {
   }, [page, reloadKey, requestKey, search, statusFilter]);
 
   const refreshBookings = () => setReloadKey((value) => value + 1);
-  const summary = useMemo(() => {
-    const pending = bookings.filter(
-      (booking) => booking.status === "PENDING",
-    ).length;
-    const confirmed = bookings.filter(
-      (booking) => booking.status === "CONFIRMED",
-    ).length;
-    const completed = bookings.filter(
-      (booking) => booking.status === "COMPLETED",
-    ).length;
-    const pageRevenue = bookings.reduce(
-      (sum, booking) => sum + booking.pricing.totalAmount,
-      0,
-    );
-
-    return {
-      pending,
-      confirmed,
-      completed,
-      pageRevenue,
-    };
-  }, [bookings]);
-
-  const handleActivateBooking = async (booking: PeerHostBookingListItem) => {
-    const originalDocsChecked = booking.withDriver
-      ? false
-      : window.confirm(
-          "Confirm that you physically checked the renter's original ID and driving license before starting this self-drive trip.",
-        );
-
-    if (!booking.withDriver && !originalDocsChecked) {
-      return;
-    }
-
-    try {
-      setIsMutatingBooking(true);
-      await activateOwnedBooking({
-        bookingId: booking.bookingId,
-        ownerType: "User",
-        originalDocsChecked,
-      });
-      setSelectedBooking((current) =>
-        current
-          ? {
-              ...current,
-              status: "ACTIVE",
-              originalDocsChecked,
-              pickupVerifiedAt: new Date().toISOString(),
-            }
-          : current,
-      );
-      refreshBookings();
-    } finally {
-      setIsMutatingBooking(false);
-    }
-  };
-
-  const handleReturnConfirmation = async (
-    booking: PeerHostBookingListItem,
-    returnCondition: "CLEAN" | "ISSUE_REPORTED",
-  ) => {
-    const reason =
-      returnCondition === "ISSUE_REPORTED"
-        ? window.prompt("Describe the issue reported for this return.") ||
-          undefined
-        : undefined;
-
-    try {
-      setIsMutatingBooking(true);
-      await confirmOwnedBookingReturn({
-        bookingId: booking.bookingId,
-        ownerType: "User",
-        returnCondition,
-        reason,
-      });
-      setSelectedBooking((current) =>
-        current
-          ? {
-              ...current,
-              status: returnCondition === "CLEAN" ? "COMPLETED" : "DISPUTED",
-              returnCondition,
-              returnConfirmedAt: new Date().toISOString(),
-              depositStatus:
-                returnCondition === "CLEAN"
-                  ? "REFUNDED_TO_RENTER"
-                  : "UNDER_REVIEW",
-            }
-          : current,
-      );
-      refreshBookings();
-    } finally {
-      setIsMutatingBooking(false);
-    }
-  };
+  const detailHref = (booking: PeerHostBookingListItem) =>
+    `/peerhost/booking-history/${encodeURIComponent(booking.bookingId || booking.id)}`;
 
   return (
     <div className="relative flex w-full h-dvh">
@@ -519,7 +331,7 @@ export function PeerHostBookingHistoryPage() {
                       <MobileBookingCard
                         key={booking.id}
                         booking={booking}
-                        onOpen={setSelectedBooking}
+                        detailHref={detailHref(booking)}
                       />
                     ))
                   )}
@@ -609,7 +421,7 @@ export function PeerHostBookingHistoryPage() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                onClick={() => setSelectedBooking(booking)}
+                                onClick={() => router.push(detailHref(booking))}
                                 className="bg-background/70 border-border/70"
                               >
                                 Detail
@@ -659,212 +471,6 @@ export function PeerHostBookingHistoryPage() {
         </Main>
       </div>
 
-      <Dialog
-        open={Boolean(selectedBooking)}
-        onOpenChange={(open) => {
-          if (!open) {
-            setSelectedBooking(null);
-          }
-        }}
-      >
-        {selectedBooking ? (
-          <DialogContent className="bg-background p-0 border-border/70 w-[calc(100vw-1rem)] sm:w-full sm:max-w-2xl overflow-hidden">
-            <DialogHeader className="bg-gradient-to-r from-slate-950 via-slate-900 to-sky-950 px-5 sm:px-6 py-5 sm:py-6 text-left">
-              <DialogTitle className="text-white text-xl">
-                {vehicleName(selectedBooking)}
-              </DialogTitle>
-              <DialogDescription className="text-slate-300">
-                Booking {selectedBooking.bookingId} for{" "}
-                {guestName(selectedBooking)}
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="h-[700px] overflow-hidden p-4 sm:p-6">
-              <Tabs defaultValue="details" className="flex h-full flex-col">
-                <TabsList className="mb-6 grid w-full grid-cols-2 bg-muted/60 p-1">
-                  <TabsTrigger value="details">Booking Details</TabsTrigger>
-                  <TabsTrigger value="chat" className="gap-2">
-                    Live Chat & Process
-                    {(selectedBooking.status === "CONFIRMED" ||
-                      selectedBooking.status === "ACTIVE") && (
-                      <span className="flex h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-                    )}
-                  </TabsTrigger>
-                </TabsList>
-
-                <TabsContent
-                  value="details"
-                  className="flex-1 space-y-4 overflow-y-auto pr-1 mt-0 sm:space-y-6"
-                >
-                  <div className="gap-3 grid sm:grid-cols-2 md:grid-cols-3">
-                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                        <UserRound className="w-4 h-4" />
-                        Guest
-                      </div>
-                      <p className="mt-2 font-medium text-sm">
-                        {guestName(selectedBooking)}
-                      </p>
-                    </div>
-
-                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                        <CalendarDays className="w-4 h-4" />
-                        Dates
-                      </div>
-                      <p className="mt-2 font-medium text-sm">
-                        {formatDateRange(
-                          selectedBooking.startTime,
-                          selectedBooking.endTime,
-                        )}
-                      </p>
-                    </div>
-
-                    <div className="bg-muted/30 p-4 border border-border/70 rounded-2xl">
-                      <div className="flex items-center gap-2 text-muted-foreground text-xs">
-                        <Wallet className="w-4 h-4" />
-                        Total
-                      </div>
-                      <p className="mt-2 font-medium text-sm">
-                        {formatCurrency(
-                          selectedBooking.pricing.totalAmount,
-                          selectedBooking.pricing.currency,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="px-4 border border-border/70 rounded-2xl">
-                    <DetailRow
-                      label="Status"
-                      value={bookingStatusLabel(selectedBooking.status)}
-                    />
-                    <DetailRow
-                      label="Payment"
-                      value={paymentStateLabel(selectedBooking.paymentState)}
-                    />
-                    <DetailRow
-                      label="Booked on"
-                      value={formatDateTime(selectedBooking.createdAt)}
-                    />
-                    <DetailRow
-                      label="Pickup"
-                      value={selectedBooking.pickupAddress || "Not provided"}
-                    />
-                    <DetailRow
-                      label="Return"
-                      value={selectedBooking.returnAddress || "Not provided"}
-                    />
-                    <DetailRow
-                      label="Booking mode"
-                      value={
-                        selectedBooking.withDriver
-                          ? "With driver"
-                          : "Self-drive"
-                      }
-                    />
-                    <DetailRow
-                      label="Deposit"
-                      value={formatCurrency(
-                        selectedBooking.securityDepositAmount || 0,
-                        selectedBooking.pricing.currency,
-                      )}
-                    />
-                    <DetailRow
-                      label="Deposit status"
-                      value={getDepositStatusDisplay(
-                        selectedBooking.depositStatus,
-                      )}
-                    />
-                    <DetailRow
-                      label="Guest email"
-                      value={selectedBooking.renter?.email || "Not provided"}
-                    />
-                  </div>
-                </TabsContent>
-
-                <TabsContent
-                  value="chat"
-                  className="flex-1 overflow-hidden space-y-6"
-                >
-                  {isChatAvailable(
-                    selectedBooking.status as UnifiedBookingStatus,
-                    selectedBooking.paymentState,
-                  ) ? (
-                    <div className="grid gap-6 lg:grid-cols-[1fr_250px] h-full overflow-hidden">
-                      <ChatWindow
-                        bookingId={selectedBooking.id}
-                        className="h-full"
-                      />
-                      <div className="space-y-6 overflow-y-auto pr-1">
-                        <LifecycleActions
-                          booking={selectedBooking}
-                          userType="provider"
-                          onRefresh={refreshBookings}
-                        />
-                        <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                          {selectedBooking.status === "CONFIRMED" &&
-                          selectedBooking.paymentState === "paid" ? (
-                            <Button
-                              onClick={() =>
-                                void handleActivateBooking(selectedBooking)
-                              }
-                              disabled={isMutatingBooking}
-                            >
-                              {isMutatingBooking
-                                ? "Starting..."
-                                : "Verify Pickup & Start Trip"}
-                            </Button>
-                          ) : null}
-                          {selectedBooking.status === "ACTIVE" ? (
-                            <>
-                              <Button
-                                variant="outline"
-                                onClick={() =>
-                                  void handleReturnConfirmation(
-                                    selectedBooking,
-                                    "ISSUE_REPORTED",
-                                  )
-                                }
-                                disabled={isMutatingBooking}
-                              >
-                                Report Issue
-                              </Button>
-                              <Button
-                                onClick={() =>
-                                  void handleReturnConfirmation(
-                                    selectedBooking,
-                                    "CLEAN",
-                                  )
-                                }
-                                disabled={isMutatingBooking}
-                              >
-                                {isMutatingBooking
-                                  ? "Saving..."
-                                  : "Confirm Clean Return"}
-                              </Button>
-                            </>
-                          ) : null}
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <Card className="p-12 text-center border-2 border-dashed border-zinc-200">
-                      <MessageSquareText className="w-12 h-12 mx-auto text-zinc-300 mb-4" />
-                      <h3 className="font-bold text-lg uppercase text-zinc-400">
-                        Chat Unavailable
-                      </h3>
-                      <p className="text-sm text-zinc-500">
-                        The chat room will open once the booking is confirmed.
-                      </p>
-                    </Card>
-                  )}
-                </TabsContent>
-              </Tabs>
-            </div>
-          </DialogContent>
-        ) : null}
-      </Dialog>
     </div>
   );
 }

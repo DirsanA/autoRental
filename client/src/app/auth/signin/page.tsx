@@ -3,7 +3,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Suspense, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Car, Mail, Lock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import carImage from "@/assets/image.jpg";
@@ -13,9 +13,36 @@ import { buildUserRoleState, writeUserRoleState } from "@/lib/role-store";
 import { useToast } from "@/hooks/use-toast";
 import { Eye, EyeOff } from "lucide-react";
 
+type PortalType = "user" | "company" | "admin";
+
+function getPortalFromQuery(value: string | null): PortalType {
+  if (value === "company" || value === "admin") return value;
+  return "user";
+}
+
+function getDefaultDestination(portal: PortalType) {
+  if (portal === "company") return "/company/dashboard";
+  if (portal === "admin") return "/sysadmin/dashboard";
+  return "/renter/dashboard";
+}
+
+function getSafeNextPath(next: string | null, fallback: string) {
+  if (!next || !next.startsWith("/") || next.startsWith("//")) {
+    return fallback;
+  }
+
+  return next;
+}
+
 function SignInContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { toast } = useToast();
+  const portal = getPortalFromQuery(searchParams.get("portal"));
+  const nextPath = getSafeNextPath(
+    searchParams.get("next"),
+    getDefaultDestination(portal),
+  );
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,6 +63,7 @@ function SignInContent() {
       const data = await loginWithEmail({
         email: email.trim().toLowerCase(),
         password,
+        portal,
       });
       writeAuthToken(data.token || null);
       const session = await fetchCurrentSession().catch(() => null);
@@ -47,7 +75,7 @@ function SignInContent() {
         description: data.message || "Login successful",
       });
 
-      router.push("/");
+      router.push(nextPath);
     } catch (err: unknown) {
       let errorMessage = "Login failed";
 
@@ -129,7 +157,11 @@ function SignInContent() {
               Welcome back
             </h1>
             <p className="text-muted-foreground">
-              Sign in to manage your rentals
+              {portal === "company"
+                ? "Sign in to manage your company bookings and fleet"
+                : portal === "admin"
+                  ? "Sign in to manage the admin portal"
+                  : "Sign in to manage your rentals"}
             </p>
           </div>
 

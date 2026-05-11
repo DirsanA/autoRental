@@ -9,10 +9,12 @@ const API_BASE_URL = resolveApiBaseUrl();
    TYPES (Frontend UI Shape)
 ========================= */
 export type BookingStatus =
-  | "pending"
-  | "approved"
-  | "rejected"
-  | "completed";
+  | "PENDING"
+  | "CONFIRMED"
+  | "ACTIVE"
+  | "COMPLETED"
+  | "CANCELLED"
+  | "DISPUTED";
 
 export type CompanyBooking = {
   id: string;
@@ -33,7 +35,6 @@ export type CompanyBooking = {
   securityDepositAmount: number;
   depositStatus: string;
   originalDocsChecked: boolean;
-  rawStatus: string;
 
   status: BookingStatus;
 
@@ -47,23 +48,6 @@ export type CompanyBooking = {
 /* =========================
    MAP BACKEND → FRONTEND
 ========================= */
-export const normalizeStatus = (status: string) => {
-  switch (status) {
-    case "CONFIRMED":
-    case "ACTIVE":
-      return "approved";
-    case "PENDING":
-      return "pending";
-    case "CANCELLED":
-    case "DISPUTED":
-      return "rejected";
-    case "COMPLETED":
-      return "completed";
-    default:
-      return "pending";
-  }
-};
-
 /* =========================
    FETCH COMPANY BOOKINGS
    (MAIN API FOR YOUR UI)
@@ -114,8 +98,7 @@ export async function fetchCompanyBookings(options?: {
       securityDepositAmount: booking.securityDepositAmount || 0,
       depositStatus: booking.depositStatus || "NOT_REQUIRED",
       originalDocsChecked: Boolean(booking.originalDocsChecked),
-      rawStatus: booking.status || "PENDING",
-      status: normalizeStatus(booking.status || "PENDING"),
+      status: (booking.status || "PENDING") as BookingStatus,
     }));
   });
 }

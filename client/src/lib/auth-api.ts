@@ -111,14 +111,26 @@ export function writeCachedAuthSession(session: AuthSessionSnapshot | null) {
 export async function loginWithEmail(input: {
   email: string;
   password: string;
+  portal?: "user" | "company" | "admin";
 }) {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
+  const portal = input.portal || "user";
+  const endpoint =
+    portal === "company"
+      ? `${API_BASE_URL}/auth/login/company`
+      : portal === "admin"
+        ? `${API_BASE_URL}/auth/login/admin`
+        : `${API_BASE_URL}/auth/login/user`;
+
+  const response = await fetch(endpoint, {
     method: "POST",
     credentials: "include",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(input),
+    body: JSON.stringify({
+      email: input.email,
+      password: input.password,
+    }),
   });
 
   if (!response.ok) await throwAuthApiError(response);

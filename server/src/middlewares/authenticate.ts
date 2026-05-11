@@ -18,6 +18,15 @@ type TokenSession = {
   userId?: string;
 } & Record<string, unknown>;
 
+function buildHeadersWithoutAuthorization(
+  headers: Request["headers"],
+): Request["headers"] {
+  const next = { ...headers };
+  delete next.authorization;
+  delete next.Authorization;
+  return next;
+}
+
 /**
  * Sends the shared unauthorized response payload.
  */
@@ -122,8 +131,11 @@ async function ensureDefaultUserRole(authUserId: string) {
 export function createAuthMiddleware(auth: Auth) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
+      const cookieOnlyHeaders = fromNodeHeaders(
+        buildHeadersWithoutAuthorization(req.headers),
+      );
       const session = await auth.api.getSession({
-        headers: fromNodeHeaders(req.headers),
+        headers: cookieOnlyHeaders,
       });
 
       if (session) {
@@ -136,6 +148,28 @@ export function createAuthMiddleware(auth: Auth) {
               authUserId: session.user.id,
             },
             session.session,
+          );
+          next();
+          return;
+        }
+      }
+
+      const token = getBearerToken(req);
+      if (token) {
+        const tokenSession = await findSessionByToken(token);
+        const userId = tokenSession?.userId;
+        const user = userId
+          ? await ensureDefaultUserRole(String(userId))
+          : null;
+
+        if (user) {
+          setRequestAuth(
+            req,
+            {
+              ...(user.toJSON() as unknown as RequestUser),
+              authUserId: user.id,
+            },
+            tokenSession,
           );
           next();
           return;

@@ -24,6 +24,12 @@ type TokenSession = {
   userId?: string;
 } & Record<string, unknown>;
 
+function cloneHeadersWithoutAuthorization(headers: Headers): Headers {
+  const next = new Headers(headers);
+  next.delete("authorization");
+  return next;
+}
+
 /**
  * Auth service business logic for registration, session flows, and portal login.
  */
@@ -354,13 +360,15 @@ export class AuthService {
     session: unknown;
     company: unknown;
   }> {
-    const session = await this.auth.api.getSession({ headers });
+    const session = await this.auth.api.getSession({
+      headers: cloneHeadersWithoutAuthorization(headers),
+    });
     const token = getBearerToken({
       headers: Object.fromEntries(headers.entries()),
     } as Parameters<typeof getBearerToken>[0]);
 
-    let resolvedUser = session?.user ?? null;
-    let resolvedSession = session?.session ?? null;
+    let resolvedUser: unknown = session?.user ?? null;
+    let resolvedSession: unknown = session?.session ?? null;
 
     if (!resolvedUser && token) {
       const tokenSession = await this.findSessionByToken(token);
