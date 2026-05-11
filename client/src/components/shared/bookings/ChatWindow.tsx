@@ -128,7 +128,7 @@ export function ChatWindow({ bookingId, bookingDisplayId, vehicleName, className
 
             if (isSystem) {
               return (
-                <div key={msg.id} className="flex justify-center my-4">
+                <div key={msg.id || `system-${idx}`} className="flex justify-center my-4">
                   <div className="bg-background/80 backdrop-blur-sm border px-3 py-1 rounded-full text-[9px] font-bold text-muted-foreground uppercase tracking-widest shadow-sm">
                     {msg.content}
                   </div>
@@ -137,8 +137,8 @@ export function ChatWindow({ bookingId, bookingDisplayId, vehicleName, className
             }
 
             return (
-              <div
-                key={msg.id}
+                <div
+                key={msg.id || `msg-${idx}`}
                 className={cn(
                   "flex items-end gap-2 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300",
                   isMe ? "ml-auto flex-row-reverse" : "mr-auto"

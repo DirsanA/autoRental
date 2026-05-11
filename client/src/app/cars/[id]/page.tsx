@@ -193,9 +193,9 @@ const Index = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+      <div className="bg-white dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-50">
         <Navbar />
-        <main className="flex min-h-[80vh] items-center justify-center pt-20">
+        <main className="flex justify-center items-center pt-20 min-h-[80vh]">
           <CarLoadingState message="Fetching vehicle details..." />
         </main>
       </div>
@@ -204,10 +204,10 @@ const Index = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+      <div className="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-50">
         <Navbar />
-        <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 space-y-4">
-          <p className="text-lg font-medium text-red-600">{error}</p>
+        <main className="space-y-4 mx-auto mt-20 px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-7xl">
+          <p className="font-medium text-red-600 text-lg">{error}</p>
           <Button onClick={() => router.push("/#cars-section")}>
             Back to cars
           </Button>
@@ -217,16 +217,16 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 text-gray-900 dark:bg-gray-900 dark:text-gray-50">
+    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen text-gray-900 dark:text-gray-50">
       <Navbar />
 
-      <main className="max-w-7xl mt-20 mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-20 space-y-10">
+      <main className="space-y-10 mx-auto mt-20 px-4 sm:px-6 lg:px-8 pt-6 pb-20 max-w-7xl">
         {/* Image Gallery */}
         <div className="relative animate-fade-in">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 rounded-2xl overflow-hidden shadow-lg">
+          <div className="gap-2 grid grid-cols-1 md:grid-cols-3 shadow-lg rounded-2xl overflow-hidden">
             <div
               onClick={() => setShowPhotos(true)}
-              className="relative md:col-span-2 aspect-[16/10] overflow-hidden rounded-2xl cursor-pointer group"
+              className="group relative md:col-span-2 rounded-2xl aspect-[16/10] overflow-hidden cursor-pointer"
             >
               <Image
                 src={car.images[0]}
@@ -234,20 +234,20 @@ const Index = () => {
                 fill
                 sizes="(max-width: 768px) 100vw, 66vw"
                 loading="eager"
-                className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 rounded-2xl"
+                className="rounded-2xl w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                 unoptimized
               />
             </div>
 
-            <div className="hidden md:grid grid-rows-2 gap-2">
+            <div className="hidden gap-2 md:grid grid-rows-2">
               {car.images.slice(1, 3).map((img, i) => (
-                <div key={i} className="relative overflow-hidden rounded-2xl">
+                <div key={i} className="relative rounded-2xl overflow-hidden">
                   <Image
                     src={img}
                     alt={`${car.name} view ${i + 2}`}
                     fill
                     sizes="(max-width: 768px) 100vw, 22vw"
-                    className="w-full h-full object-cover hover:scale-105 transition-transform duration-500 rounded-2xl"
+                    className="rounded-2xl w-full h-full object-cover hover:scale-105 transition-transform duration-500"
                     unoptimized
                   />
                 </div>
@@ -258,7 +258,7 @@ const Index = () => {
           {/* Favorite Heart */}
           <button
             onClick={() => setIsFavorite(!isFavorite)}
-            className="absolute top-4 right-4 p-3 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-white/90 backdrop-blur-sm shadow-md hover:bg-white transition-colors"
+            className="top-4 right-4 absolute bg-white/90 hover:bg-white dark:bg-gray-800 shadow-md backdrop-blur-sm p-3 dark:border-gray-700 rounded-full transition-colors"
           >
             <Heart
               className={`w-6 h-6 transition-colors ${
@@ -273,7 +273,7 @@ const Index = () => {
           <Button
             onClick={() => setShowPhotos(true)}
             variant="secondary"
-            className="absolute bottom-4 right-4 gap-2 shadow-md dark:bg-gray-800 dark:border-gray-700 bg-white/90 backdrop-blur-sm hover:bg-white/95 transition-colors font-semibold"
+            className="right-4 bottom-4 absolute gap-2 bg-white/90 hover:bg-white/95 dark:bg-gray-800 shadow-md backdrop-blur-sm dark:border-gray-700 font-semibold transition-colors"
           >
             <Grid className="w-4 h-4" />
             View {car.images.length} photos
@@ -281,22 +281,22 @@ const Index = () => {
         </div>
 
         {/* Content Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+        <div className="gap-10 grid grid-cols-1 lg:grid-cols-3">
           {/* Left Content */}
-          <div className="lg:col-span-2 space-y-8">
+          <div className="space-y-8 lg:col-span-2">
             {/* Title Section */}
-            <div className="animate-fade-in space-y-2">
-              <h1 className="text-4xl font-extrabold dark:text-gray-300 text-gray-900">
+            <div className="space-y-2 animate-fade-in">
+              <h1 className="font-extrabold text-gray-900 dark:text-gray-300 text-4xl">
                 {car.name}
               </h1>
-              <div className="flex flex-wrap items-center gap-3 text-sm dark:text-gray-300 text-gray-600">
-                <span className="font-semibold dark:text-gray-300 text-gray-800">
+              <div className="flex flex-wrap items-center gap-3 text-gray-600 dark:text-gray-300 text-sm">
+                <span className="font-semibold text-gray-800 dark:text-gray-300">
                   {car.subtitle}
                 </span>
                 <span>•</span>
                 <div className="flex items-center gap-1">
-                  <Star className="w-5 h-5 fill-yellow-400 text-yellow-400" />
-                  <span className="font-semibold dark:text-gray-300 text-gray-800">
+                  <Star className="fill-yellow-400 w-5 h-5 text-yellow-400" />
+                  <span className="font-semibold text-gray-800 dark:text-gray-300">
                     {car.rating}
                   </span>
                   <span className="text-gray-500 dark:text-gray-300">
@@ -305,7 +305,7 @@ const Index = () => {
                 </div>
                 <span>•</span>
                 {car.host.allStar && (
-                  <div className="flex items-center gap-1 text-yellow-500 font-semibold">
+                  <div className="flex items-center gap-1 font-semibold text-yellow-500">
                     <Award className="w-4 h-4" /> All-Star Host
                   </div>
                 )}
@@ -314,32 +314,32 @@ const Index = () => {
 
             {/* Feature Badges */}
             <div className="flex flex-wrap gap-3 mt-6 mb-6">
-              <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-blue-50 text-blue-600 font-semibold shadow-sm">
+              <span className="flex items-center gap-1 bg-blue-50 dark:bg-gray-800 shadow-sm px-3 py-1 dark:border-gray-700 rounded-full font-semibold text-blue-600">
                 <CarFront className="w-4 h-4" /> {car.model}
               </span>
-              <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-green-50 text-green-600 font-semibold shadow-sm">
+              <span className="flex items-center gap-1 bg-green-50 dark:bg-gray-800 shadow-sm px-3 py-1 dark:border-gray-700 rounded-full font-semibold text-green-600">
                 <Fuel className="w-4 h-4" /> {car.fuel}
               </span>
-              <span className="flex items-center gap-1 px-3 py-1 rounded-full dark:bg-gray-800 dark:border-gray-700 bg-yellow-50 text-yellow-600 font-semibold shadow-sm">
+              <span className="flex items-center gap-1 bg-yellow-50 dark:bg-gray-800 shadow-sm px-3 py-1 dark:border-gray-700 rounded-full font-semibold text-yellow-600">
                 <Settings2 className="w-4 h-4" /> {car.transmission}
               </span>
             </div>
 
-            <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
+            <div className="dark:bg-gray-800 my-6 border-gray-200 dark:border-gray-700 border-t" />
             <div className="py-2">
-              <h2 className="text-xl font-bold font-heading mb-4">Hosted by</h2>
-              <div className="flex items-center gap-2.5 rounded-xl border border-slate-50 bg-slate-50/50 p-3 dark:border-slate-800/50 dark:bg-slate-800/30">
-                <Avatar className="h-12 w-12 border border-white shadow-sm dark:border-slate-700">
+              <h2 className="mb-4 font-heading font-bold text-xl">Hosted by</h2>
+              <div className="flex items-center gap-2.5 bg-slate-50/50 dark:bg-slate-800/30 p-3 border border-slate-50 dark:border-slate-800/50 rounded-xl">
+                <Avatar className="shadow-sm border border-white dark:border-slate-700 w-12 h-12">
                   <AvatarImage src={car.host.image} alt={car.host.name} />
-                  <AvatarFallback className="bg-blue-100 text-sm font-bold text-blue-700 dark:bg-blue-900 dark:text-blue-300">
+                  <AvatarFallback className="bg-blue-100 dark:bg-blue-900 font-bold text-blue-700 dark:text-blue-300 text-sm">
                     {car.host.name?.substring(0, 2).toUpperCase() || "PH"}
                   </AvatarFallback>
                 </Avatar>
-                <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-bold text-slate-700 dark:text-slate-200">
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-slate-700 dark:text-slate-200 text-sm truncate">
                     {car.host.name}
                   </p>
-                  <p className="text-[11px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+                  <p className="font-medium text-[11px] text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                     {car.host.typeLabel ||
                       (vehicle?.owner?.type === "company"
                         ? "Rental Company"
@@ -348,34 +348,34 @@ const Index = () => {
                 </div>
               </div>
             </div>
-            <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
+            <div className="dark:bg-gray-800 my-6 border-gray-200 dark:border-gray-700 border-t" />
             <CarFeatures features={vehicle?.features} />
-            <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
+            <div className="dark:bg-gray-800 my-6 border-gray-200 dark:border-gray-700 border-t" />
 
             {/* Description */}
             <div className="py-2">
-              <h2 className="text-2xl font-bold dark:text-gray-300 text-gray-900 mb-3">
+              <h2 className="mb-3 font-bold text-gray-900 dark:text-gray-300 text-2xl">
                 Description
               </h2>
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg">
+              <p className="text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
                 {car.description}
               </p>
             </div>
 
-            <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 my-6" />
+            <div className="dark:bg-gray-800 my-6 border-gray-200 dark:border-gray-700 border-t" />
             <div className="py-2">
-              <h2 className="text-2xl font-bold dark:text-gray-300 text-gray-900 mb-3">
+              <h2 className="mb-3 font-bold text-gray-900 dark:text-gray-300 text-2xl">
                 Rating and Reviews
               </h2>
 
               <div className="flex items-center mb-2">
-                <h2 className="text-3xl font-bold dark:text-gray-300 text-gray-900">
+                <h2 className="font-bold text-gray-900 dark:text-gray-300 text-3xl">
                   {ratingStats?.avg?.toFixed(2) ?? car.rating}
                 </h2>
-                <Star className="w-6 h-6 fill-yellow-400 text-yellow-400 ml-2" />
+                <Star className="fill-yellow-400 ml-2 w-6 h-6 text-yellow-400" />
               </div>
 
-              <p className="text-gray-700 dark:text-gray-300 leading-relaxed text-lg mb-4">
+              <p className="mb-4 text-gray-700 dark:text-gray-300 text-lg leading-relaxed">
                 ({ratingStats?.count ?? car.trips} ratings)
               </p>
 
@@ -389,20 +389,20 @@ const Index = () => {
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-5">
                     {/* Label */}
-                    <div className="w-32 text-sm font-medium text-gray-700 dark:text-gray-300">
+                    <div className="w-32 font-medium text-gray-700 dark:text-gray-300 text-sm">
                       {item.label}
                     </div>
 
                     {/* Progress Bar */}
-                    <div className="flex-1 h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
+                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
                       <div
-                        className="h-full bg-blue-700 rounded-full"
+                        className="bg-blue-700 rounded-full h-full"
                         style={{ width: `${(item.value / 5) * 100}%` }}
                       ></div>
                     </div>
 
                     {/* Value */}
-                    <div className=" mr-48 text-lg text-gray-700 dark:text-gray-300 text-right">
+                    <div className="mr-48 text-gray-700 dark:text-gray-300 text-lg text-right">
                       {item.value}
                     </div>
                   </div>
@@ -410,7 +410,7 @@ const Index = () => {
               </div>
             </div>
             <div className="mt-6">
-              <h3 className="text-xl font-semibold mb-4 dark:text-gray-300 text-gray-900">
+              <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-300 text-xl">
                 Reviews
               </h3>
 
@@ -423,7 +423,7 @@ const Index = () => {
                   reviews.map((review, i) => (
                     <div key={i} className="flex gap-4">
                       {/* Avatar */}
-                      <div className="w-10 h-10 rounded-full bg-gray-300 flex items-center justify-center font-bold">
+                      <div className="flex justify-center items-center bg-gray-300 rounded-full w-10 h-10 font-bold">
                         {review?.name?.charAt(0) ?? "U"}
                       </div>
 
@@ -447,7 +447,7 @@ const Index = () => {
                           <h4 className="text-gray-900 dark:text-gray-300">
                             {review?.name}
                           </h4>
-                          <span className="text-sm text-gray-500">
+                          <span className="text-gray-500 text-sm">
                             {new Date(review?.createdAt).toLocaleDateString()}
                           </span>
                         </div>
@@ -481,7 +481,7 @@ const Index = () => {
         </div>
 
         {/* Map Section */}
-        <div className="mt-10 border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 pt-10">
+        <div className="dark:bg-gray-800 mt-10 pt-10 border-gray-200 dark:border-gray-700 border-t">
           <MapSection
             locationText={
               vehicle?.ownerType === "Company"
@@ -512,60 +512,12 @@ const Index = () => {
           />
         </div>
 
-        {/* Similar Cars */}
-        <div className="mt-10">
-          <div className="border-t dark:bg-gray-800 dark:border-gray-700 border-gray-200 mb-6" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">
-            Similar Cars You Might Like
-          </h2>
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            {[
-              { id: "audi-a6", name: "Audi A6", price: 1650, image: car2 },
-              {
-                id: "mercedes-e-class",
-                name: "Mercedes E-Class",
-                price: 1750,
-                image: car3,
-              },
-              {
-                id: "tesla-model-s",
-                name: "Tesla Model S",
-                price: 2100,
-                image: car4,
-              },
-              { id: "lexus-es", name: "Lexus ES", price: 1600, image: car5 },
-            ].map((sc) => (
-              <Link href={`/cars/${sc.id}`} key={sc.id}>
-                <div className="group rounded-2xl overflow-hidden border dark:bg-gray-800 dark:border-gray-700 border-gray-200 bg-white shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer hover:-translate-y-1 active:scale-[0.98]">
-                  <div className="aspect-[4/3] overflow-hidden relative">
-                    <Image
-                      src={sc.image}
-                      alt={sc.name}
-                      className="w-full h-full object-cover transform group-hover:scale-110 transition-transform duration-500"
-                    />
-                    <span className="absolute top-2 right-2 bg-blue-600 dark:bg-gray-800 dark:border-gray-700 text-white px-2 py-1 rounded text-sm font-semibold shadow">
-                      ${sc.price}/mo
-                    </span>
-                  </div>
-
-                  <div className="p-3">
-                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-primary transition-colors">
-                      {sc.name}
-                    </h3>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
-        {/* Browse Cars CTA */}
-        <div className="mt-10 flex items-center justify-between p-6 rounded-2xl border  dark:bg-gray-800 dark:border-gray-700 border-gray-200 bg-white shadow hover:shadow-lg transition-shadow">
+        <div className="flex justify-between items-center bg-white dark:bg-gray-800 shadow hover:shadow-lg mt-10 p-6 border border-gray-200 dark:border-gray-700 rounded-2xl transition-shadow">
           <div>
-            <h3 className="text-lg font-bold dark:text-white text-gray-900">
+            <h3 className="font-bold text-gray-900 dark:text-white text-lg">
               Looking for more cars?
             </h3>
-            <p className="text-sm dark:text-white text-gray-600">
+            <p className="text-gray-600 dark:text-white text-sm">
               Browse all available cars in your area.
             </p>
           </div>
@@ -580,16 +532,16 @@ const Index = () => {
       </main>
 
       {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-800 dark:border-gray-700 text-gray-300 py-12 mt-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+      <footer className="bg-gray-900 dark:bg-gray-800 mt-20 py-12 dark:border-gray-700 text-gray-300">
+        <div className="gap-8 grid grid-cols-1 md:grid-cols-3 mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
           <div>
-            <h3 className="font-bold mb-3 dark:bg-gray-800 dark:border-gray-700 text-white">
+            <h3 className="dark:bg-gray-800 mb-3 dark:border-gray-700 font-bold text-white">
               CarRental
             </h3>
             <p>Premium cars at your fingertips. Drive with style.</p>
           </div>
           <div>
-            <h3 className="font-bold mb-3  dark:border-gray-700  text-white">
+            <h3 className="mb-3 dark:border-gray-700 font-bold text-white">
               Company
             </h3>
             <ul className="space-y-1">
@@ -599,7 +551,7 @@ const Index = () => {
             </ul>
           </div>
           <div>
-            <h3 className="font-bold mb-3  dark:border-gray-700 dark:bg-gray-800 text-white">
+            <h3 className="dark:bg-gray-800 mb-3 dark:border-gray-700 font-bold text-white">
               Support
             </h3>
             <ul className="space-y-1">
@@ -614,7 +566,7 @@ const Index = () => {
             </ul>
           </div>
         </div>
-        <div className="mt-8 text-center text-gray-500">
+        <div className="mt-8 text-gray-500 text-center">
           &copy; 2026 CarRental. All rights reserved.
         </div>
       </footer>

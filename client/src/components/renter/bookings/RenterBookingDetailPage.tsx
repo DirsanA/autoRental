@@ -642,323 +642,97 @@ export function RenterBookingDetailPage() {
 
                 <TabsContent value="details" className="space-y-6 mt-0">
                   <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CarFront className="h-5 w-5" />
-                    Vehicle Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {booking.vehicle ? (
-                    <div className="flex flex-col gap-5 lg:flex-row">
-                      {booking.vehicle.imageUrl ? (
-                        <img
-                          src={booking.vehicle.imageUrl}
-                          alt={`${booking.vehicle.make} ${booking.vehicle.model}`}
-                          className="h-52 w-full rounded-2xl object-cover lg:w-72"
-                        />
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <CarFront className="h-5 w-5" />
+                        Vehicle Details
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      {booking.vehicle ? (
+                        <div className="flex flex-col gap-5 lg:flex-row">
+                          {booking.vehicle.imageUrl ? (
+                            <img
+                              src={booking.vehicle.imageUrl}
+                              alt={`${booking.vehicle.make} ${booking.vehicle.model}`}
+                              className="h-52 w-full rounded-2xl object-cover lg:w-72"
+                            />
+                          ) : (
+                            <div className="flex h-52 w-full items-center justify-center rounded-2xl bg-muted lg:w-72">
+                              <CarFront className="h-10 w-10 text-muted-foreground" />
+                            </div>
+                          )}
+
+                          <div className="flex-1 space-y-4">
+                            <div>
+                              <h2 className="text-2xl font-semibold">
+                                {booking.vehicle.make} {booking.vehicle.model}
+                              </h2>
+                              <p className="mt-1 text-sm text-muted-foreground">
+                                {booking.vehicle.year} | Plate{" "}
+                                {booking.vehicle.plate}
+                              </p>
+                            </div>
+
+                            <div className="grid gap-3 sm:grid-cols-2">
+                              <div className="rounded-xl border bg-muted/20 p-4">
+                                <p className="text-xs text-muted-foreground">
+                                  Pickup support
+                                </p>
+                                <p className="mt-2 text-sm font-medium">
+                                  {booking.vehicle.delivery || "Standard handoff"}
+                                </p>
+                              </div>
+                              <div className="rounded-xl border bg-muted/20 p-4">
+                                <p className="text-xs text-muted-foreground">
+                                  Availability note
+                                </p>
+                                <p className="mt-2 text-sm font-medium">
+                                  {booking.vehicle.availability || "No extra note"}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
                       ) : (
-                        <div className="flex h-52 w-full items-center justify-center rounded-2xl bg-muted lg:w-72">
-                          <CarFront className="h-10 w-10 text-muted-foreground" />
+                        <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
+                          Vehicle information is currently unavailable for this
+                          booking.
                         </div>
                       )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
 
-                      <div className="flex-1 space-y-4">
-                        <div>
-                          <h2 className="text-2xl font-semibold">
-                            {booking.vehicle.make} {booking.vehicle.model}
-                          </h2>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            {booking.vehicle.year} | Plate{" "}
-                            {booking.vehicle.plate}
-                          </p>
-                        </div>
-
-                        <div className="grid gap-3 sm:grid-cols-2">
-                          <div className="rounded-xl border bg-muted/20 p-4">
-                            <p className="text-xs text-muted-foreground">
-                              Pickup support
-                            </p>
-                            <p className="mt-2 text-sm font-medium">
-                              {booking.vehicle.delivery || "Standard handoff"}
-                            </p>
-                          </div>
-                          <div className="rounded-xl border bg-muted/20 p-4">
-                            <p className="text-xs text-muted-foreground">
-                              Availability note
-                            </p>
-                            <p className="mt-2 text-sm font-medium">
-                              {booking.vehicle.availability || "No extra note"}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                <TabsContent value="chat" className="space-y-6 mt-0 h-[calc(100vh-300px)] min-h-[500px]">
+                  {booking.status === "CONFIRMED" ||
+                  booking.status === "ACTIVE" ||
+                  booking.status === "COMPLETED" ? (
+                    <div className="h-full overflow-hidden">
+                      <ChatWindow
+                        bookingId={booking.id}
+                        className="h-full"
+                        counterparty={{
+                          name: "Vehicle Owner",
+                          role: "HOST",
+                          avatar: booking.vehicle?.imageUrl || undefined,
+                        }}
+                      />
                     </div>
                   ) : (
-                    <div className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                      Vehicle information is currently unavailable for this
-                      booking.
-                    </div>
+                    <Card className="border-2 border-dashed border-black p-12 text-center">
+                      <MessageSquareText className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
+                      <h3 className="text-lg font-bold uppercase">
+                        Chat Unavailable
+                      </h3>
+                      <p className="text-sm text-zinc-500">
+                        The chat room will open once your booking is confirmed.
+                      </p>
+                    </Card>
                   )}
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <MapPin className="h-5 w-5" />
-                    Trip Logistics
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-6 lg:grid-cols-2">
-                  <div className="rounded-2xl border bg-muted/10 p-5">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      Timeline
-                    </p>
-                    <div className="mt-4 space-y-4">
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Pickup time
-                        </p>
-                        <p className="mt-1 text-sm font-medium">
-                          {formatDateTime(booking.startTime)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Return time
-                        </p>
-                        <p className="mt-1 text-sm font-medium">
-                          {formatDateTime(booking.endTime)}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Booking mode
-                        </p>
-                        <p className="mt-1 text-sm font-medium">
-                          {booking.withDriver ? "With driver" : "Self-drive"}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="text-xs text-muted-foreground">
-                          Deposit status
-                        </p>
-                        <p className="mt-1 text-sm font-medium">
-                          {depositStatusLabel(booking.depositStatus)}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border bg-muted/10 p-5">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      Contact and stops
-                    </p>
-                    <div className="mt-4 space-y-4">
-                      <div className="flex items-start gap-3">
-                        <Phone className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Contact phone
-                          </p>
-                          <p className="mt-1 text-sm font-medium">
-                            {booking.contactPhone || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Pickup address
-                          </p>
-                          <p className="mt-1 text-sm font-medium">
-                            {booking.pickupAddress || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-3">
-                        <MapPin className="mt-0.5 h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Return address
-                          </p>
-                          <p className="mt-1 text-sm font-medium">
-                            {booking.returnAddress || "Not provided"}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CalendarDays className="h-5 w-5" />
-                    Pickup and Return Verification
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="grid gap-4 md:grid-cols-2">
-                  <div className="rounded-2xl border bg-muted/10 p-5">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      Pickup
-                    </p>
-                    <div className="mt-4 space-y-3">
-                      <DetailRow
-                        label="Verified at"
-                        value={formatDateTime(booking.pickupVerifiedAt)}
-                      />
-                      <DetailRow
-                        label="Original documents checked"
-                        value={booking.originalDocsChecked ? "Yes" : "No"}
-                      />
-                      <DetailRow
-                        label="Document hold note"
-                        value={booking.manualDocumentHoldNote || "-"}
-                      />
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border bg-muted/10 p-5">
-                    <p className="text-xs font-medium uppercase tracking-[0.2em] text-muted-foreground">
-                      Return
-                    </p>
-                    <div className="mt-4 space-y-3">
-                      <DetailRow
-                        label="Confirmed at"
-                        value={formatDateTime(booking.returnConfirmedAt)}
-                      />
-                      <DetailRow
-                        label="Return condition"
-                        value={booking.returnCondition || "-"}
-                      />
-                      <DetailRow
-                        label="Deposit status"
-                        value={depositStatusLabel(booking.depositStatus)}
-                      />
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <CreditCard className="h-5 w-5" />
-                    Payment Breakdown
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-5">
-                  <div className="grid gap-4 md:grid-cols-3">
-                    <div className="rounded-xl border bg-muted/20 p-4">
-                      <p className="text-sm text-muted-foreground">
-                        Rental subtotal
-                      </p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {formatCurrency(
-                          booking.pricing.rentalSubtotal,
-                          booking.pricing.currency,
-                        )}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/20 p-4">
-                      <p className="text-sm text-muted-foreground">Duration</p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {formatDuration(booking.pricing.totalHours)}
-                      </p>
-                    </div>
-                    <div className="rounded-xl border bg-muted/20 p-4">
-                      <p className="text-sm text-muted-foreground">
-                        Total paid
-                      </p>
-                      <p className="mt-2 text-lg font-semibold">
-                        {formatCurrency(
-                          booking.pricing.totalAmount,
-                          booking.pricing.currency,
-                        )}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="rounded-2xl border p-5">
-                    <DetailRow
-                      label="Rental subtotal"
-                      value={formatCurrency(
-                        booking.pricing.rentalSubtotal,
-                        booking.pricing.currency,
-                      )}
-                    />
-                    <DetailRow
-                      label="System commission"
-                      value={formatCurrency(
-                        booking.pricing.systemCommission,
-                        booking.pricing.currency,
-                      )}
-                    />
-                    <DetailRow
-                      label="Security deposit"
-                      value={formatCurrency(
-                        booking.securityDepositAmount || 0,
-                        booking.pricing.currency,
-                      )}
-                    />
-                    <DetailRow
-                      label="Deposit status"
-                      value={depositStatusLabel(booking.depositStatus)}
-                    />
-                    <DetailRow
-                      label="Payment method"
-                      value={booking.payment.method || "Not specified"}
-                    />
-                    <DetailRow
-                      label="Gateway status"
-                      value={booking.payment.status}
-                    />
-                    <DetailRow
-                      label="Paid at"
-                      value={formatDateTime(booking.payment.paidAt)}
-                    />
-                    <DetailRow
-                      label="Transaction reference"
-                      value={booking.payment.txRef || "-"}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            <TabsContent value="chat" className="space-y-6 mt-0 h-[calc(100vh-300px)] min-h-[500px]">
-              {booking.status === "CONFIRMED" ||
-              booking.status === "ACTIVE" ||
-              booking.status === "COMPLETED" ? (
-                <div className="h-full overflow-hidden">
-                  <ChatWindow
-                    bookingId={booking.id}
-                    className="h-full"
-                    counterparty={{
-                      name: "Vehicle Owner",
-                      role: "HOST",
-                      avatar: booking.vehicle?.imageUrl || undefined,
-                    }}
-                  />
-                </div>
-              ) : (
-                <Card className="border-2 border-dashed border-black p-12 text-center">
-                  <MessageSquareText className="mx-auto mb-4 h-12 w-12 text-zinc-300" />
-                  <h3 className="text-lg font-bold uppercase">
-                    Chat Unavailable
-                  </h3>
-                  <p className="text-sm text-zinc-500">
-                    The chat room will open once your booking is confirmed.
-                  </p>
-                </Card>
-              )}
-            </TabsContent>
-          </Tabs>
-        </div>
+                </TabsContent>
+              </Tabs>
+            </div>
 
             <div className="space-y-6">
               <Card>
@@ -1119,95 +893,92 @@ export function RenterBookingDetailPage() {
                   )}
                 </CardContent>
               </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Review Activity</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {reviews.length === 0 ? (
+                    <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                      No reviews are attached to this booking yet.
+                    </div>
+                  ) : (
+                    <div className="space-y-4">
+                      {reviews.map((review) => (
+                        <div
+                          key={review.id}
+                          className="rounded-2xl border bg-muted/10 p-5"
+                        >
+                          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <p className="text-sm font-semibold">
+                                  {review.isOwner
+                                    ? "Your review"
+                                    : review.reviewer?.name || "Booking review"}
+                                </p>
+                                <Badge variant="outline">
+                                  {review.isOwner ? "Editable" : "Read only"}
+                                </Badge>
+                              </div>
+                              <div className="flex flex-wrap items-center gap-3">
+                                <StarRating rating={review.rating} />
+                                <span className="text-xs text-muted-foreground">
+                                  Created {formatDateTime(review.createdAt)}
+                                </span>
+                              </div>
+                            </div>
+
+                            {review.target && (
+                              <div className="rounded-xl border bg-background px-3 py-2 text-xs text-muted-foreground">
+                                Target:{" "}
+                                {[
+                                  [review.target.make, review.target.model]
+                                    .filter(Boolean)
+                                    .join(" "),
+                                  review.target.plate,
+                                ]
+                                  .filter(Boolean)
+                                  .join(" | ") || "Vehicle"}
+                              </div>
+                            )}
+                          </div>
+
+                          <p className="mt-4 text-sm leading-6 text-foreground">
+                            {review.comment || "No written comment provided."}
+                          </p>
+
+                          {review.images.length > 0 && (
+                            <div className="mt-4 flex flex-wrap gap-3">
+                              {review.images.map((image, index) => (
+                                <img
+                                  key={`${review.id}-${image}-${index}`}
+                                  src={image}
+                                  alt={`Review evidence ${index + 1}`}
+                                  className="h-20 w-20 rounded-xl object-cover"
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </div>
           </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Review Activity</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {reviews.length === 0 ? (
-                <div className="rounded-2xl border border-dashed p-8 text-center text-sm text-muted-foreground">
-                  No reviews are attached to this booking yet.
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {reviews.map((review) => (
-                    <div
-                      key={review.id}
-                      className="rounded-2xl border bg-muted/10 p-5"
-                    >
-                      <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
-                        <div className="space-y-2">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <p className="text-sm font-semibold">
-                              {review.isOwner
-                                ? "Your review"
-                                : review.reviewer?.name || "Booking review"}
-                            </p>
-                            <Badge variant="outline">
-                              {review.isOwner ? "Editable" : "Read only"}
-                            </Badge>
-                          </div>
-                          <div className="flex flex-wrap items-center gap-3">
-                            <StarRating rating={review.rating} />
-                            <span className="text-xs text-muted-foreground">
-                              Created {formatDateTime(review.createdAt)}
-                            </span>
-                          </div>
-                        </div>
-
-                        {review.target && (
-                          <div className="rounded-xl border bg-background px-3 py-2 text-xs text-muted-foreground">
-                            Target:{" "}
-                            {[
-                              [review.target.make, review.target.model]
-                                .filter(Boolean)
-                                .join(" "),
-                              review.target.plate,
-                            ]
-                              .filter(Boolean)
-                              .join(" | ") || "Vehicle"}
-                          </div>
-                        )}
-                      </div>
-
-                      <p className="mt-4 text-sm leading-6 text-foreground">
-                        {review.comment || "No written comment provided."}
-                      </p>
-
-                      {review.images.length > 0 && (
-                        <div className="mt-4 flex flex-wrap gap-3">
-                          {review.images.map((image, index) => (
-                            <img
-                              key={`${review.id}-${image}-${index}`}
-                              src={image}
-                              alt={`Review evidence ${index + 1}`}
-                              className="h-20 w-20 rounded-xl object-cover"
-                            />
-                          ))}
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
           {(() => {
             const vehicle = booking.vehicle;
-            
             const pickupAddress = booking.pickupAddress || vehicle?.pickupAddress || null;
             const returnAddress = booking.returnAddress || vehicle?.returnAddress || null;
             const sameLocation = pickupAddress && returnAddress && pickupAddress === returnAddress;
             
             const locationText = (() => {
               if (pickupAddress && returnAddress) {
-                if (sameLocation) {
-                  return pickupAddress;
-                }
+                if (sameLocation) return pickupAddress;
                 return `Pickup: ${pickupAddress} | Return: ${returnAddress}`;
               }
               if (pickupAddress) return pickupAddress;
@@ -1217,22 +988,15 @@ export function RenterBookingDetailPage() {
 
             const coords = (() => {
               if (!vehicle) return undefined;
-              
               const geo = vehicle.pickupGeo || vehicle.returnGeo;
               if (!geo?.lat || !geo?.lng) return undefined;
-              
               return {
                 lat: Math.round(geo.lat * 100) / 100,
                 lng: Math.round(geo.lng * 100) / 100,
               };
             })();
 
-            return (
-              <MapSection
-                locationText={locationText}
-                coords={coords}
-              />
-            );
+            return <MapSection locationText={locationText} coords={coords} />;
           })()}
         </Main>
       </div>
