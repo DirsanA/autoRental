@@ -345,10 +345,8 @@ export function RenterBookingDetailPage() {
         setLoading(true);
         setError(null);
 
-        const [bookingData, reviewsData] = await Promise.all([
-          fetchBookingDetail(bookingId),
-          fetchBookingReviews(bookingId),
-        ]);
+        const bookingData = await fetchBookingDetail(bookingId);
+        const reviewsData = await fetchBookingReviews(bookingId).catch(() => []);
 
         if (cancelled) return;
 
@@ -405,10 +403,8 @@ export function RenterBookingDetailPage() {
       setRefreshing(true);
       setError(null);
 
-      const [bookingData, reviewsData] = await Promise.all([
-        fetchBookingDetail(bookingId),
-        fetchBookingReviews(bookingId),
-      ]);
+      const bookingData = await fetchBookingDetail(bookingId);
+      const reviewsData = await fetchBookingReviews(bookingId).catch(() => []);
 
       setBooking(bookingData);
       setReviews(reviewsData);

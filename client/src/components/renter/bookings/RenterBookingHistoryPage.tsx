@@ -18,6 +18,7 @@ import {
   AlertTriangle,
   MoreVertical,
   DollarSign,
+  type LucideIcon,
 } from "lucide-react";
 import { Header } from "@/components/layout/header";
 import { Main } from "@/components/layout/main";
@@ -58,15 +59,6 @@ import { BookingHistoryPageSkeleton } from "@/components/shared/bookings/booking
 
 const PAGE_SIZE = 10;
 
-// Utility functions
-const formatDateTime = (value?: string | null) => {
-  if (!value) return "-";
-  return new Date(value).toLocaleString("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  });
-};
-
 const formatDate = (value?: string | null) => {
   if (!value) return "-";
   return new Date(value).toLocaleDateString("en-US", {
@@ -91,7 +83,7 @@ const formatCurrency = (amount: number, currency: string) => {
 // Status configurations with icons
 const STATUS_CONFIG: Record<
   RenterBookingStatus,
-  { label: string; icon: any; variant: string }
+  { label: string; icon: LucideIcon; variant: string }
 > = {
   PENDING: {
     label: "Pending",
@@ -128,7 +120,7 @@ const STATUS_CONFIG: Record<
 
 const PAYMENT_CONFIG: Record<
   RenterBookingPaymentState,
-  { label: string; icon: any; variant: string }
+  { label: string; icon: LucideIcon; variant: string }
 > = {
   paid: {
     label: "Paid",
@@ -300,7 +292,7 @@ const BookingTableRow = ({ booking }: { booking: RenterBookingListItem }) => {
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => router.push(`/renter/booking-history/${booking.id}`)}>
+            <DropdownMenuItem onClick={() => router.push(`/renter/booking-history/${encodeURIComponent(booking.bookingId || booking.id)}`)}>
               <Eye className="mr-2 w-4 h-4" />
               View Details
             </DropdownMenuItem>
@@ -313,7 +305,7 @@ const BookingTableRow = ({ booking }: { booking: RenterBookingListItem }) => {
         <Button
           variant="ghost"
           size="sm"
-          onClick={() => router.push(`/renter/booking-history/${booking.id}`)}
+          onClick={() => router.push(`/renter/booking-history/${encodeURIComponent(booking.bookingId || booking.id)}`)}
           className="hidden lg:inline-flex"
         >
           <Eye className="mr-2 w-4 h-4" />
@@ -484,7 +476,7 @@ const EmptyState = ({ onClearFilters }: { onClearFilters: () => void }) => (
     </div>
     <h3 className="mt-4 font-semibold text-foreground text-lg">No bookings found</h3>
     <p className="mt-2 text-muted-foreground text-sm">
-      We couldn't find any bookings matching your criteria
+      We could not find any bookings matching your criteria
     </p>
     <Button variant="outline" onClick={onClearFilters} className="mt-6">
       Clear all filters
