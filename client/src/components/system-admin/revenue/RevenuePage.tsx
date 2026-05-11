@@ -221,10 +221,9 @@ export default function RevenuePage() {
   const handleRetry = (t: Transaction) => console.log("Retry", t.id);
 
   return (
-    <div className="relative flex h-full w-full  ">
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <Main className="gap-6 p-6 md:p-8">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8">
           {/* Header */}
           <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
             <div>
@@ -447,7 +446,7 @@ export default function RevenuePage() {
             </Table>
           </div>
         </Main>
-      </div>
+    
     </div>
   );
 }

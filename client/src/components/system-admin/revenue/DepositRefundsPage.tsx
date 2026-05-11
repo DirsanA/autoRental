@@ -153,10 +153,9 @@ export default function DepositRefundsPage() {
   }
 
   return (
-    <div className="relative flex h-full w-full">
-      <div className="flex flex-1 flex-col overflow-hidden">
-        <Header />
-        <Main className="gap-6 p-6 md:p-8">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8">
           <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
             <div>
               <h1 className="text-3xl font-bold tracking-tight">Deposit Refunds</h1>
@@ -215,7 +214,7 @@ export default function DepositRefundsPage() {
             </div>
           </div>
 
-          <div className="max-h-[72vh] overflow-auto rounded-xl border bg-card shadow-sm">
+          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
             <Table>
               <TableHeader className="sticky top-0 z-10 bg-muted/50">
                 <TableRow className="hover:bg-transparent">
@@ -353,7 +352,7 @@ export default function DepositRefundsPage() {
             </div>
           </div>
         </Main>
-      </div>
+    
     </div>
   );
 }

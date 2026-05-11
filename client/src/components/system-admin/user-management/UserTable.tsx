@@ -147,12 +147,9 @@ export function UserTable({
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
                           <div className="font-medium">{user.name}</div>
-                          {showActionBadges &&
-                            (user.status === "inactive" ||
-                              user.status === "invited") &&
-                            !isViewed("USER", user.id) && (
-                              <RecordBadge show={true} variant="signal" />
-                            )}
+                          {showActionBadges && !isViewed("USER", user.id) && (
+                            <RecordBadge show={true} variant="signal" />
+                          )}
                         </div>
                         <div className="text-sm text-muted-foreground truncate">
                           {user.email}

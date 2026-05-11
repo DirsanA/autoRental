@@ -109,6 +109,25 @@ export async function markAllNotificationsAsRead(): Promise<number> {
   return data.count;
 }
 
+export async function markCategoriesAsRead(categories: AdminNotificationCategory[]): Promise<number> {
+  const response = await fetch(`${API_BASE}/admin/notifications/mark-categories-read`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...buildAuthHeader(),
+    },
+    credentials: "include",
+    body: JSON.stringify({ categories }),
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to mark categories as read: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.count;
+}
+
 export async function deleteNotification(id: string): Promise<void> {
   const response = await fetch(`${API_BASE}/admin/notifications/${id}`, {
     method: "DELETE",

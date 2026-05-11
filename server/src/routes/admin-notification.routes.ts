@@ -109,6 +109,30 @@ export function createAdminNotificationRoutes(auth: Auth): Router {
     }
   });
 
+  router.post("/mark-categories-read", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const adminId = req.user?.id;
+      if (!adminId) {
+        return res.status(401).json({ error: "Unauthorized" });
+      }
+
+      const { categories } = req.body;
+      if (!Array.isArray(categories)) {
+        return res.status(400).json({ error: "categories must be an array" });
+      }
+
+      const count = await adminNotificationService.markCategoriesAsRead(adminId, categories);
+
+      res.status(200).json({
+        success: true,
+        message: `Marked ${count} notifications as read`,
+        count,
+      });
+    } catch (error) {
+      next(error);
+    }
+  });
+
   router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
     try {
       const adminId = req.user?.id;

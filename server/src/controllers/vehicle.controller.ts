@@ -54,6 +54,19 @@ export const vehicleController = {
   }),
 
   /**
+   * Returns vehicles ranked by booking count (most popular first).
+   */
+  listMostBooked: asyncHandler(async (req: Request, res: Response) => {
+    const limit = Math.min(Number(req.query.limit) || 6, 20);
+    const vehicles = await vehicleService.listMostBooked(limit);
+
+    res.json({
+      success: true,
+      data: { vehicles },
+    });
+  }),
+
+  /**
    * Lists vehicles owned by the current authenticated user or company.
    */
   listMine: asyncHandler(async (req: Request, res: Response) => {

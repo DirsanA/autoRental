@@ -567,11 +567,9 @@ export function RenterBookingHistoryPage() {
   const showSkeleton = isLoading && bookings.length === 0;
 
   return (
-    <div className="relative flex w-full h-dvh">
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-
-        <Main className="gap-6 p-6 md:p-8 overflow-y-auto">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8">
           {showSkeleton ? (
             <BookingHistoryPageSkeleton columns={6} rows={5} statCards={4} />
           ) : (
@@ -649,7 +647,7 @@ export function RenterBookingHistoryPage() {
             </>
           )}
         </Main>
-      </div>
+    
     </div>
   );
 }

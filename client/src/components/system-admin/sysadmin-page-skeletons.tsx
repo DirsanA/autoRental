@@ -34,10 +34,9 @@ export function AdminListPageSkeleton({
   showInfoBar?: boolean;
 }) {
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <div className="flex min-h-0 flex-1 flex-col">
-        <Header />
-        <Main className="gap-6 p-6 pb-20 md:p-8">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="space-y-3">
             <ShimmerSkeleton className="h-10 w-64" />
             <ShimmerSkeleton className="h-4 w-[28rem] max-w-full" />
@@ -89,7 +88,7 @@ export function AdminListPageSkeleton({
             </div>
           </div>
         </Main>
-      </div>
+    
     </div>
   );
 }

@@ -83,17 +83,17 @@ const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
     icon: <ClipboardCheck className="size-4" />,
     link: "/peerhost/booking-history",
   },
-  {
-    id: "messages",
-    title: "Messages",
-    icon: (
-      <div className="relative">
-        <MessageSquareText className="size-4" />
-        <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
-      </div>
-    ),
-    link: "/peerhost/messages",
-  },
+  // {
+  //   id: "messages",
+  //   title: "Messages",
+  //   icon: (
+  //     <div className="relative">
+  //       <MessageSquareText className="size-4" />
+  //       <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
+  //     </div>
+  //   ),
+  //   link: "/peerhost/messages",
+  // },
   {
     id: "reviews",
     title: "Reviews",
@@ -258,9 +258,9 @@ export function PeerToPeerSidebar({ isLoading = false }: { isLoading?: boolean }
         </SidebarMenu>
 
         <div className="mt-2 pb-4">
-          <ReportIssueModal 
+          <ReportIssueModal
             trigger={
-              <SidebarMenuButton 
+              <SidebarMenuButton
                 tooltip="Report a Problem"
                 className="w-full justify-start gap-2 text-rose-500 hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/30"
               >

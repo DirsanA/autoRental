@@ -132,6 +132,14 @@ export class AdminNotificationService {
     return result.modifiedCount;
   }
 
+  async markCategoriesAsRead(adminId: string, categories: AdminNotificationCategory[]): Promise<number> {
+    const result = await AdminNotification.updateMany(
+      { recipientId: adminId, category: { $in: categories }, isRead: false },
+      { isRead: true, readAt: new Date() },
+    );
+    return result.modifiedCount;
+  }
+
   async deleteNotification(
     adminId: string,
     notificationId: string,

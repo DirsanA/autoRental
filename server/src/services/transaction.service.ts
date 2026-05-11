@@ -49,10 +49,10 @@ export class TransactionService {
   ) {
     const canRefundDepositToRenter = Boolean(
       transaction.type === "COLLATERAL_DEPOSIT" &&
-        transaction.status === "HELD_IN_ESCROW" &&
-        booking?._id &&
-        (booking.securityDepositAmount ?? 0) > 0 &&
-        ["HELD_IN_ESCROW", "UNDER_REVIEW"].includes(String(booking.depositStatus || "")),
+      transaction.status === "HELD_IN_ESCROW" &&
+      booking?._id &&
+      (booking.securityDepositAmount ?? 0) > 0 &&
+      ["HELD_IN_ESCROW", "UNDER_REVIEW"].includes(String(booking.depositStatus || "")),
     );
 
     const refundIneligibleReason = canRefundDepositToRenter
@@ -71,10 +71,10 @@ export class TransactionService {
 
     const canReleaseDepositToOwner = Boolean(
       transaction.type === "COLLATERAL_DEPOSIT" &&
-        transaction.status === "HELD_IN_ESCROW" &&
-        booking?._id &&
-        booking.depositStatus === "UNDER_REVIEW" &&
-        booking.status === "DISPUTED",
+      transaction.status === "HELD_IN_ESCROW" &&
+      booking?._id &&
+      booking.depositStatus === "UNDER_REVIEW" &&
+      booking.status === "DISPUTED",
     );
 
     const releaseIneligibleReason = canReleaseDepositToOwner
@@ -172,8 +172,8 @@ export class TransactionService {
 
     const vehicle = booking?.vehicleId
       ? await Vehicle.findById(booking.vehicleId)
-          .select("make model year plate ownerId ownerType")
-          .lean()
+        .select("make model year plate ownerId ownerType")
+        .lean()
       : null;
 
     const [renter, ownerUser, ownerCompany, ownerWallet] = await Promise.all([
@@ -188,9 +188,9 @@ export class TransactionService {
         : Promise.resolve(null),
       vehicle?.ownerId && vehicle?.ownerType
         ? walletService.getWalletByOwner(
-            vehicle.ownerId as mongoose.Types.ObjectId,
-            vehicle.ownerType,
-          )
+          vehicle.ownerId as mongoose.Types.ObjectId,
+          vehicle.ownerType,
+        )
         : Promise.resolve(null),
     ]);
 
@@ -201,10 +201,10 @@ export class TransactionService {
 
     const canRefundToSystemWallet = Boolean(
       transaction.type === "ESCROW_HOLD"
-        && transaction.status === "HELD_IN_ESCROW"
-        && booking?._id
-        && vehicle?.ownerId
-        && (ownerWallet?.pendingBalance ?? 0) >= (transaction.amount ?? 0),
+      && transaction.status === "HELD_IN_ESCROW"
+      && booking?._id
+      && vehicle?.ownerId
+      && (ownerWallet?.pendingBalance ?? 0) >= (transaction.amount ?? 0),
     );
 
     const securityDepositActions = this.getSecurityDepositActions(transaction, booking);
@@ -226,36 +226,36 @@ export class TransactionService {
       transaction: mapTransaction(transaction as Record<string, any>),
       booking: booking
         ? {
-            id: booking._id?.toString?.() ?? String(booking._id),
-            bookingId: booking.bookingId || null,
-            status: booking.status || null,
-            paymentStatus: booking.payment?.status || null,
-            startTime: booking.startTime?.toISOString?.() ?? null,
-            endTime: booking.endTime?.toISOString?.() ?? null,
-          }
+          id: booking._id?.toString?.() ?? String(booking._id),
+          bookingId: booking.bookingId || null,
+          status: booking.status || null,
+          paymentStatus: booking.payment?.status || null,
+          startTime: booking.startTime?.toISOString?.() ?? null,
+          endTime: booking.endTime?.toISOString?.() ?? null,
+        }
         : null,
       vehicle: vehicle
         ? {
-            id: vehicle._id?.toString?.() ?? String(vehicle._id),
-            label: [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" "),
-            plate: vehicle.plate || null,
-            ownerType: vehicle.ownerType || null,
-            ownerName,
-          }
+          id: vehicle._id?.toString?.() ?? String(vehicle._id),
+          label: [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" "),
+          plate: vehicle.plate || null,
+          ownerType: vehicle.ownerType || null,
+          ownerName,
+        }
         : null,
       renter: renter
         ? {
-            id: renter._id?.toString?.() ?? String(renter._id),
-            name: formatUserName(renter as Record<string, any>),
-            email: renter.email || null,
-          }
+          id: renter._id?.toString?.() ?? String(renter._id),
+          name: formatUserName(renter as Record<string, any>),
+          email: renter.email || null,
+        }
         : null,
       ownerWallet: ownerWallet
         ? {
-            pendingBalance: ownerWallet.pendingBalance ?? 0,
-            availableBalance: ownerWallet.availableBalance ?? 0,
-            currency: ownerWallet.currency || transaction.currency || "ETB",
-          }
+          pendingBalance: ownerWallet.pendingBalance ?? 0,
+          availableBalance: ownerWallet.availableBalance ?? 0,
+          currency: ownerWallet.currency || transaction.currency || "ETB",
+        }
         : null,
       actions: {
         canRefundToSystemWallet,
@@ -304,8 +304,8 @@ export class TransactionService {
       .filter((id): id is mongoose.Types.ObjectId => Boolean(id));
     const vehicles = vehicleIds.length
       ? await Vehicle.find({ _id: { $in: vehicleIds } })
-          .select("make model year plate ownerId ownerType")
-          .lean()
+        .select("make model year plate ownerId ownerType")
+        .lean()
       : [];
     const vehicleMap = new Map(vehicles.map((vehicle) => [String(vehicle._id), vehicle]));
 
@@ -322,13 +322,13 @@ export class TransactionService {
     const [users, companies] = await Promise.all([
       renterIds.length || ownerUserIds.length
         ? User.find({ _id: { $in: [...renterIds, ...ownerUserIds] } })
-            .select("name firstName lastName email")
-            .lean()
+          .select("name firstName lastName email")
+          .lean()
         : Promise.resolve([]),
       ownerCompanyIds.length
         ? Company.find({ _id: { $in: ownerCompanyIds } })
-            .select("name contactInfo.email")
-            .lean()
+          .select("name contactInfo.email")
+          .lean()
         : Promise.resolve([]),
     ]);
 
@@ -348,8 +348,8 @@ export class TransactionService {
       const ownerName =
         vehicle?.ownerType === "Company"
           ? companyMap.get(String(vehicle.ownerId))?.name ||
-            companyMap.get(String(vehicle.ownerId))?.contactInfo?.email ||
-            null
+          companyMap.get(String(vehicle.ownerId))?.contactInfo?.email ||
+          null
           : formatUserName(userMap.get(String(vehicle?.ownerId)));
       const securityDepositActions = this.getSecurityDepositActions(transaction, booking || null);
 
@@ -357,30 +357,30 @@ export class TransactionService {
         transaction: mapTransaction(transaction as Record<string, any>),
         booking: booking
           ? {
-              id: String(booking._id),
-              bookingId: booking.bookingId || null,
-              status: booking.status || null,
-              depositStatus: booking.depositStatus || null,
-              paymentStatus: booking.payment?.status || null,
-              startTime: booking.startTime?.toISOString?.() ?? null,
-              endTime: booking.endTime?.toISOString?.() ?? null,
-            }
+            id: String(booking._id),
+            bookingId: booking.bookingId || null,
+            status: booking.status || null,
+            depositStatus: booking.depositStatus || null,
+            paymentStatus: booking.payment?.status || null,
+            startTime: booking.startTime?.toISOString?.() ?? null,
+            endTime: booking.endTime?.toISOString?.() ?? null,
+          }
           : null,
         renter: renter
           ? {
-              id: String(renter._id),
-              name: formatUserName(renter as Record<string, any>),
-              email: renter.email || null,
-            }
+            id: String(renter._id),
+            name: formatUserName(renter as Record<string, any>),
+            email: renter.email || null,
+          }
           : null,
         vehicle: vehicle
           ? {
-              id: String(vehicle._id),
-              label: [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" "),
-              plate: vehicle.plate || null,
-              ownerType: vehicle.ownerType || null,
-              ownerName,
-            }
+            id: String(vehicle._id),
+            label: [vehicle.year, vehicle.make, vehicle.model].filter(Boolean).join(" "),
+            plate: vehicle.plate || null,
+            ownerType: vehicle.ownerType || null,
+            ownerName,
+          }
           : null,
         actions: {
           canRefundDepositToRenter: securityDepositActions.canRefundDepositToRenter,
@@ -456,7 +456,7 @@ export class TransactionService {
       if (!securityDepositActions.canRefundDepositToRenter) {
         throw ApiError.unprocessable(
           securityDepositActions.refundIneligibleReason ||
-            "This security deposit is not eligible for renter refund",
+          "This security deposit is not eligible for renter refund",
         );
       }
 
@@ -470,7 +470,7 @@ export class TransactionService {
       if (!securityDepositActions.canReleaseDepositToOwner) {
         throw ApiError.unprocessable(
           securityDepositActions.releaseIneligibleReason ||
-            "This security deposit is not eligible for owner release",
+          "This security deposit is not eligible for owner release",
         );
       }
 

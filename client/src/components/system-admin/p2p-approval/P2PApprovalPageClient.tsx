@@ -72,6 +72,7 @@ import {
   type P2PHostSummary,
 } from "@/lib/admin-p2p-api";
 import { updateAdminUserStatus } from "@/lib/admin-users-api";
+import { markCategoriesAsRead } from "@/lib/admin-notifications-api";
 
 const PAGE_SIZE = 20;
 
@@ -317,6 +318,15 @@ export function P2PApprovalPageClient() {
     void loadHosts();
   }, [loadHosts]);
 
+  const refreshCounts = useActionBadgesStore((state) => state.refreshCounts);
+
+  useEffect(() => {
+    // Clear P2P related notifications to remove sidebar badge when visiting the page
+    markCategoriesAsRead(["P2P_ACTIVITY", "VEHICLE_ACTIVITY", "VERIFICATION_ACTIVITY"])
+      .then(() => refreshCounts())
+      .catch((err) => console.error("Failed to clear P2P notifications", err));
+  }, [refreshCounts]);
+
   const handleView = (host: P2PHostSummary) => {
     router.push(`/sysadmin/P2P/${host.id}`);
   };
@@ -488,14 +498,12 @@ export function P2PApprovalPageClient() {
   }
 
   return (
-    <div className="relative flex h-full w-full min-w-0 overflow-x-hidden">
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <Header />
-        <Main fixed className="min-w-0 flex flex-col gap-6 p-6 md:p-8 overflow-hidden">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-1">
             <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               P2P Approval
-              <ActionBadge entityType="P2P_HOST" className="h-6 min-w-[24px] text-sm" />
             </h1>
             <p className="max-w-2xl text-muted-foreground">
               Review renters who submitted vehicles and verification documents
@@ -601,8 +609,7 @@ export function P2PApprovalPageClient() {
             {hostsData.hosts.length} hosts shown
           </div>
 
-          <div className="flex-1 min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm flex flex-col">
-            <div className="flex-1 overflow-auto">
+          <div className="rounded-xl border bg-card shadow-sm">
               <Table className="w-full">
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/85">
                 <TableRow className="hover:bg-transparent">
@@ -650,11 +657,9 @@ export function P2PApprovalPageClient() {
                       <TableCell className="align-top">
                         <div className="flex items-center gap-2">
                           <div className="text-sm font-medium">{host.name}</div>
-                          {host.status === "pending" &&
-                            host.reviewReadiness.canPromote &&
-                            !isViewed("P2P_HOST", host.id) && (
-                              <RecordBadge show={true} variant="signal" />
-                            )}
+                          {!isViewed("P2P_HOST", host.id) && (
+                            <RecordBadge show={true} variant="signal" />
+                          )}
                         </div>
                         <div className="max-w-[180px] truncate text-xs text-muted-foreground">
                           Level: {host.verificationLevel.replaceAll("_", " ")}
@@ -727,7 +732,6 @@ export function P2PApprovalPageClient() {
               </TableBody>
             </Table>
             </div>
-          </div>
 
           {hostsData.pagination.totalPages > 1 && (
             <div className="flex items-center justify-between">
@@ -763,7 +767,7 @@ export function P2PApprovalPageClient() {
             </div>
           )}
         </Main>
-      </div>
+    
 
       {/* Approve Confirmation Dialog */}
       <AlertDialog

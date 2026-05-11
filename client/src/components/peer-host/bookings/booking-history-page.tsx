@@ -238,11 +238,9 @@ export function PeerHostBookingHistoryPage() {
     `/peerhost/booking-history/${encodeURIComponent(booking.bookingId || booking.id)}`;
 
   return (
-    <div className="relative flex w-full h-dvh">
-      <div className="flex flex-col flex-1 overflow-hidden">
-        <Header />
-
-        <Main className="gap-6 p-4 md:p-6 lg:p-8">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-4 md:p-6 lg:p-8">
           {isFetching ? (
             <BookingHistoryPageSkeleton columns={6} rows={5} statCards={4} />
           ) : error ? (
@@ -469,7 +467,7 @@ export function PeerHostBookingHistoryPage() {
             </>
           )}
         </Main>
-      </div>
+    
 
     </div>
   );

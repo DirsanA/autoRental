@@ -17,6 +17,7 @@ export function createVehicleRoutes(auth: Auth): Router {
   const authenticate = createAuthMiddleware(auth);
 
   router.get("/", vehicleController.list);
+  router.get("/most-booked", vehicleController.listMostBooked);
   router.get("/marketplace", vehicleController.listMarketplace);
   router.get(
     "/marketplace/:id",

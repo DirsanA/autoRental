@@ -7,6 +7,7 @@ import { ApiError } from "../utils/ApiError.js";
 import { User } from "../models/User.js";
 import { normalizePhoneNumber } from "../utils/phone.js";
 import { requireRequestUser } from "../utils/requestContext.js";
+import { uploadToCloudinary } from "../utils/cloudinary.js";
 import { Verification } from "../models/Verification.js";
 import { Company } from "../models/Company.js";
 

@@ -230,7 +230,7 @@ export class UserService {
       );
     }
 
-    await User.findByIdAndUpdate(
+    const updatedUser = await User.findByIdAndUpdate(
       user.id,
       { $set: updateData },
       { new: true },

@@ -276,7 +276,9 @@ export default function AdminNotificationsPage() {
 
   useEffect(() => {
     fetchNotifications(true);
-  }, [fetchNotifications]);
+    // Mark all as read when user visits the notifications page
+    markAllAsRead();
+  }, [fetchNotifications, markAllAsRead]);
 
   const handleMarkAllRead = async () => {
     await markAllAsRead();
@@ -294,10 +296,9 @@ export default function AdminNotificationsPage() {
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <div className="flex flex-1 flex-col min-h-0">
-        <Header />
-        <Main className="gap-6 p-6 md:p-8 pb-20">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-2">
             <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               Notifications
@@ -330,24 +331,19 @@ export default function AdminNotificationsPage() {
                 </SelectContent>
               </Select>
 
-              {unreadCount > 0 && (
-                <div className="rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-700 dark:bg-blue-900/30 dark:text-blue-400">
-                  {unreadCount} unread
-                </div>
-              )}
+
             </div>
 
             <div className="flex gap-2">
-              {unreadCount > 0 && (
-                <Button
-                  variant="outline"
-                  onClick={handleMarkAllRead}
-                  className="gap-2"
-                >
-                  <CheckCheck className="h-4 w-4" />
-                  Mark all read
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={handleMarkAllRead}
+                className="gap-2"
+                disabled={unreadCount === 0}
+              >
+                <CheckCheck className="h-4 w-4" />
+                Mark all as read
+              </Button>
             </div>
           </div>
 
@@ -358,7 +354,7 @@ export default function AdminNotificationsPage() {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
+          <div className="rounded-xl border bg-card shadow-sm">
             <Table>
               <TableHeader className="bg-muted/50">
                 <TableRow className="hover:bg-transparent">
@@ -448,7 +444,7 @@ export default function AdminNotificationsPage() {
             )}
           </div>
         </Main>
-      </div>
+    
 
       <AlertDialog
         open={!!deleteTarget}

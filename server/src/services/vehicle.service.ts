@@ -131,6 +131,59 @@ export class VehicleService {
   }
 
   /**
+   * Returns the most-booked vehicles, ranked by total booking count.
+   * Only includes vehicles that are currently AVAILABLE or BOOKED.
+   */
+  async listMostBooked(limit = 6) {
+    // Aggregate bookings to find vehicle IDs with the highest booking counts
+    const topVehicleIds = await Booking.aggregate([
+      {
+        $match: {
+          status: { $in: ["CONFIRMED", "ACTIVE", "COMPLETED"] },
+        },
+      },
+      {
+        $group: {
+          _id: "$vehicleId",
+          bookingCount: { $sum: 1 },
+        },
+      },
+      { $sort: { bookingCount: -1 } },
+      { $limit: limit },
+    ]);
+
+    if (topVehicleIds.length === 0) return [];
+
+    const vehicleIds = topVehicleIds.map((v) => v._id);
+    const bookingCountMap = new Map(
+      topVehicleIds.map((v) => [v._id.toString(), v.bookingCount as number]),
+    );
+
+    // Fetch the actual vehicle documents (only active ones)
+    const vehicles = await Vehicle.find({
+      _id: { $in: vehicleIds },
+      status: { $in: ["AVAILABLE", "BOOKED"] },
+    }).lean();
+
+    if (vehicles.length === 0) return [];
+
+    // Preserve the booking-count ordering
+    vehicles.sort((a, b) => {
+      const countA = bookingCountMap.get(a._id.toString()) ?? 0;
+      const countB = bookingCountMap.get(b._id.toString()) ?? 0;
+      return countB - countA;
+    });
+
+    const enriched = await this.enrichWithOwners(vehicles);
+
+    // Attach bookingCount to each vehicle for the frontend
+    return enriched.map((v: any) => ({
+      ...v,
+      bookingCount: bookingCountMap.get(v._id.toString()) ?? 0,
+    }));
+  }
+
+  /**
    * Returns a public vehicle by id, enriched with owner summary.
    */
   async getPublicById(id: string) {

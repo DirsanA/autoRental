@@ -256,19 +256,14 @@ export class ViewTrackingService {
         notifCounts[group._id] = group.count;
       });
 
-      // Combine action-required counts with unread notification counts
-      // This ensures that either a new record OR a new notification triggers the badge
+      // Ensure the sidebar badge only reflects unviewed action-required records.
+      // Notifications (notifCounts) are handled separately by the notification bell.
       return {
-        users: usersUnviewed + (notifCounts["USER_ACTIVITY"] || 0),
-        p2pHosts:
-          p2pUnviewed +
-          (notifCounts["P2P_ACTIVITY"] || 0) +
-          (notifCounts["VEHICLE_ACTIVITY"] || 0) +
-          (notifCounts["VERIFICATION_ACTIVITY"] || 0),
-        companies: companiesUnviewed + (notifCounts["COMPANY_ACTIVITY"] || 0),
-        vehicles: vehiclesUnviewed + (notifCounts["VEHICLE_ACTIVITY"] || 0),
-        verifications:
-          verificationsUnviewed + (notifCounts["VERIFICATION_ACTIVITY"] || 0),
+        users: usersUnviewed,
+        p2pHosts: p2pUnviewed,
+        companies: companiesUnviewed,
+        vehicles: vehiclesUnviewed,
+        verifications: verificationsUnviewed,
       };
     } catch (error) {
       console.error("[ViewTracking] Error getting sidebar counts:", error);

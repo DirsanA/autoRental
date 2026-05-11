@@ -239,15 +239,12 @@ export default function UserManagementPage() {
   }
 
   return (
-    <div className="relative flex h-full w-full overflow-hidden">
-      <div className="flex flex-1 flex-col min-h-0">
-        <Header />
-
-        <Main className="gap-6 p-6 md:p-8 pb-20">
+    <div className="flex flex-1 flex-col h-full overflow-hidden">
+      <Header />
+      <Main className="gap-6 p-6 md:p-8 pb-20">
           <div className="flex flex-col gap-2">
             <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               User Management
-              <ActionBadge entityType="USER" className="h-6 min-w-[24px] text-sm" />
             </h1>
             <p className="max-w-2xl text-muted-foreground">
               Manage people accounts and internal admins. Company entities are
@@ -381,7 +378,7 @@ export default function UserManagementPage() {
             </>
           )}
         </Main>
-      </div>
+    
 
       <AlertDialog
         open={!!deleteDialogUser}

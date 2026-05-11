@@ -69,21 +69,13 @@ export function NotificationsPopover() {
           aria-label="Open notifications"
         >
           <BellIcon className="size-5" />
-          {unreadCount > 0 && (
-            <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-semibold text-white">
-              {unreadCount > 99 ? "99+" : unreadCount}
-            </span>
-          )}
+
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent side="right" className="w-80 my-6 bg-background">
         <DropdownMenuLabel className="flex items-center justify-between">
           <span>Notifications</span>
-          {unreadCount > 0 && (
-            <span className="rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">
-              {unreadCount} unread
-            </span>
-          )}
+
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {previewNotifications.length === 0 ? (
