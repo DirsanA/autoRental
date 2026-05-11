@@ -96,17 +96,6 @@ const dashboardRoutes: Route[] = [
     icon: <Building2 className="size-4" />,
     link: "/company/bookings",
   },
-  {
-    id: "Messages",
-    title: "Messages",
-    icon: (
-      <div className="relative">
-        <MessageSquareText className="size-4" />
-        <div className="absolute -top-1 -right-1 w-2 h-2 bg-primary rounded-full ring-2 ring-sidebar shadow-sm" />
-      </div>
-    ),
-    link: "/company/messages",
-  },
   // {
   //   id: "customers",
   //   title: "Customers",
