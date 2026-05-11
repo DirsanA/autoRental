@@ -52,8 +52,7 @@ export class TransactionService {
         transaction.status === "HELD_IN_ESCROW" &&
         booking?._id &&
         (booking.securityDepositAmount ?? 0) > 0 &&
-        ["HELD_IN_ESCROW", "UNDER_REVIEW"].includes(String(booking.depositStatus || "")) &&
-        ["COMPLETED", "CANCELLED", "DISPUTED"].includes(String(booking.status || "")),
+        ["HELD_IN_ESCROW", "UNDER_REVIEW"].includes(String(booking.depositStatus || "")),
     );
 
     const refundIneligibleReason = canRefundDepositToRenter
@@ -68,9 +67,7 @@ export class TransactionService {
               ? "This booking does not have a valid held security deposit."
               : !["HELD_IN_ESCROW", "UNDER_REVIEW"].includes(String(booking.depositStatus || ""))
                 ? "This booking deposit is not in a refundable state."
-                : !["COMPLETED", "CANCELLED", "DISPUTED"].includes(String(booking.status || ""))
-                  ? "Security deposits can only be manually refunded after completion, cancellation, or dispute."
-                  : "This deposit is not eligible for renter refund.";
+                : "This deposit is not eligible for renter refund.";
 
     const canReleaseDepositToOwner = Boolean(
       transaction.type === "COLLATERAL_DEPOSIT" &&

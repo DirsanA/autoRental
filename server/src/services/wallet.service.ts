@@ -18,6 +18,8 @@ type WalletOwner = {
   currency: string;
 };
 
+const REFUND_WINDOW_HOURS = 48;
+
 export type WalletSnapshot = {
   ownerType: WalletOwnerType;
   currency: string;
@@ -1096,6 +1098,52 @@ export class WalletService {
   }
 
   /**
+   * Automatically refunds security deposits for bookings that were completed
+   * more than 48 hours ago and have no reported issues.
+   */
+  async processAutomaticDepositRefunds() {
+    try {
+      const threshold = new Date();
+      threshold.setHours(threshold.getHours() - REFUND_WINDOW_HOURS);
+
+      const eligibleBookings = await Booking.find({
+        status: "COMPLETED",
+        depositStatus: "HELD_IN_ESCROW",
+        returnCondition: "CLEAN", // Only auto-refund if everything is clean
+        $or: [
+          { actualReturnTime: { $lte: threshold } },
+          { 
+            actualReturnTime: { $exists: false },
+            returnConfirmedAt: { $lte: threshold }
+          },
+          {
+            actualReturnTime: { $exists: false },
+            returnConfirmedAt: { $exists: false },
+            updatedAt: { $lte: threshold }
+          }
+        ]
+      }).limit(100);
+
+      if (eligibleBookings.length > 0) {
+        console.log(`[\uD83D\uDCAA Wallet Service] Found ${eligibleBookings.length} bookings eligible for automatic deposit refund.`);
+      }
+
+      for (const booking of eligibleBookings) {
+        try {
+          await this.refundSecurityDepositToRenterWallet(booking.id, "CLEAN_RETURN");
+          booking.depositStatus = "REFUNDED_TO_RENTER";
+          await booking.save();
+          console.log(`[\u2705 Wallet Service] Auto-refunded deposit for booking ${booking.bookingId}`);
+        } catch (err) {
+          console.error(`[\u274C Wallet Service] Failed to auto-refund deposit for booking ${booking.bookingId}:`, err);
+        }
+      }
+    } catch (err) {
+      console.error("[\u274C Wallet Service] Error in processAutomaticDepositRefunds:", err);
+    }
+  }
+
+  /**
    * Starts a MongoDB Change Stream to watch for direct database updates to Booking documents.
    * If a booking is marked as COMPLETED directly in the database, this will trigger the escrow release automatically.
    */
@@ -1103,6 +1151,14 @@ export class WalletService {
     try {
       console.log("[\uD83D\uDC40 Wallet Watcher] Starting database watcher for booking updates...");
       
+      // Run automatic refunds every hour
+      setInterval(() => {
+        void this.processAutomaticDepositRefunds();
+      }, 60 * 60 * 1000);
+
+      // Also run immediately on start
+      void this.processAutomaticDepositRefunds();
+
       Booking.watch([
         {
           $match: {

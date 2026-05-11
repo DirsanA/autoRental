@@ -491,7 +491,7 @@ export function P2PApprovalPageClient() {
     <div className="relative flex h-full w-full min-w-0 overflow-x-hidden">
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <Header />
-        <Main className="min-w-0 gap-6 p-6 pb-20 md:p-8">
+        <Main fixed className="min-w-0 flex flex-col gap-6 p-6 md:p-8 overflow-hidden">
           <div className="flex flex-col gap-1">
             <h1 className="flex items-center gap-3 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
               P2P Approval
@@ -601,9 +601,9 @@ export function P2PApprovalPageClient() {
             {hostsData.hosts.length} hosts shown
           </div>
 
-          <div className="overflow-hidden rounded-xl border bg-card shadow-sm">
-            <div className="max-h-[65vh] overflow-y-auto">
-            <Table className="w-full table-fixed">
+          <div className="flex-1 min-h-0 overflow-hidden rounded-xl border bg-card shadow-sm flex flex-col">
+            <div className="flex-1 overflow-auto">
+              <Table className="w-full">
               <TableHeader className="sticky top-0 z-10 bg-muted/95 backdrop-blur supports-[backdrop-filter]:bg-muted/85">
                 <TableRow className="hover:bg-transparent">
                   <TableHead className="w-[20%]">Host</TableHead>
