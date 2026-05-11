@@ -256,13 +256,6 @@ export default function BookingManagement() {
               <RefreshCcw className="mr-2 w-4 h-4" />
               Refresh
             </Button>
-            <Button
-              onClick={exportToCSV}
-              className="bg-foreground hover:bg-foreground/90 rounded-2xl text-background"
-            >
-              <Download className="mr-2 w-4 h-4" />
-              Export CSV
-            </Button>
           </div>
         </div>
       </div>
