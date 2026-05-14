@@ -89,7 +89,8 @@ function NotificationRow({
   onDelete: (id: string) => void;
 }) {
   const router = useRouter();
-  const categoryConfig = CATEGORY_CONFIG[notification.category] || CATEGORY_CONFIG.SYSTEM;
+  const categoryConfig =
+    CATEGORY_CONFIG[notification.category] || CATEGORY_CONFIG.SYSTEM;
 
   const handleClick = () => {
     if (!notification.isRead) {
@@ -215,11 +216,15 @@ export function UserNotificationsPage() {
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting && !isLoadingMore && pagination.page < pagination.totalPages) {
+        if (
+          entries[0].isIntersecting &&
+          !isLoadingMore &&
+          pagination.page < pagination.totalPages
+        ) {
           loadMore();
         }
       },
-      { threshold: 0.1 }
+      { threshold: 0.1 },
     );
 
     const target = document.getElementById("infinite-scroll-sentinel");
@@ -240,12 +245,18 @@ export function UserNotificationsPage() {
   };
 
   if (isLoading && notifications.length === 0) {
-    return <AdminListPageSkeleton stats={0} columns={4} rows={6} showHelperCard={false} />;
+    return (
+      <AdminListPageSkeleton
+        stats={0}
+        columns={4}
+        rows={6}
+        showHelperCard={false}
+      />
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col h-full overflow-hidden">
-      <Header />
       <Main className="gap-6 p-6 md:p-8 pb-20">
         <div className="flex flex-col gap-2">
           <h1 className="bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text text-4xl font-bold tracking-tight text-transparent">
@@ -320,11 +331,11 @@ export function UserNotificationsPage() {
               )}
             </TableBody>
           </Table>
-          
+
           {/* Infinite Scroll Sentinel */}
           {notifications.length > 0 && (
-            <div 
-              id="infinite-scroll-sentinel" 
+            <div
+              id="infinite-scroll-sentinel"
               className="flex items-center justify-center p-8 text-muted-foreground"
             >
               {isLoadingMore ? (
@@ -333,9 +344,13 @@ export function UserNotificationsPage() {
                   <span className="text-sm">Loading more...</span>
                 </div>
               ) : pagination.page < pagination.totalPages ? (
-                <span className="text-xs opacity-50 italic">Scroll for more</span>
+                <span className="text-xs opacity-50 italic">
+                  Scroll for more
+                </span>
               ) : (
-                <span className="text-xs opacity-50 italic">End of notifications</span>
+                <span className="text-xs opacity-50 italic">
+                  End of notifications
+                </span>
               )}
             </div>
           )}
@@ -347,9 +362,9 @@ export function UserNotificationsPage() {
             Showing {notifications.length} of {pagination.total} notifications
           </p>
           {pagination.page < pagination.totalPages && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={() => loadMore()}
               disabled={isLoadingMore}
               className="text-xs text-blue-600 hover:text-blue-700"
