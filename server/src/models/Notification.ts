@@ -19,6 +19,7 @@ export const NOTIFICATION_CATEGORIES = [
   "ACCOUNT",
   "PROMOTION",
   "ADMIN_ALERT",
+  "CHAT",
 ] as const;
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number];

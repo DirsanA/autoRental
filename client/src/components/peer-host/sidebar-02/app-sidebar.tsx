@@ -24,12 +24,13 @@ import {
   Plus,
   AlertCircle,
   MessageSquareText,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/peer-host/sidebar-02/nav-main";
-import { NotificationsPopover } from "@/components/peer-host/sidebar-02/nav-notifications";
+import { UserNotificationsBell } from "@/components/dashboard/sidebar-02/user-notifications-bell";
 import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { toggleActiveRole, writeUserRoleState } from "@/lib/role-store";
@@ -37,26 +38,7 @@ import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 import { fetchPeerHostVehicles } from "@/components/peer-host/vehicles/api";
 
-const sampleNotifications = [
-  {
-    id: "1",
-    fallback: "NR",
-    text: "New booking request for Tesla Model 3",
-    time: "5m ago",
-  },
-  {
-    id: "2",
-    fallback: "JD",
-    text: "Booking accepted: BMW X5",
-    time: "2h ago",
-  },
-  {
-    id: "3",
-    fallback: "MK",
-    text: "Document verification pending",
-    time: "5h ago",
-  },
-];
+
 
 const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
   {
@@ -64,6 +46,12 @@ const getDashboardRoutes = (hasVehicles: boolean): Route[] => [
     title: "Dashboard",
     icon: <Home className="size-4" />,
     link: "/peerhost/dashboard",
+  },
+  {
+    id: "notifications",
+    title: "Notifications",
+    icon: <Bell className="size-4" />,
+    link: "/peerhost/notifications",
   },
   {
     id: "wallet",
@@ -221,7 +209,7 @@ export function PeerToPeerSidebar({ isLoading = false }: { isLoading?: boolean }
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <NotificationsPopover notifications={sampleNotifications} />
+          <UserNotificationsBell href="/peerhost/notifications" />
           <SidebarTrigger />
         </motion.div>
       </SidebarHeader>

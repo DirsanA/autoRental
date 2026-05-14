@@ -21,38 +21,20 @@ import {
   UserCheck,
   AlertCircle,
   MessageSquareText,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { Logo } from "@/components/logo";
 import type { Route } from "./nav-main";
 import DashboardNavigation from "@/components/dashboard/sidebar-02/nav-main";
-import { NotificationsPopover } from "@/components/dashboard/sidebar-02/nav-notifications";
+import { UserNotificationsBell } from "@/components/dashboard/sidebar-02/user-notifications-bell";
 import { useRouter } from "next/navigation";
 import { useUserRoleState } from "@/hooks/use-user-role-state";
 import { writeUserRoleState } from "@/lib/role-store";
 import { SidebarLoadingSkeleton } from "@/components/sidebar-loading";
 import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 
-const sampleNotifications = [
-  {
-    id: "1",
-    fallback: "OM",
-    text: "New order received.",
-    time: "10m ago",
-  },
-  {
-    id: "2",
-    fallback: "JL",
-    text: "Server upgrade completed.",
-    time: "1h ago",
-  },
-  {
-    id: "3",
-    fallback: "HH",
-    text: "New user signed up.",
-    time: "2h ago",
-  },
-];
+
 
 const dashboardRoutes: Route[] = [
   {
@@ -60,6 +42,12 @@ const dashboardRoutes: Route[] = [
     title: "Dashboard",
     icon: <LayoutDashboard className="size-4" />,
     link: "/company/dashboard",
+  },
+  {
+    id: "Notifications",
+    title: "Notifications",
+    icon: <Bell className="size-4" />,
+    link: "/company/notifications",
   },
   {
     id: "Wallet",
@@ -171,7 +159,7 @@ export function DashboardSidebar({ isLoading = false }: { isLoading?: boolean })
           animate={{ opacity: 1 }}
           transition={{ duration: 0.8 }}
         >
-          <NotificationsPopover notifications={sampleNotifications} />
+          <UserNotificationsBell href="/company/notifications" />
           <SidebarTrigger />
         </motion.div>
       </SidebarHeader>

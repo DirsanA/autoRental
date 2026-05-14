@@ -1,5 +1,6 @@
 import { Notification } from "../models/Notification.js";
 import { emailService } from "./email.service.js";
+import { notificationSocketService } from "./notification-socket.service.js";
 import type { Types } from "mongoose";
 
 /**
@@ -367,6 +368,96 @@ export class NotificationDispatcher {
     }
 
     return { notificationId, emailSent };
+  }
+
+  /**
+   * Sends a chat notification to a recipient
+   */
+  async sendChatNotification(params: {
+    recipientId: string | Types.ObjectId;
+    senderName: string;
+    content: string;
+    bookingId: string;
+    actionUrl?: string;
+  }): Promise<void> {
+    const { recipientId, senderName, content, bookingId, actionUrl } = params;
+
+    try {
+      const notification = await Notification.create({
+        recipientId,
+        title: `New message from ${senderName}`,
+        message: content.length > 60 ? `${content.substring(0, 57)}...` : content,
+        category: "CHAT",
+        priority: "MEDIUM",
+        channels: ["IN_APP"],
+        actionUrl: actionUrl ?? `/renter/booking-history`,
+        relatedEntity: {
+          id: bookingId as any,
+          entityType: "Booking",
+        },
+      });
+
+      // Emit real-time socket event
+      if (notificationSocketService.isInitialized()) {
+        const userIdStr = recipientId.toString();
+        notificationSocketService.emitUserNotification(userIdStr, notification.toJSON());
+        
+        // Update unread count
+        const unreadCount = await Notification.countDocuments({
+          recipientId,
+          isRead: false,
+        });
+        notificationSocketService.emitUserUnreadCount(userIdStr, unreadCount);
+      }
+    } catch (error) {
+      console.error("[NotificationDispatcher] Failed to send chat notification:", error);
+    }
+  }
+
+  /**
+   * Sends a refund notification to a renter
+   */
+  async sendRefundNotification(params: {
+    recipientId: string | Types.ObjectId;
+    amount: number;
+    bookingId: string;
+    reason?: string;
+  }): Promise<void> {
+    const { recipientId, amount, bookingId, reason } = params;
+
+    try {
+      const notification = await Notification.create({
+        recipientId,
+        title: "Security Deposit Refunded",
+        message: `Your security deposit of ETB ${amount.toLocaleString()} for booking #${bookingId.substring(
+          bookingId.length - 6,
+        ).toUpperCase()} has been refunded to your wallet.${reason ? ` Reason: ${reason}` : ""}`,
+        category: "PAYMENT",
+        priority: "HIGH",
+        channels: ["IN_APP", "EMAIL"],
+        actionUrl: "/profile/wallet",
+        relatedEntity: {
+          id: bookingId as any,
+          entityType: "Booking",
+        },
+      });
+
+      // Emit real-time socket event
+      if (notificationSocketService.isInitialized()) {
+        const userIdStr = recipientId.toString();
+        notificationSocketService.emitUserNotification(userIdStr, notification.toJSON());
+        
+        const unreadCount = await Notification.countDocuments({
+          recipientId,
+          isRead: false,
+        });
+        notificationSocketService.emitUserUnreadCount(userIdStr, unreadCount);
+      }
+      
+      // Future: Could also trigger emailService here if not already handled by channel logic
+    } catch (error) {
+      console.error("[NotificationDispatcher] Failed to send refund notification:", error);
+    }
   }
 }
 

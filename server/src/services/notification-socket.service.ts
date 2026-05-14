@@ -41,11 +41,15 @@ export class NotificationSocketService {
       console.log(`[NotificationSocket] Client connected: ${socket.id}`);
 
       // Authenticate socket connection
-      socket.on("authenticate", (data: { adminId: string }) => {
+      socket.on("authenticate", (data: { adminId?: string; userId?: string }) => {
         if (data.adminId) {
           socket.join(`admin:${data.adminId}`);
           socket.emit("authenticated", { success: true });
           console.log(`[NotificationSocket] Admin ${data.adminId} authenticated`);
+        } else if (data.userId) {
+          socket.join(`user:${data.userId}`);
+          socket.emit("authenticated", { success: true });
+          console.log(`[NotificationSocket] User ${data.userId} authenticated`);
         }
       });
 
@@ -138,6 +142,22 @@ export class NotificationSocketService {
     if (!this.io) return;
 
     this.io.emit(event, data);
+  }
+
+  /**
+   * Emit notification update to a specific user
+   */
+  emitUserNotification(userId: string, data: unknown): void {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit("v1:user-notification:new", data);
+  }
+
+  /**
+   * Emit unread count update to a specific user
+   */
+  emitUserUnreadCount(userId: string, count: number): void {
+    if (!this.io) return;
+    this.io.to(`user:${userId}`).emit("v1:user-notification:unread-count", { count });
   }
 
   /**

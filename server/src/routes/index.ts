@@ -14,6 +14,7 @@ import { createReportRoutes } from "./report.routes.js";
 import { createAdminReportsRoutes } from "./admin.reports.routes.js";
 import { createViewTrackingRoutes } from "./view-tracking.routes.js";
 import { createAdminNotificationRoutes } from "./admin-notification.routes.js";
+import { createNotificationRoutes } from "./notification.routes.js";
 import { createChatRoutes } from "./chat.routes.js";
 import type { Auth } from "../config/auth.js";
 
@@ -40,6 +41,7 @@ export function createApiRoutes(auth: Auth): Router {
   router.use("/reports", createReportRoutes(auth));
   router.use("/view-tracking", createViewTrackingRoutes(auth));
   router.use("/admin/notifications", createAdminNotificationRoutes(auth));
+  router.use("/notifications", createNotificationRoutes(auth));
   router.use("/chat", createChatRoutes(auth));
 
   return router;

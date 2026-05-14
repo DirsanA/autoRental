@@ -8,6 +8,7 @@ import {
   User,
   AlertCircle,
   CreditCard,
+  Bell,
 } from "lucide-react";
 
 import {
@@ -26,6 +27,8 @@ import { ReportIssueModal } from "@/components/shared/report/ReportIssueModal";
 import { SidebarFooter } from "@/components/ui/sidebar";
 import { readCachedAuthSession } from "@/lib/auth-api";
 import { Logo } from "@/components/logo";
+import { UserNotificationsBell } from "@/components/dashboard/sidebar-02/user-notifications-bell";
+import { motion } from "framer-motion";
 
 export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
   const { state: sidebarState } = useSidebar();
@@ -62,7 +65,10 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
           />
         </Link>
 
-        <SidebarTrigger />
+        <div className="flex items-center gap-2">
+            <UserNotificationsBell href="/renter/notifications" />
+          <SidebarTrigger />
+        </div>
       </SidebarHeader>
 
       <SidebarContent className="gap-4 px-2 py-4">
@@ -80,6 +86,24 @@ export function RenterSidebar({ isLoading = false }: { isLoading?: boolean }) {
                 <Home className="size-4" />
                 {!isCollapsed && (
                   <span className="ml-2 text-sm font-medium">Dashboard</span>
+                )}
+              </Link>
+            </SidebarMenuButton>
+          </SidebarMenuItem>
+
+          <SidebarMenuItem>
+            <SidebarMenuButton tooltip="Notifications" asChild>
+              <Link
+                href="/renter/notifications"
+                prefetch={true}
+                className={cn(
+                  "flex items-center rounded-lg px-2 text-muted-foreground transition-colors hover:bg-sidebar-muted hover:text-foreground",
+                  isCollapsed && "justify-center",
+                )}
+              >
+                <Bell className="size-4" />
+                {!isCollapsed && (
+                  <span className="ml-2 text-sm font-medium">Notifications</span>
                 )}
               </Link>
             </SidebarMenuButton>

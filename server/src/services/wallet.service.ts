@@ -7,6 +7,7 @@ import { Wallet, type WalletDocument, type WalletOwnerType } from "../models/Wal
 import { WalletEntry } from "../models/WalletEntry.js";
 import { Payout } from "../models/Payout.js";
 import { ApiError } from "../utils/ApiError.js";
+import { notificationDispatcher } from "./notification.dispatcher.js";
 
 function roundMoney(value: number) {
   return Math.round(value * 100) / 100;
@@ -644,6 +645,34 @@ export class WalletService {
           { session },
         );
       });
+
+      // Dispatch notification to renter outside of transaction for performance
+      // but only if it's a manual admin refund as requested by user
+      if (["ADMIN_DISPUTE_REFUND", "ADMIN_MANUAL_REFUND"].includes(source)) {
+        void (async () => {
+          try {
+            const booking = await Booking.findById(bookingId)
+              .select("renterId securityDepositAmount")
+              .lean();
+            if (booking && booking.renterId) {
+              await notificationDispatcher.sendRefundNotification({
+                recipientId: booking.renterId.toString(),
+                amount: booking.securityDepositAmount || 0,
+                bookingId: bookingId,
+                reason:
+                  source === "ADMIN_DISPUTE_REFUND"
+                    ? "Dispute resolution"
+                    : "Manual refund by administrator",
+              });
+            }
+          } catch (err) {
+            console.error(
+              "[WalletService] Failed to dispatch refund notification:",
+              err,
+            );
+          }
+        })();
+      }
     } finally {
       await session.endSession();
     }

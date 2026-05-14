@@ -9,9 +9,18 @@ import { useAuth } from "@/hooks/use_auth";
 import { Button } from "@/components/ui/button";
 
 import { ModeToggle } from "./mode-toggle";
+import { UserNotificationsBell } from "./dashboard/sidebar-02/user-notifications-bell";
+
+function resolveNotificationsHref(accountType?: string): string {
+  if (accountType === "COMPANY") return "/company/notifications";
+  if (accountType === "ADMIN")   return "/sysadmin/notifications";
+  return "/renter/notifications"; // covers USER / PEERHOST / default
+}
 
 const Navbar = () => {
   const { user, company, loading } = useAuth();
+  const notificationsHref = resolveNotificationsHref(user?.accountType);
+
   return (
     <nav className="h-16 border-b bg-background/80 backdrop-blur">
       <div className="mx-auto flex h-full max-w-7xl items-center justify-between px-6">
@@ -42,10 +51,13 @@ const Navbar = () => {
           ) : null}
 
           {!loading && user ? (
-            <UserAccountMenuContent
-              triggerVariant="outline"
-              auth={{ user, company, loading }}
-            />
+            <>
+              <UserNotificationsBell href={notificationsHref} />
+              <UserAccountMenuContent
+                triggerVariant="outline"
+                auth={{ user, company, loading }}
+              />
+            </>
           ) : null}
 
           <ModeToggle />

@@ -36,6 +36,7 @@ const WS_URL = API_BASE.replace(/^http/, "ws").replace(/\/api$/, "");
 interface NotificationProviderProps {
   children: ReactNode;
   adminId?: string;
+  userId?: string;
 }
 
 /**
@@ -50,6 +51,7 @@ interface NotificationProviderProps {
 export function NotificationProvider({
   children,
   adminId,
+  userId,
 }: NotificationProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [transport, setTransport] = useState<"websocket" | "polling" | "http" | null>(null);
@@ -178,8 +180,8 @@ export function NotificationProvider({
    * Initialize WebSocket connection
    */
   useEffect(() => {
-    if (!adminId) {
-      // No admin ID, use HTTP polling only
+    if (!adminId && !userId) {
+      // No identity, use HTTP polling as fallback if needed
       startPolling();
       return;
     }
@@ -201,8 +203,12 @@ export function NotificationProvider({
       setIsConnected(true);
       setTransport(socket.io.engine?.transport?.name as any || "websocket");
       
-      // Authenticate with admin ID
-      socket.emit("authenticate", { adminId });
+      // Authenticate with admin or user ID
+      if (adminId) {
+        socket.emit("authenticate", { adminId });
+      } else if (userId) {
+        socket.emit("authenticate", { userId });
+      }
       
       // Stop HTTP polling since WebSocket is working
       stopPolling();
@@ -229,6 +235,29 @@ export function NotificationProvider({
 
     // Listen for admin inbox refresh events
     socket.on("v1:admin-inbox:refresh", handleAdminInboxUpdate);
+
+    // Listen for general user notifications
+    socket.on("v1:user-notification:new", (notification: any) => {
+      console.log("[NotificationProvider] New user notification received:", notification);
+      
+      // Dispatch a browser notification or update state if we had a user store
+      // For now, we'll trigger a global event so UI components can react
+      window.dispatchEvent(new CustomEvent("user-notification-received", { 
+        detail: notification 
+      }));
+
+      // If we have a toast system, we could show it here
+      // import { toast } from "@/components/ui/use-toast";
+      // toast({ title: notification.title, description: notification.message });
+    });
+
+    // Listen for unread count updates
+    socket.on("v1:user-notification:unread-count", (data: { count: number }) => {
+      console.log("[NotificationProvider] User unread count updated:", data.count);
+      window.dispatchEvent(new CustomEvent("user-unread-count-updated", { 
+        detail: data.count 
+      }));
+    });
 
     // Listen for status changes
     socket.on("v1:entity:status-changed", (data?: any) => {
@@ -262,11 +291,12 @@ export function NotificationProvider({
     refreshBadgeCounts,
     startPolling,
     stopPolling,
+    userId,
   ]);
 
-  // If no adminId provided, just use polling
+  // If no identity provided, just use polling
   useEffect(() => {
-    if (!adminId && !pollingIntervalRef.current) {
+    if (!adminId && !userId && !pollingIntervalRef.current) {
       startPolling();
     }
     
