@@ -3,7 +3,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   Star,
   Grid,
-  Heart,
   Fuel,
   Settings2,
   CarFront,
@@ -23,6 +22,7 @@ import CarFeatures from "@/components/CarFeatures";
 import MapSection from "@/components/MapSection";
 import PhotoModal from "@/components/PhototModal";
 import Navbar from "@/components/navbar";
+import { LandingFooter } from "@/components/marketing/landing-footer";
 import Image from "next/image";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
@@ -54,7 +54,6 @@ type VehicleRatingStats = {
 
 const Index = () => {
   const [showPhotos, setShowPhotos] = useState(false);
-  const [isFavorite, setIsFavorite] = useState(false);
   const [vehicle, setVehicle] = useState<Vehicle | null>(null);
   const [availabilityBlocks, setAvailabilityBlocks] = useState<
     VehicleAvailabilityBlock[]
@@ -255,19 +254,7 @@ const Index = () => {
             </div>
           </div>
 
-          {/* Favorite Heart */}
-          <button
-            onClick={() => setIsFavorite(!isFavorite)}
-            className="top-4 right-4 absolute bg-white/90 hover:bg-white dark:bg-gray-800 shadow-md backdrop-blur-sm p-3 dark:border-gray-700 rounded-full transition-colors"
-          >
-            <Heart
-              className={`w-6 h-6 transition-colors ${
-                isFavorite
-                  ? "fill-red-500 text-red-500"
-                  : "text-gray-700 hover:text-red-500"
-              }`}
-            />
-          </button>
+
 
           {/* View Photos Button */}
           <Button
@@ -503,45 +490,7 @@ const Index = () => {
         </div>
       </main>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 dark:bg-gray-800 mt-20 py-12 dark:border-gray-700 text-gray-300">
-        <div className="gap-8 grid grid-cols-1 md:grid-cols-3 mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
-          <div>
-            <h3 className="dark:bg-gray-800 mb-3 dark:border-gray-700 font-bold text-white">
-              CarRental
-            </h3>
-            <p>Premium cars at your fingertips. Drive with style.</p>
-          </div>
-          <div>
-            <h3 className="mb-3 dark:border-gray-700 font-bold text-white">
-              Company
-            </h3>
-            <ul className="space-y-1">
-              <li className="hover:underline cursor-pointer">About Us</li>
-              <li className="hover:underline cursor-pointer">Careers</li>
-              <li className="hover:underline cursor-pointer">Contact</li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="dark:bg-gray-800 mb-3 dark:border-gray-700 font-bold text-white">
-              Support
-            </h3>
-            <ul className="space-y-1">
-              <li className="hover:underline cursor-pointer">Help Center</li>
-              <li className="hover:underline cursor-pointer">FAQs</li>
-              <li className="hover:underline cursor-pointer">
-                Terms & Conditions
-              </li>
-              <li className="hover:underline cursor-pointer">
-                Terms & Conditions
-              </li>
-            </ul>
-          </div>
-        </div>
-        <div className="mt-8 text-gray-500 text-center">
-          &copy; 2026 CarRental. All rights reserved.
-        </div>
-      </footer>
+      <LandingFooter />
 
       {/* Photo Modal */}
       <PhotoModal
