@@ -622,6 +622,7 @@ export class VehicleService {
         metadata: {
           vehicleName: `${vehicle.make} ${vehicle.model}`,
           vehiclePlate: vehicle.plate,
+          userId: vehicle.ownerId.toString(),
         }
       });
     }

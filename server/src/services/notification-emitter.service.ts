@@ -179,9 +179,9 @@ export class NotificationEmitterService {
       case "RENTER_VERIFICATION":
         return `/sysadmin/users/${userId}`;
       case "PEERHOST_APPLICATION":
-        return `/sysadmin/P2P/${userId}`;
+        return `/sysadmin/p2p/${userId}`;
       case "PEERHOST_VEHICLE_ADD":
-        return `/sysadmin/P2P/vehicles/${entityId}`;
+        return `/sysadmin/p2p/${userId}`;
       case "COMPANY_REGISTRATION":
       case "COMPANY_PROFILE_CHANGE":
         return `/sysadmin/companies/${entityId}`;

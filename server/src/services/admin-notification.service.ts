@@ -259,7 +259,7 @@ export class AdminNotificationService {
           .select("_id name")
           .lean(),
         Vehicle.find({ status: "PENDING_APPROVAL", ownerType: "User" })
-          .select("_id make model")
+          .select("_id make model ownerId")
           .lean(),
         Verification.find({ status: "PENDING" })
           .select("_id documentType userId extractedData")
@@ -346,12 +346,13 @@ export class AdminNotificationService {
           priority: "MEDIUM" as const,
           isRead: false,
           relatedEntity: { id: v._id, entityType: "VEHICLE" },
-          actionUrl: `/sysadmin/p2p/vehicles/${v._id}`,
+          actionUrl: `/sysadmin/p2p/${v.ownerId}`,
           metadata: {
             entityType: "VEHICLE",
             entityId: v._id.toString(),
             activityType: "PEERHOST_VEHICLE_ADD",
-            targetUrl: `/sysadmin/p2p/vehicles/${v._id}`,
+            targetUrl: `/sysadmin/p2p/${v.ownerId}`,
+            userId: v.ownerId.toString(),
             sentToAdmin: true,
           },
         });
@@ -372,7 +373,7 @@ export class AdminNotificationService {
         const message = isPeerhostApp 
           ? "A new host application is waiting for review." 
           : `A renter ${docType.toLowerCase()} is waiting for review.`;
-        const targetUrl = isPeerhostApp ? `/sysadmin/P2P/${v._id}` : `/sysadmin/users/${v.userId}`;
+        const targetUrl = isPeerhostApp ? `/sysadmin/p2p/${v._id}` : `/sysadmin/users/${v.userId}`;
 
         docs.push({
           recipientId: adminId as any,
