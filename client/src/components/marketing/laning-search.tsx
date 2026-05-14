@@ -145,11 +145,7 @@ export function LandingSearch() {
                         className="object-cover group-hover:scale-110 transition-transform duration-500"
                       />
                     )}
-                    <div className="absolute top-1.5 left-1.5">
-                      <span className="bg-primary/90 backdrop-blur-md text-[8px] font-black uppercase tracking-tighter text-white px-2 py-0.5 rounded-full shadow-lg">
-                        🔥 {car.bookingCount ?? 0} booked
-                      </span>
-                    </div>
+
                   </div>
 
                   <div className="flex flex-col flex-grow justify-between py-1">
