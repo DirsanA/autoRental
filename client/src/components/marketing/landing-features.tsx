@@ -41,6 +41,7 @@ type ApiVehicle = {
   make?: string;
   model?: string;
   year?: number;
+  rating?: number;
   price?: number;
   delivery?: string;
   availability?: string;
@@ -128,7 +129,7 @@ function toCarCard(
     image: vehicle.photos?.front || fromGallery || fallbackImage,
     vechile_name: toCarName(vehicle),
     year: vehicle.year || 2024,
-    rating: 4.9,
+    rating: vehicle.rating || 0.0,
     price: basePrice,
     discount,
     isOfficial: vehicle.ownerType === "Company",
@@ -455,7 +456,7 @@ function CarRow({ section }: { section: CompanySection }) {
                   <div className="flex items-center justify-between">
                     <div>
                       <span className="text-xl font-black text-primary dark:text-primary/80">
-                        ${car.price}
+                        {car.price}birr
                       </span>
                       <span className="text-[10px] text-muted-foreground dark:text-gray-400 ml-1 uppercase">
                         / Day
@@ -463,7 +464,7 @@ function CarRow({ section }: { section: CompanySection }) {
                     </div>
                     <div className="text-right">
                       <span className="text-[10px] text-muted-foreground dark:text-gray-400 line-through block">
-                        ${car.price + car.discount}
+                        {car.price + car.discount}birr
                       </span>
                       <span className="text-[10px] font-bold text-green-600 bg-green-50 dark:bg-green-900 px-1 rounded">
                         -

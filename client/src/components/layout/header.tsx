@@ -1,9 +1,6 @@
 import { SidebarTrigger } from "@/components/ui/sidebar";
-import { TopNav } from "@/components/layout/top-nav";
 import { ModeToggle } from "@/components/mode-toggle";
-import { ConfigDrawer } from "@/components/dashboard/config-drawer";
 import { ProfileDropdown } from "@/components/dashboard/profile-dropdown";
-// import { Button } from "@/components/ui/button";
 
 export function Header() {
   return (
@@ -16,7 +13,6 @@ export function Header() {
       </div>
       <div className="flex justify-end space-x-4 ml-auto">
         <ModeToggle />
-        <ConfigDrawer />
         <ProfileDropdown />
       </div>
     </header>

@@ -160,7 +160,7 @@ const Index = () => {
         ? `${vehicle.year} ${vehicle.model}`
         : "Vehicle details",
       rating:
-        vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg : 4.9,
+        vehicle?.ratingAvg && vehicle.ratingAvg > 0 ? vehicle.ratingAvg :0.0,
       trips: vehicle?.ratingCount ?? 0,
       model: vehicle?.model ?? "N/A",
       fuel: vehicle?.fuel ?? "Petrol",
@@ -379,35 +379,7 @@ const Index = () => {
                 ({ratingStats?.count ?? car.trips} ratings)
               </p>
 
-              <div className="space-y-2">
-                {[
-                  { label: "Cleanliness", value: 5 },
-                  { label: "Maintenance", value: 4.8 },
-                  { label: "Communication", value: 4.9 },
-                  { label: "Convenience", value: 4.7 },
-                  { label: "Accuracy", value: 5 },
-                ].map((item, i) => (
-                  <div key={i} className="flex items-center gap-5">
-                    {/* Label */}
-                    <div className="w-32 font-medium text-gray-700 dark:text-gray-300 text-sm">
-                      {item.label}
-                    </div>
-
-                    {/* Progress Bar */}
-                    <div className="flex-1 bg-gray-200 dark:bg-gray-700 rounded-full h-3 overflow-hidden">
-                      <div
-                        className="bg-blue-700 rounded-full h-full"
-                        style={{ width: `${(item.value / 5) * 100}%` }}
-                      ></div>
-                    </div>
-
-                    {/* Value */}
-                    <div className="mr-48 text-gray-700 dark:text-gray-300 text-lg text-right">
-                      {item.value}
-                    </div>
-                  </div>
-                ))}
-              </div>
+             
             </div>
             <div className="mt-6">
               <h3 className="mb-4 font-semibold text-gray-900 dark:text-gray-300 text-xl">

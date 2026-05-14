@@ -140,7 +140,8 @@ export function CompanyFleetManagementPage({
             Fleet Management
           </h2>
           <p className="mt-1 text-sm text-muted-foreground dark:text-slate-400">
-            Manage listings, pricing, and availability for your company vehicles.
+            Manage listings, pricing, and availability for your company
+            vehicles.
           </p>
         </div>
         <Button
@@ -179,8 +180,9 @@ export function CompanyFleetManagementPage({
                 <SelectItem value="available">Available</SelectItem>
                 <SelectItem value="booked">Booked</SelectItem>
                 <SelectItem value="maintenance">Maintenance</SelectItem>
-                <SelectItem value="pending_approval">Pending approval</SelectItem>
-                <SelectItem value="retired">Retired</SelectItem>
+                <SelectItem value="pending_approval">
+                  Pending approval
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -198,7 +200,9 @@ export function CompanyFleetManagementPage({
               No vehicles matched the current filters.
             </p>
             <Button asChild className="mt-6 rounded-2xl">
-              <Link href="/company/fleetmangment/add">Add your first vehicle</Link>
+              <Link href="/company/fleetmangment/add">
+                Add your first vehicle
+              </Link>
             </Button>
           </div>
         ) : (
