@@ -103,3 +103,39 @@ export const fetchCompanyDashboard = async (): Promise<CompanyDashboardData> => 
   const payload = await res.json();
   return payload.data.dashboard;
 };
+
+export type CompanyReview = {
+  id: string;
+  name: string;
+  image: string | null;
+  rating: number;
+  comment: string;
+  date: string;
+  vehicle: string;
+  targetType: "Vehicle" | "Company";
+};
+
+export type CompanyReviewsResponse = {
+  reviews: CompanyReview[];
+  stats: {
+    avg: number;
+    count: number;
+    breakdown: Record<number, number>;
+  };
+};
+
+export const fetchCompanyReviews = async (): Promise<CompanyReviewsResponse> => {
+  const res = await fetch(`${API_BASE_URL}/companies/me/reviews`, {
+    headers: {
+      ...buildAuthHeader(),
+    },
+  });
+
+  if (!res.ok) {
+    const error = await res.json().catch(() => null);
+    throw new Error(error?.error?.message || "Failed to load company reviews");
+  }
+
+  const payload = await res.json();
+  return payload.data;
+};

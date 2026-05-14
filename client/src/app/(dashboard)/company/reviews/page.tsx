@@ -1,33 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ThumbsUp, MessageSquare } from "lucide-react";
+import { Search, ThumbsUp, MessageSquare, AlertCircle } from "lucide-react";
 import { CompanyReviewsSkeleton } from "./company-reviews-skeleton";
-
-const sampleReviews = [
-  {
-    name: "Alice Johnson",
-    vehicle: "Tesla Model 3",
-    date: "2024-02-28",
-    rating: 5,
-    comment: "The Tesla was in perfect condition. Great experience!",
-  },
-  {
-    name: "Bob Wilson",
-    vehicle: "BMW X5",
-    date: "2024-02-15",
-    rating: 4,
-    comment: "Good service, but the car was slightly late.",
-  },
-];
-
-const sampleRatingBreakdown = [
-  { star: 5, percent: 80 },
-  { star: 4, percent: 15 },
-  { star: 3, percent: 5 },
-  { star: 2, percent: 5 },
-  { star: 1, percent: 5 },
-];
+import { fetchCompanyReviews, type CompanyReview } from "@/lib/companyApi";
 
 const StarRating = ({ rating }: { rating: number }) => {
   return (
@@ -43,21 +19,65 @@ const StarRating = ({ rating }: { rating: number }) => {
 
 const RatingsPage = () => {
   const [loading, setLoading] = useState(true);
-  const [reviews, setReviews] = useState(sampleReviews);
-  const [ratingBreakdown, setRatingBreakdown] = useState(sampleRatingBreakdown);
+  const [error, setError] = useState<string | null>(null);
+  const [reviews, setReviews] = useState<CompanyReview[]>([]);
+  const [stats, setStats] = useState({
+    avg: 0,
+    count: 0,
+    breakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<number, number>,
+  });
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    // Simulate data fetching - replace with actual API call when ready
-    const timer = setTimeout(() => {
-      setReviews(sampleReviews);
-      setRatingBreakdown(sampleRatingBreakdown);
-      setLoading(false);
-    }, 800);
-    return () => clearTimeout(timer);
+    const loadData = async () => {
+      try {
+        setLoading(true);
+        const data = await fetchCompanyReviews();
+        setReviews(data.reviews);
+        setStats(data.stats);
+        setError(null);
+      } catch (err: any) {
+        console.error("Error fetching company reviews:", err);
+        setError(err.message || "Failed to load reviews");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
   }, []);
+
+  const filteredReviews = reviews.filter(
+    (r) =>
+      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const ratingBreakdown = [5, 4, 3, 2, 1].map((star) => {
+    const count = stats.breakdown[star] || 0;
+    const percent = stats.count > 0 ? Math.round((count / stats.count) * 100) : 0;
+    return { star, percent, count };
+  });
 
   if (loading) {
     return <CompanyReviewsSkeleton />;
+  }
+
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4 bg-white rounded-xl shadow p-8">
+        <AlertCircle size={48} className="text-red-500" />
+        <h2 className="text-xl font-bold">Failed to load reviews</h2>
+        <p className="text-gray-500 text-center max-w-md">{error}</p>
+        <button 
+          onClick={() => window.location.reload()}
+          className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+        >
+          Try Again
+        </button>
+      </div>
+    );
   }
 
   return (
@@ -78,14 +98,14 @@ const RatingsPage = () => {
           <div className="bg-white shadow p-6 rounded-xl text-center">
             <p className="text-gray-500 text-sm">AVERAGE RATING</p>
 
-            <h2 className="mt-2 font-bold text-gray-800 text-5xl">4.8</h2>
+            <h2 className="mt-2 font-bold text-gray-800 text-5xl">{stats.avg}</h2>
 
             <div className="flex justify-center mt-2">
-              <StarRating rating={5} />
+              <StarRating rating={Math.round(stats.avg)} />
             </div>
 
             <p className="mt-2 text-gray-500 text-sm">
-              Based on 142 reviews
+              Based on {stats.count} reviews
             </p>
           </div>
 
@@ -125,6 +145,8 @@ const RatingsPage = () => {
               <input
                 placeholder="Search reviews..."
                 className="outline-none w-full"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
             </div>
 
@@ -134,44 +156,58 @@ const RatingsPage = () => {
           </div>
 
           {/* Reviews */}
-          {reviews.map((review, index) => (
-            <div
-              key={index}
-              className="space-y-3 bg-white shadow p-5 rounded-xl"
-            >
-              <div className="flex sm:flex-row flex-col justify-between gap-3">
+          {filteredReviews.length === 0 ? (
+            <div className="bg-white shadow p-12 rounded-xl text-center text-gray-500">
+              {searchQuery ? "No reviews match your search." : "No reviews yet."}
+            </div>
+          ) : (
+            filteredReviews.map((review) => (
+              <div
+                key={review.id}
+                className="space-y-3 bg-white shadow p-5 rounded-xl"
+              >
+                <div className="flex sm:flex-row flex-col justify-between gap-3">
 
-                <div className="flex gap-3">
-                  <div className="flex justify-center items-center bg-blue-100 rounded-full w-10 h-10 font-bold text-blue-600">
-                    {review.name[0]}
+                  <div className="flex gap-3">
+                    {review.image ? (
+                      <img 
+                        src={review.image} 
+                        alt={review.name} 
+                        className="w-10 h-10 rounded-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex justify-center items-center bg-blue-100 rounded-full w-10 h-10 font-bold text-blue-600">
+                        {review.name[0]}
+                      </div>
+                    )}
+
+                    <div>
+                      <p className="font-semibold">{review.name}</p>
+                      <p className="text-gray-500 text-sm">
+                        {new Date(review.date).toLocaleDateString()} • {review.targetType === "Vehicle" ? `Renting ${review.vehicle}` : "Company Review"}
+                      </p>
+                    </div>
                   </div>
 
-                  <div>
-                    <p className="font-semibold">{review.name}</p>
-                    <p className="text-gray-500 text-sm">
-                      {review.date} • Renting {review.vehicle}
-                    </p>
-                  </div>
+                  <StarRating rating={review.rating} />
                 </div>
 
-                <StarRating rating={review.rating} />
+                <p className="text-gray-600 italic">
+                  &quot;{review.comment}&quot;
+                </p>
+
+                <div className="flex gap-6 text-gray-500 text-sm">
+                  <button className="flex items-center gap-1 hover:text-blue-500">
+                    <ThumbsUp size={16} /> Helpful
+                  </button>
+
+                  <button className="flex items-center gap-1 hover:text-blue-500">
+                    <MessageSquare size={16} /> Respond
+                  </button>
+                </div>
               </div>
-
-              <p className="text-gray-600 italic">
-                &quot;{review.comment}&quot;
-              </p>
-
-              <div className="flex gap-6 text-gray-500 text-sm">
-                <button className="flex items-center gap-1 hover:text-blue-500">
-                  <ThumbsUp size={16} /> Helpful
-                </button>
-
-                <button className="flex items-center gap-1 hover:text-blue-500">
-                  <MessageSquare size={16} /> Respond
-                </button>
-              </div>
-            </div>
-          ))}
+            ))
+          )}
 
         </div>
       </div>

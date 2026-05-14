@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import { Company, type CompanyDocument } from "../models/Company.js";
 import { AccountType, User } from "../models/User.js";
 import { Vehicle } from "../models/Vehicle.js";
+import { Review } from "../models/Review.js";
 import { Booking } from "../models/Booking.js";
 import { Role } from "../models/Role.js";
 import { SYSTEM_ROLES } from "../config/constants.js";
@@ -630,6 +631,72 @@ export class CompanyService {
    */
   async findByEmail(email: string): Promise<CompanyDocument | null> {
     return Company.findOne({ "contactInfo.email": normalizeEmail(email) });
+  }
+
+  /**
+   * Returns all reviews for a company's vehicles and the company itself.
+   */
+  async getReviewsForAuthUser(authUserId: string) {
+    const company = await Company.findOne({ authUserId }).select("_id").lean();
+    if (!company) {
+      throw ApiError.notFound("You don't have a registered company account");
+    }
+
+    const companyVehicles = await Vehicle.find({
+      ownerType: "Company",
+      ownerId: company._id,
+    })
+      .select("_id")
+      .lean();
+
+    const vehicleIds = companyVehicles.map((v) => v._id);
+
+    // Fetch reviews targeting either the company or any of its vehicles
+    const reviews = await Review.find({
+      $or: [
+        { targetId: company._id, targetType: "Company" },
+        { targetId: { $in: vehicleIds }, targetType: "Vehicle" },
+      ],
+    })
+      .populate({
+        path: "reviewerId",
+        select: "name firstName lastName image profilePicture",
+      })
+      .populate({
+        path: "targetId",
+        select: "make model year plate name", // name if it's a company
+      })
+      .sort({ createdAt: -1 })
+      .lean();
+
+    const count = reviews.length;
+    const avg = count > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / count : 0;
+    const breakdown = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+
+    reviews.forEach((r) => {
+      const rating = Math.round(r.rating) as 1 | 2 | 3 | 4 | 5;
+      if (breakdown[rating] !== undefined) {
+        breakdown[rating]++;
+      }
+    });
+
+    return {
+      reviews: reviews.map((r: any) => ({
+        id: r._id.toString(),
+        name: r.reviewerId?.name || [r.reviewerId?.firstName, r.reviewerId?.lastName].filter(Boolean).join(" ") || "Anonymous",
+        image: r.reviewerId?.image || r.reviewerId?.profilePicture || null,
+        rating: r.rating,
+        comment: r.comment,
+        date: r.createdAt,
+        vehicle: r.targetType === "Vehicle" ? `${r.targetId?.make} ${r.targetId?.model}` : "Company",
+        targetType: r.targetType,
+      })),
+      stats: {
+        avg: Number(avg.toFixed(1)),
+        count,
+        breakdown,
+      },
+    };
   }
 }
 

@@ -146,6 +146,16 @@ export const companyController = {
     });
   }),
 
+  getMyCompanyReviews: asyncHandler(async (req: Request, res: Response) => {
+    const user = requireRequestUser(req);
+    const result = await companyService.getReviewsForAuthUser(user.id);
+
+    res.json({
+      success: true,
+      data: result,
+    });
+  }),
+
   /**
    * GET /api/companies/:id
    * Returns a single company by id.
