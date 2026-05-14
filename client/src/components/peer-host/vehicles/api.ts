@@ -42,6 +42,8 @@ type ApiVehicle = {
     front?: string;
     gallery?: string[];
   };
+  rating?: number;
+  ratingCount?: number;
 };
 
 function mapStatus(status?: string): VehicleStatus {
@@ -106,8 +108,8 @@ function mapApiVehicleToCard(vehicle: ApiVehicle): Vehicle {
     location: vehicle.delivery || vehicle.availability || "Ethiopia",
     imageUrl: vehicle.photos?.front || imageFromGallery,
     galleryImages,
-    ratingAvg: 0,
-    ratingCount: 0,
+    ratingAvg: vehicle.rating || 0,
+    ratingCount: vehicle.ratingCount || 0,
     pickupAddress: vehicle.pickupAddress,
     returnAddress: vehicle.returnAddress,
     pickupGeo:

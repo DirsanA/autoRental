@@ -29,6 +29,7 @@ type CarCardData = {
   vechile_name: string;
   year: number;
   rating: number;
+  ratingCount: number;
   price: number;
   discount: number;
   isOfficial: boolean;
@@ -42,6 +43,7 @@ type ApiVehicle = {
   model?: string;
   year?: number;
   rating?: number;
+  ratingCount?: number;
   price?: number;
   delivery?: string;
   availability?: string;
@@ -130,6 +132,7 @@ function toCarCard(
     vechile_name: toCarName(vehicle),
     year: vehicle.year || 2024,
     rating: vehicle.rating || 0.0,
+    ratingCount: vehicle.ratingCount || 0,
     price: basePrice,
     discount,
     isOfficial: vehicle.ownerType === "Company",
@@ -166,6 +169,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
       vechile_name: "Toyota Camry",
       year: 2024,
       rating: 4.9,
+      ratingCount: 12,
       price: 3400,
       discount: 340,
       isOfficial: true,
@@ -182,6 +186,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
       vechile_name: "Hyundai Tucson",
       year: 2021,
       rating: 4.5,
+      ratingCount: 8,
       price: 2800,
       discount: 150,
       isOfficial: false,
@@ -198,6 +203,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
       vechile_name: "Mercedes-Benz E-Class",
       year: 2023,
       rating: 4.8,
+      ratingCount: 15,
       price: 4200,
       discount: 200,
       isOfficial: true,
@@ -214,6 +220,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
       vechile_name: "BMW 5 Series",
       year: 2023,
       rating: 4.9,
+      ratingCount: 10,
       price: 5500,
       discount: 300,
       isOfficial: true,
@@ -230,6 +237,7 @@ const COMPANY_SECTIONS: CompanySection[] = [
       vechile_name: "Ford Explorer",
       year: 2022,
       rating: 4.7,
+      ratingCount: 7,
       price: 3800,
       discount: 250,
       isOfficial: true,
@@ -440,7 +448,10 @@ function CarRow({ section }: { section: CompanySection }) {
                         size={14}
                         className="fill-yellow-500 dark:fill-yellow-400 text-yellow-500 dark:text-yellow-400"
                       />{" "}
-                      {car.rating}
+                      <span>{car.rating}</span>
+                      <span className="text-muted-foreground font-normal text-[10px]">
+                        ({car.ratingCount})
+                      </span>
                     </div>
                   </div>
 

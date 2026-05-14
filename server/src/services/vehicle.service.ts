@@ -7,6 +7,7 @@ import {
 import { Booking } from "../models/Booking.js";
 import { AccountType, VerificationLevel, User } from "../models/User.js";
 import { Company } from "../models/Company.js";
+import { Review } from "../models/Review.js";
 import type {
   CreateVehicleInput,
   UpdateVehicleInput,
@@ -213,6 +214,32 @@ export class VehicleService {
       }
     }
 
+    // Fetch Ratings for these vehicles
+    const vehicleIds = vehicles.map((v) => v._id);
+    const ratings = await Review.aggregate([
+      {
+        $match: {
+          targetId: { $in: vehicleIds },
+          targetType: "Vehicle",
+        },
+      },
+      {
+        $group: {
+          _id: "$targetId",
+          avgRating: { $avg: "$rating" },
+          count: { $sum: 1 },
+        },
+      },
+    ]);
+
+    const ratingsMap = new Map<string, { avg: number; count: number }>();
+    for (const r of ratings) {
+      ratingsMap.set(r._id.toString(), {
+        avg: Math.round(r.avgRating * 10) / 10,
+        count: r.count,
+      });
+    }
+
     // Fetch User owners
     const userOwnersMap = new Map<string, any>();
     if (userOwnerIds.size > 0) {
@@ -288,6 +315,7 @@ export class VehicleService {
     // Attach owner summaries back to lean vehicle objects and filter out those with inactive owners
     return vehicles
       .map((v) => {
+        const vehicleIdStr = v._id.toString();
         const ownerIdStr = v.ownerId.toString();
         const ownerSummary =
           v.ownerType === "User"
@@ -298,8 +326,10 @@ export class VehicleService {
 
         return {
           ...v,
-          id: v._id?.toString() || v.id,
+          id: vehicleIdStr,
           owner: ownerSummary,
+          rating: ratingsMap.get(vehicleIdStr)?.avg || 0,
+          ratingCount: ratingsMap.get(vehicleIdStr)?.count || 0,
           companyLocation:
             v.ownerType === "Company"
               ? companyLocationsMap.get(ownerIdStr) || undefined
