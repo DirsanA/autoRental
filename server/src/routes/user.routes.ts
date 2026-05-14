@@ -23,7 +23,13 @@ export function createUserRoutes(auth: Auth): Router {
   const userController = createUserController(userService);
 
   router.use(authenticate);
-  router.use(requireAccountType(AccountType.USER, AccountType.ADMIN));
+  router.use(
+    requireAccountType(
+      AccountType.USER,
+      AccountType.ADMIN,
+      AccountType.COMPANY,
+    ),
+  );
 
   router.get("/me", userController.getMe);
   router.get("/me/peerhost-dashboard", userController.getPeerHostDashboard);

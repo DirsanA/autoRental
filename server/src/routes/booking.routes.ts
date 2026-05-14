@@ -26,7 +26,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.get(
     "/",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("read", "Booking"),
     validate({ query: renterBookingListQuerySchema }),
     bookingController.listRenterBookings,
@@ -73,7 +73,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.get(
     "/:bookingId",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("read", "Booking"),
     bookingController.getBookingDetail,
   );
@@ -81,7 +81,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.post(
     "/:bookingId/reviews",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("create", "Review"),
     validate({
       params: bookingIdParamsSchema,
@@ -93,7 +93,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.get(
     "/:bookingId/reviews",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("read", "Review"),
     validate({ params: bookingIdParamsSchema }),
     bookingController.getBookingReviews,
@@ -102,7 +102,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.patch(
     "/:bookingId/reviews/:reviewId",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("create", "Review"),
     validate({
       params: bookingReviewParamsSchema,
@@ -114,7 +114,7 @@ export function createBookingRoutes(auth: Auth): Router {
   router.delete(
     "/:bookingId/reviews/:reviewId",
     authenticate,
-    requireAccountType(AccountType.USER),
+    requireAccountType(AccountType.USER, AccountType.COMPANY),
     authorize("create", "Review"),
     validate({ params: bookingReviewParamsSchema }),
     bookingController.deleteReview,

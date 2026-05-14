@@ -10,7 +10,7 @@ export function createAdminNotificationRoutes(auth: Auth): Router {
   const router = Router();
 
   router.use(createAuthMiddleware(auth));
-  router.use(requireAccountType(AccountType.ADMIN));
+  router.use(requireAccountType(AccountType.ADMIN, AccountType.COMPANY));
 
   router.get("/", async (req: Request, res: Response, next: NextFunction) => {
     try {
@@ -29,10 +29,13 @@ export function createAdminNotificationRoutes(auth: Auth): Router {
         limit: limit ? Number(limit) : 20,
         category: category as any,
         priority: priority as string,
-        isRead: isRead === "true" ? true : isRead === "false" ? false : undefined,
+        isRead:
+          isRead === "true" ? true : isRead === "false" ? false : undefined,
       });
 
-      console.log(`[AdminNotificationRoutes] Returning ${result.notifications.length} notifications, unreadCount=${result.unreadCount}`);
+      console.log(
+        `[AdminNotificationRoutes] Returning ${result.notifications.length} notifications, unreadCount=${result.unreadCount}`,
+      );
 
       res.status(200).json(result);
     } catch (error) {
@@ -40,114 +43,140 @@ export function createAdminNotificationRoutes(auth: Auth): Router {
     }
   });
 
-  router.post("/generate", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
+  router.post(
+    "/generate",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const count =
+          await adminNotificationService.autoGenerateNotificationsForPendingItems(
+            adminId,
+          );
+
+        res.status(200).json({
+          success: true,
+          message: `Generated ${count} notifications from pending items`,
+          count,
+        });
+      } catch (error) {
+        next(error);
       }
+    },
+  );
 
-      const count = await adminNotificationService.autoGenerateNotificationsForPendingItems(adminId);
+  router.get(
+    "/unread-count",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
 
-      res.status(200).json({
-        success: true,
-        message: `Generated ${count} notifications from pending items`,
-        count,
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
+        const count = await adminNotificationService.getUnreadCount(adminId);
 
-  router.get("/unread-count", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(200).json({ unreadCount: count });
+      } catch (error) {
+        next(error);
       }
+    },
+  );
 
-      const count = await adminNotificationService.getUnreadCount(adminId);
+  router.patch(
+    "/:id/read",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
 
-      res.status(200).json({ unreadCount: count });
-    } catch (error) {
-      next(error);
-    }
-  });
+        const { id } = req.params;
+        await adminNotificationService.markAsRead(adminId, id);
 
-  router.patch("/:id/read", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(200).json({ success: true, message: "Marked as read" });
+      } catch (error) {
+        next(error);
       }
+    },
+  );
 
-      const { id } = req.params;
-      await adminNotificationService.markAsRead(adminId, id);
+  router.post(
+    "/mark-all-read",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
 
-      res.status(200).json({ success: true, message: "Marked as read" });
-    } catch (error) {
-      next(error);
-    }
-  });
+        const count = await adminNotificationService.markAllAsRead(adminId);
 
-  router.post("/mark-all-read", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        res.status(200).json({
+          success: true,
+          message: `Marked ${count} notifications as read`,
+          count,
+        });
+      } catch (error) {
+        next(error);
       }
+    },
+  );
 
-      const count = await adminNotificationService.markAllAsRead(adminId);
+  router.post(
+    "/mark-categories-read",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
 
-      res.status(200).json({
-        success: true,
-        message: `Marked ${count} notifications as read`,
-        count,
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
+        const { categories } = req.body;
+        if (!Array.isArray(categories)) {
+          return res.status(400).json({ error: "categories must be an array" });
+        }
 
-  router.post("/mark-categories-read", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
+        const count = await adminNotificationService.markCategoriesAsRead(
+          adminId,
+          categories,
+        );
+
+        res.status(200).json({
+          success: true,
+          message: `Marked ${count} notifications as read`,
+          count,
+        });
+      } catch (error) {
+        next(error);
       }
+    },
+  );
 
-      const { categories } = req.body;
-      if (!Array.isArray(categories)) {
-        return res.status(400).json({ error: "categories must be an array" });
+  router.delete(
+    "/:id",
+    async (req: Request, res: Response, next: NextFunction) => {
+      try {
+        const adminId = req.user?.id;
+        if (!adminId) {
+          return res.status(401).json({ error: "Unauthorized" });
+        }
+
+        const { id } = req.params;
+        await adminNotificationService.deleteNotification(adminId, id);
+
+        res
+          .status(200)
+          .json({ success: true, message: "Notification deleted" });
+      } catch (error) {
+        next(error);
       }
-
-      const count = await adminNotificationService.markCategoriesAsRead(adminId, categories);
-
-      res.status(200).json({
-        success: true,
-        message: `Marked ${count} notifications as read`,
-        count,
-      });
-    } catch (error) {
-      next(error);
-    }
-  });
-
-  router.delete("/:id", async (req: Request, res: Response, next: NextFunction) => {
-    try {
-      const adminId = req.user?.id;
-      if (!adminId) {
-        return res.status(401).json({ error: "Unauthorized" });
-      }
-
-      const { id } = req.params;
-      await adminNotificationService.deleteNotification(adminId, id);
-
-      res.status(200).json({ success: true, message: "Notification deleted" });
-    } catch (error) {
-      next(error);
-    }
-  });
+    },
+  );
 
   return router;
 }

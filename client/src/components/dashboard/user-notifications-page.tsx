@@ -293,7 +293,7 @@ export function UserNotificationsPage() {
             </TableHeader>
             <TableBody>
               {isLoading && notifications.length === 0 ? (
-                <TableRow>
+                <TableRow key="loading">
                   <TableCell
                     colSpan={4}
                     className="py-16 text-center text-muted-foreground"
@@ -305,7 +305,7 @@ export function UserNotificationsPage() {
                   </TableCell>
                 </TableRow>
               ) : notifications.length === 0 ? (
-                <TableRow>
+                <TableRow key="empty">
                   <TableCell
                     colSpan={4}
                     className="py-16 text-center text-muted-foreground"

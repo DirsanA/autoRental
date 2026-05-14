@@ -25,7 +25,7 @@ export function createViewTrackingRoutes(auth: Auth): Router {
 
   // All routes require admin authentication
   router.use(createAuthMiddleware(auth));
-  router.use(requireAccountType("ADMIN"));
+  router.use(requireAccountType("ADMIN", "COMPANY"));
 
   /**
    * POST /api/view-tracking/mark-viewed
