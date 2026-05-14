@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Search, ThumbsUp, MessageSquare, AlertCircle } from "lucide-react";
+import { Search, AlertCircle } from "lucide-react";
 import { CompanyReviewsSkeleton } from "./company-reviews-skeleton";
 import { fetchCompanyReviews, type CompanyReview } from "@/lib/companyApi";
 
@@ -9,9 +9,7 @@ const StarRating = ({ rating }: { rating: number }) => {
   return (
     <div className="flex gap-1 text-yellow-400">
       {[1, 2, 3, 4, 5].map((star) => (
-        <span key={star}>
-          {star <= rating ? "★" : "☆"}
-        </span>
+        <span key={star}>{star <= rating ? "★" : "☆"}</span>
       ))}
     </div>
   );
@@ -27,6 +25,8 @@ const RatingsPage = () => {
     breakdown: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } as Record<number, number>,
   });
   const [searchQuery, setSearchQuery] = useState("");
+  const [ratingFilter, setRatingFilter] = useState<number | "all">("all");
+  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
 
   useEffect(() => {
     const loadData = async () => {
@@ -47,16 +47,32 @@ const RatingsPage = () => {
     loadData();
   }, []);
 
-  const filteredReviews = reviews.filter(
-    (r) =>
-      r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      r.vehicle.toLowerCase().includes(searchQuery.toLowerCase())
-  );
+  const filteredReviews = reviews
+    .filter((r) => {
+      const matchesSearch =
+        r.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.comment.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        r.vehicle.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesRating =
+        ratingFilter === "all" || Math.round(r.rating) === ratingFilter;
+
+      return matchesSearch && matchesRating;
+    })
+    .sort((a, b) => {
+      if (sortBy === "newest")
+        return new Date(b.date).getTime() - new Date(a.date).getTime();
+      if (sortBy === "oldest")
+        return new Date(a.date).getTime() - new Date(b.date).getTime();
+      if (sortBy === "highest") return b.rating - a.rating;
+      if (sortBy === "lowest") return a.rating - b.rating;
+      return 0;
+    });
 
   const ratingBreakdown = [5, 4, 3, 2, 1].map((star) => {
     const count = stats.breakdown[star] || 0;
-    const percent = stats.count > 0 ? Math.round((count / stats.count) * 100) : 0;
+    const percent =
+      stats.count > 0 ? Math.round((count / stats.count) * 100) : 0;
     return { star, percent, count };
   });
 
@@ -70,7 +86,7 @@ const RatingsPage = () => {
         <AlertCircle size={48} className="text-red-500" />
         <h2 className="text-xl font-bold">Failed to load reviews</h2>
         <p className="text-gray-500 text-center max-w-md">{error}</p>
-        <button 
+        <button
           onClick={() => window.location.reload()}
           className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
         >
@@ -90,15 +106,15 @@ const RatingsPage = () => {
       </div>
 
       <div className="gap-6 grid grid-cols-1 lg:grid-cols-3">
-
         {/* LEFT SIDE */}
         <div className="space-y-6">
-
           {/* Average Rating */}
           <div className="bg-white shadow p-6 rounded-xl text-center">
             <p className="text-gray-500 text-sm">AVERAGE RATING</p>
 
-            <h2 className="mt-2 font-bold text-gray-800 text-5xl">{stats.avg}</h2>
+            <h2 className="mt-2 font-bold text-gray-800 text-5xl">
+              {stats.avg}
+            </h2>
 
             <div className="flex justify-center mt-2">
               <StarRating rating={Math.round(stats.avg)} />
@@ -132,14 +148,12 @@ const RatingsPage = () => {
               ))}
             </div>
           </div>
-
         </div>
 
         {/* RIGHT SIDE */}
         <div className="space-y-6 lg:col-span-2">
-
-          {/* Search + Sort */}
-          <div className="flex sm:flex-row flex-col gap-4">
+          {/* Search + Sort + Filter */}
+          <div className="flex lg:flex-row flex-col gap-4">
             <div className="flex flex-1 items-center gap-2 bg-white px-3 py-2 border rounded-lg min-w-0">
               <Search size={18} className="text-gray-400" />
               <input
@@ -150,15 +164,43 @@ const RatingsPage = () => {
               />
             </div>
 
-            <button className="bg-white px-4 py-2 border rounded-lg w-full sm:w-auto">
-              Sort by: Newest
-            </button>
+            <div className="flex sm:flex-row flex-col gap-2">
+              <select
+                className="bg-white px-3 py-2 border rounded-lg outline-none text-sm cursor-pointer"
+                value={ratingFilter}
+                onChange={(e) =>
+                  setRatingFilter(
+                    e.target.value === "all" ? "all" : Number(e.target.value),
+                  )
+                }
+              >
+                <option value="all">All Ratings</option>
+                <option value="5">5 Stars</option>
+                <option value="4">4 Stars</option>
+                <option value="3">3 Stars</option>
+                <option value="2">2 Stars</option>
+                <option value="1">1 Star</option>
+              </select>
+
+              <select
+                className="bg-white px-3 py-2 border rounded-lg outline-none text-sm cursor-pointer"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as any)}
+              >
+                <option value="newest">Newest First</option>
+                <option value="oldest">Oldest First</option>
+                <option value="highest">Highest Rated</option>
+                <option value="lowest">Lowest Rated</option>
+              </select>
+            </div>
           </div>
 
           {/* Reviews */}
           {filteredReviews.length === 0 ? (
             <div className="bg-white shadow p-12 rounded-xl text-center text-gray-500">
-              {searchQuery ? "No reviews match your search." : "No reviews yet."}
+              {searchQuery || ratingFilter !== "all"
+                ? "No reviews match your criteria."
+                : "No reviews yet."}
             </div>
           ) : (
             filteredReviews.map((review) => (
@@ -167,12 +209,11 @@ const RatingsPage = () => {
                 className="space-y-3 bg-white shadow p-5 rounded-xl"
               >
                 <div className="flex sm:flex-row flex-col justify-between gap-3">
-
                   <div className="flex gap-3">
                     {review.image ? (
-                      <img 
-                        src={review.image} 
-                        alt={review.name} 
+                      <img
+                        src={review.image}
+                        alt={review.name}
                         className="w-10 h-10 rounded-full object-cover"
                       />
                     ) : (
@@ -184,7 +225,17 @@ const RatingsPage = () => {
                     <div>
                       <p className="font-semibold">{review.name}</p>
                       <p className="text-gray-500 text-sm">
-                        {new Date(review.date).toLocaleDateString()} • {review.targetType === "Vehicle" ? `Renting ${review.vehicle}` : "Company Review"}
+                        {new Date(review.date).toLocaleDateString("en-US", {
+                          hour: "numeric",
+                          minute: "numeric",
+                          year: "numeric",
+                          month: "long",
+                          day: "numeric",
+                        })}{" "}
+                        •{" "}
+                        {review.targetType === "Vehicle"
+                          ? `Renting ${review.vehicle}`
+                          : "Company Review"}
                       </p>
                     </div>
                   </div>
@@ -195,20 +246,9 @@ const RatingsPage = () => {
                 <p className="text-gray-600 italic">
                   &quot;{review.comment}&quot;
                 </p>
-
-                <div className="flex gap-6 text-gray-500 text-sm">
-                  <button className="flex items-center gap-1 hover:text-blue-500">
-                    <ThumbsUp size={16} /> Helpful
-                  </button>
-
-                  <button className="flex items-center gap-1 hover:text-blue-500">
-                    <MessageSquare size={16} /> Respond
-                  </button>
-                </div>
               </div>
             ))
           )}
-
         </div>
       </div>
     </div>
