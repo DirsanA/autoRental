@@ -107,7 +107,7 @@ export default function P2PHostDetailPageClient({
           <Header />
           <Main className="p-6 md:p-8">
             <button
-              onClick={() => router.push("/sysadmin/P2P")}
+              onClick={() => router.push("/sysadmin/p2p")}
               className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" /> Back to P2P Approvals
@@ -462,7 +462,7 @@ export default function P2PHostDetailPageClient({
   }));
 
   const handleViewVehicle = (vehicleId: string) => {
-    router.push(`/sysadmin/P2P/vehicles/${vehicleId}`);
+    router.push(`/sysadmin/p2p/vehicles/${vehicleId}`);
   };
 
   return (
@@ -472,7 +472,7 @@ export default function P2PHostDetailPageClient({
         <Main className="overflow-y-auto p-6 md:p-8">
           <div className="mx-auto w-full max-w-7xl">
             <button
-              onClick={() => router.push("/sysadmin/P2P")}
+              onClick={() => router.push("/sysadmin/p2p")}
               className="mb-6 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
             >
               <ArrowLeft className="h-4 w-4" /> Back to P2P Approvals

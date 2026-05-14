@@ -328,7 +328,7 @@ export function P2PApprovalPageClient() {
   }, [refreshCounts]);
 
   const handleView = (host: P2PHostSummary) => {
-    router.push(`/sysadmin/P2P/${host.id}`);
+    router.push(`/sysadmin/p2p/${host.id}`);
   };
 
   const openApproveDialog = (host: P2PHostSummary) => {
