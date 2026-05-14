@@ -26,7 +26,9 @@ const RatingsPage = () => {
   });
   const [searchQuery, setSearchQuery] = useState("");
   const [ratingFilter, setRatingFilter] = useState<number | "all">("all");
-  const [sortBy, setSortBy] = useState<"newest" | "oldest" | "highest" | "lowest">("newest");
+  const [sortBy, setSortBy] = useState<
+    "newest" | "oldest" | "highest" | "lowest"
+  >("newest");
 
   useEffect(() => {
     const loadData = async () => {
@@ -38,7 +40,7 @@ const RatingsPage = () => {
         setError(null);
       } catch (err: any) {
         console.error("Error fetching company reviews:", err);
-        setError(err.message || "Failed to load reviews");
+        setError(err?.message || "Failed to load reviews");
       } finally {
         setLoading(false);
       }
