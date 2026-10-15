@@ -10,7 +10,7 @@ type KnowledgeSection = {
   content: string;
 };
 
-const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
+export const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
   {
     id: "overview",
     title: "Platform Overview",
@@ -19,20 +19,22 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "platform",
       "system",
       "autorent",
+      "about autorent",
+      "what is autorent",
       "roles",
       "dashboard",
     ],
     content: [
-      "AutoRent supports four role states in the client: renter, peerhost, company, and admin.",
-      "Renter is the default customer role. Peer host access is enabled when the session exposes verificationLevel = PEER_HOST or a peerhost role.",
-      "Company access is enabled only when company status is ACTIVE. If company status is not ACTIVE, the company sees a review screen instead of the dashboard.",
-      "Admin is exclusive and does not share renter or company dashboard access.",
-      "The main product areas confirmed in the codebase are renter bookings, renter verification, peer-host vehicle onboarding, company onboarding, wallet payouts, booking payment tracking, and admin review flows.",
+      "AutoRent is a car rental marketplace supporting four user roles: Renter, Peer Host, Company, and Admin.",
+      "Renter is the default customer role to search, book, and rent vehicles.",
+      "Peer Host access allows individuals to list personal cars and earn rental income after identity verification.",
+      "Company access allows registered vehicle rental businesses to manage commercial fleets across supported cities.",
+      "Admin manages approvals, platform moderation, revenue tracking, and commission payouts.",
     ].join("\n"),
   },
   {
     id: "renter",
-    title: "How To Become A Renter",
+    title: "How To Become A Renter & Book a Trip",
     keywords: [
       "renter",
       "signup",
@@ -42,18 +44,21 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "book",
       "booking",
       "rent",
+      "how to rent",
+      "how to book",
+      "trip",
     ],
     content: [
-      "Renter signup collects first name, last name, phone number, email, and password.",
-      "After successful signup, the UI tells the user to check email and verify the account before logging in.",
-      "After signing in, renters use the renter dashboard and booking history pages to manage trips.",
-      "Renter booking history supports search plus status filters including Pending, Confirmed, Completed, Cancelled, and Declined in the UI layer.",
-      "If a renter wants to become a host later, the renter sidebar links to a become-host flow.",
+      "1. Sign up on AutoRent with first name, last name, phone number, email, and password.",
+      "2. Verify your email address via the confirmation link sent to your inbox before logging in.",
+      "3. Complete identity or driver's license verification under your account profile.",
+      "4. Browse available cars, select pickup and return dates (minimum 3 days), and complete checkout via Chapa.",
+      "5. Manage upcoming, active, completed, or cancelled trips directly from your Renter Dashboard.",
     ].join("\n"),
   },
   {
     id: "renter-verification",
-    title: "Renter Verification",
+    title: "Identity & Driver's License Verification",
     keywords: [
       "verification",
       "verify",
@@ -63,15 +68,15 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "with driver",
       "national id",
       "driver license",
+      "documents",
+      "driver's license",
     ],
     content: [
-      "The shared verification page supports two renter modes: with_driver and self_drive.",
-      "With-driver mode uses National ID verification. The user submits date of birth, national ID number, and front/back ID files.",
-      "Self-drive mode uses Driver's License verification. The user submits date of birth, license number, license expiry date, and front/back license files.",
-      "Verification statuses in the client are not_submitted, pending, approved, and rejected.",
-      "When a submission is rejected, the user can resubmit. Approved records can also be replaced and sent back for review.",
-      "The UI shows last submitted time, last reviewed time, total submissions on file, and any admin comment returned by the verification record.",
-      "Accepted upload types shown in the UI are JPG, PNG, or PDF. The guidance card says max file size is 5MB per document.",
+      "AutoRent provides two verification modes based on how you plan to travel:",
+      "• With-Driver Mode: Requires National ID verification (Date of Birth, National ID Number, front & back ID photos).",
+      "• Self-Drive Mode: Requires Driver's License verification (Date of Birth, License Number, Expiry Date, front & back license photos).",
+      "Supported file formats are JPG, PNG, or PDF with a maximum size of 5MB per document.",
+      "Submissions are reviewed by administrators within 24-48 hours. If rejected, you can review feedback and resubmit anytime.",
     ].join("\n"),
   },
   {
@@ -82,25 +87,28 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "peer host",
       "host",
       "become host",
+      "become a host",
       "p2p",
       "upgrade peerhost",
       "listing",
       "vehicle onboarding",
+      "list my car",
+      "add vehicle",
     ],
     content: [
-      "There are two peer-host related flows visible in the client codebase.",
-      "First, account verification for peer-host access is submitted through the shared verification page to /auth/upgrade/peerhost using date of birth, license number, license expiry, and front/back driver's license files.",
-      "Second, the actual host onboarding and first vehicle listing flow is a four-step vehicle submission flow used at /renter/become-host and /peerhost/add-vehicle.",
-      "The four vehicle onboarding steps are Car Details, Documents, Pricing, and Submit.",
-      "Required car details include make, model, year, seats, at least one feature, and four photos: front, back, side, and interior.",
-      "Required host documents in this flow are vehicle ownership and insurance.",
-      "Required pricing data includes at least a daily price. Pickup address is collected, and return address defaults to the pickup address unless changed.",
-      "After submission, the success state says the application or vehicle is under review, typically within 24-48 hours, and the user will receive an email once verification is complete.",
+      "Becoming a Peer Host allows you to rent out your personal vehicle safely:",
+      "1. Upgrade to Peer Host: Submit driver's license and identity details at /auth/upgrade/peerhost.",
+      "2. 4-Step Vehicle Onboarding (/peerhost/add-vehicle or /renter/become-host):",
+      "   • Step 1 - Car Details: Make, model, year, seat count, features, and 4 exterior/interior photos (front, back, side, interior).",
+      "   • Step 2 - Documents: Upload vehicle ownership document (Libre) and active insurance policy.",
+      "   • Step 3 - Pricing & Location: Set daily rental price, pickup location, and return address.",
+      "   • Step 4 - Submit: Review details and submit for admin verification.",
+      "3. Approval: Listings are reviewed within 24-48 hours. You will receive an email once approved and active.",
     ].join("\n"),
   },
   {
     id: "company",
-    title: "How To Become A Company",
+    title: "Company Fleet Onboarding",
     keywords: [
       "company",
       "fleet",
@@ -110,22 +118,23 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "registration",
       "company signup",
       "company onboarding",
+      "register company",
     ],
     content: [
-      "The company onboarding flow starts with business eligibility checks: registered company, valid TIN number, commercial license, and operating in a supported city.",
-      "The user then confirms location using geolocation or manual city selection. Supported cities in the client include Addis Ababa, Adama, Hawassa, Bahir Dar, Mekelle, Dire Dawa, Bishoftu, Jimma, Gondar, and Dessie.",
-      "The company form is split into five stages: Operating Location, Company Identity, Primary Contact, Fleet and Documents, and Final Review.",
-      "Confirmed location fields are region, city, sub-city or woreda, and business address.",
-      "Confirmed company identity fields are legal company name, a 10-digit TIN number, registration number, and optional year founded.",
-      "Confirmed contact fields are representative full name, email, and Ethiopian-format phone number.",
-      "Confirmed professional fields are fleet size, vehicle types, years in business, website, commercial license upload, and TIN certificate upload in the UI.",
-      "The company API helper posts company name, tinNumber, normalized email and phone, address, fullAddress, website, and a licenseDocument to /companies.",
-      "Company dashboard access is gated by company status. If the status is not ACTIVE, the user sees a review screen that says approval usually takes 24-48 hours and that email notification will be sent once approved.",
+      "Rental companies can onboard their commercial vehicle fleet across Ethiopia:",
+      "• Supported Cities: Addis Ababa, Adama, Hawassa, Bahir Dar, Mekelle, Dire Dawa, Bishoftu, Jimma, Gondar, and Dessie.",
+      "• 5-Stage Onboarding Process:",
+      "   1. Operating Location: Region, city, sub-city/woreda, and street address.",
+      "   2. Company Identity: Legal registered business name, 10-digit TIN number, and registration number.",
+      "   3. Primary Contact: Authorized representative name, verified business email, and Ethiopian phone number.",
+      "   4. Fleet & Documentation: Commercial trade license and TIN certificate upload.",
+      "   5. Final Review: Submit for administrative compliance check.",
+      "• Approval: The company dashboard activates upon approval (typically within 24-48 hours with email notification).",
     ].join("\n"),
   },
   {
     id: "bookings-payments",
-    title: "Bookings, Payment, And Commission",
+    title: "Bookings, Payments, and Commissions",
     keywords: [
       "booking",
       "checkout",
@@ -136,22 +145,20 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "system commission",
       "price",
       "pricing",
+      "cost",
+      "how to pay",
     ],
     content: [
-      "Vehicle checkout uses Chapa through the /bookings/checkout/chapa endpoint.",
-      "The booking card enforces these client-side rules: pickup must be in the future, return must be after pickup, booking length must be at least 3 days, and both pickup and return must stay within one month from today.",
-      "Vehicles cannot be booked if they are unavailable because of maintenance, retirement, pending approval, or overlapping availability blocks such as existing bookings, maintenance, owner use, or admin hold.",
-      "The booking card calculates subtotal as days multiplied by daily rate.",
-      "The client-side trip fee or commission rate used in the booking card is 8% of subtotal.",
-      "The booking total shown to the renter is subtotal plus commission.",
-      "Detailed booking records returned by the API include pricePerHour, totalHours, systemCommission, totalAmount, currency, payment method, payment status, transaction reference, paidAt, and checkout expiry details.",
-      "The renter booking detail page explicitly labels this amount as System commission in the payment breakdown.",
-      "Admin revenue screens also track commission as a separate revenue type alongside other transaction categories.",
+      "• Checkout & Payment: Payments are securely processed online using Chapa.",
+      "• Booking Rules: Minimum rental duration is 3 days. Pickup must be in the future and return must be within 30 days.",
+      "• Platform Fee: AutoRent applies a standard 8% system commission / trip fee calculated on the rental subtotal.",
+      "• Pricing Transparency: Total price = (Daily rate × days) + 8% platform fee.",
+      "• Availability: Vehicles under maintenance, retired, or with overlapping booking schedules are automatically blocked.",
     ].join("\n"),
   },
   {
     id: "wallet",
-    title: "Wallets And Payouts",
+    title: "Wallets, Balances, and Payouts",
     keywords: [
       "wallet",
       "payout",
@@ -160,21 +167,20 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "ledger",
       "escrow",
       "funds",
+      "earnings",
     ],
     content: [
-      "Wallet data exists for User and Company owners.",
-      "The wallet snapshot exposes pendingBalance, availableBalance, lifetimeEarned, lifetimePaidOut, and lifetimeRefunded.",
-      "Pending balance is described as escrow funds locked until completion or admin release.",
-      "Available balance is withdrawable balance.",
-      "The current wallet UI lets the user request withdrawal via Chapa.",
-      "The client enforces a minimum withdrawal amount of 500 ETB and blocks requests above the available balance.",
-      "Payout statuses confirmed in the client are PENDING, PROCESSING, PAID, FAILED, and CANCELLED.",
-      "Recent payout requests show amount, status, created time, payout method, and paid time when available.",
+      "Hosts and companies track earnings and request payouts from their dedicated Wallet:",
+      "• Pending Balance: Escrow funds held securely until the trip completes successfully.",
+      "• Available Balance: Funds eligible for immediate withdrawal.",
+      "• Withdrawal Method: Direct payout through Chapa.",
+      "• Minimum Withdrawal: 500 ETB minimum per payout request.",
+      "• Payout Tracking: Statuses are tracked in real time: PENDING, PROCESSING, PAID, FAILED, or CANCELLED.",
     ].join("\n"),
   },
   {
     id: "email-notifications",
-    title: "Email Notifications",
+    title: "Email Notifications & Password Recovery",
     keywords: [
       "email",
       "emails",
@@ -182,18 +188,15 @@ const KNOWLEDGE_SECTIONS: KnowledgeSection[] = [
       "notifications",
       "verify email",
       "reset password",
+      "forgot password",
       "approval email",
       "inbox",
     ],
     content: [
-      "Confirmed email-driven flows in the client are account verification, company email verification, password reset, and approval-result notifications for review-based onboarding.",
-      "After normal renter signup, the success message tells the user to check email and verify the account before logging in.",
-      "The /verify-email page confirms successful email verification for normal users and redirects them to sign in.",
-      "The /company/verify-email page confirms company email verification and tells the user to sign in and continue to the company dashboard.",
-      "Forgot-password submits to /auth/forgot-password and the success screen says a password reset link was sent to the user's email.",
-      "Reset password uses a token-based flow and the app has a reset-password route that forwards the token to the auth reset page.",
-      "Peer-host and company pending-review screens explicitly say the user will receive an email once verification or approval is complete.",
-      "The current client codebase does not explicitly define the exact contents of booking confirmation emails, cancellation emails, payout emails, or admin moderation emails, so the assistant should describe those as not confirmed unless backend documentation is added later.",
+      "AutoRent communicates key account events via automated email notifications:",
+      "• Account Verification: Confirmation links sent after renter or company registration.",
+      "• Password Reset: Secure one-time reset link sent to your registered email address.",
+      "• Onboarding Approval: Email notifications sent when host vehicle or company accounts are approved or require updates.",
     ].join("\n"),
   },
 ];
@@ -207,6 +210,136 @@ function getLatestUserMessage(messages: ChatLikeMessage[]) {
     [...messages].reverse().find((message) => message.role === "user")
       ?.content ?? ""
   );
+}
+
+function isGreeting(text: string): boolean {
+  const clean = text.trim().toLowerCase().replace(/[!?.,;]/g, "");
+  const greetings = [
+    "hi",
+    "hello",
+    "hey",
+    "hiya",
+    "howdy",
+    "yo",
+    "greetings",
+    "good morning",
+    "good afternoon",
+    "good evening",
+    "hi there",
+    "hello there",
+    "hey there",
+    "sup",
+    "what's up",
+    "whats up",
+  ];
+  return greetings.includes(clean);
+}
+
+function isCarRecommendationRequest(text: string): {
+  isMatch: boolean;
+  category?: "suv" | "budget" | "airport" | "luxury" | "van" | "general";
+} {
+  const lower = text.toLowerCase();
+
+  if (
+    lower.includes("suv") ||
+    lower.includes("family") ||
+    lower.includes("child") ||
+    lower.includes("kids") ||
+    lower.includes("luggage") ||
+    lower.includes("spacious") ||
+    lower.includes("road trip")
+  ) {
+    return { isMatch: true, category: "suv" };
+  }
+
+  if (
+    lower.includes("budget") ||
+    lower.includes("cheap") ||
+    lower.includes("affordable") ||
+    lower.includes("economy") ||
+    lower.includes("low cost") ||
+    lower.includes("saving")
+  ) {
+    return { isMatch: true, category: "budget" };
+  }
+
+  if (
+    lower.includes("airport") ||
+    lower.includes("flight") ||
+    lower.includes("terminal") ||
+    lower.includes("arrival")
+  ) {
+    return { isMatch: true, category: "airport" };
+  }
+
+  if (
+    lower.includes("luxury") ||
+    lower.includes("vip") ||
+    lower.includes("premium") ||
+    lower.includes("executive") ||
+    lower.includes("wedding") ||
+    lower.includes("mercedes") ||
+    lower.includes("bmw")
+  ) {
+    return { isMatch: true, category: "luxury" };
+  }
+
+  if (
+    lower.includes("van") ||
+    lower.includes("minivan") ||
+    lower.includes("group") ||
+    lower.includes("bus") ||
+    lower.includes("passenger")
+  ) {
+    return { isMatch: true, category: "van" };
+  }
+
+  if (
+    lower.includes("car") ||
+    lower.includes("cars") ||
+    lower.includes("vehicle") ||
+    lower.includes("rent") ||
+    lower.includes("recommend") ||
+    lower.includes("drive")
+  ) {
+    return { isMatch: true, category: "general" };
+  }
+
+  return { isMatch: false };
+}
+
+function isOffTopic(text: string): boolean {
+  const lower = text.toLowerCase().trim();
+
+  // Common off-topic patterns
+  const offTopicPatterns = [
+    /\bwhat is (atom|physics|chemistry|quantum|gravity|dna|photosynthesis|math|biology)\b/i,
+    /\bwho (is|was) (elon|napoleon|einstein|newton|shakespeare|president|biden|trump)\b/i,
+    /\b(write|create) (code|python|javascript|script|essay|poem|story)\b/i,
+    /\b(tell me a joke|solve|weather today|recipe for)\b/i,
+  ];
+
+  for (const pattern of offTopicPatterns) {
+    if (pattern.test(lower)) return true;
+  }
+
+  // If query is a general question and has no rental/car/autorent keywords
+  const relevantKeywords = [
+    "car", "auto", "rent", "vehicle", "trip", "drive", "host", "company",
+    "fleet", "book", "chapa", "payment", "price", "tin", "license",
+    "verification", "wallet", "payout", "pickup", "dropoff", "return",
+    "suv", "sedan", "van", "model", "toyota", "hyundai", "suzuki", "ethiopia",
+    "addis", "hi", "hello", "help", "support",
+  ];
+
+  const hasRelevantKeyword = relevantKeywords.some((kw) => lower.includes(kw));
+
+  if (!hasRelevantKeyword && (lower.startsWith("what is") || lower.startsWith("who is") || lower.startsWith("how to make") || lower.startsWith("explain"))) {
+    return true;
+  }
+
+  return false;
 }
 
 function scoreSection(query: string, section: KnowledgeSection) {
@@ -224,30 +357,18 @@ function scoreSection(query: string, section: KnowledgeSection) {
   }, 0);
 }
 
-function selectKnowledgeSections(query: string, limit = 4) {
-  const overview = KNOWLEDGE_SECTIONS.find((section) => section.id === "overview");
-  const ranked = KNOWLEDGE_SECTIONS
-    .filter((section) => section.id !== "overview")
+function selectKnowledgeSections(query: string, limit = 3) {
+  const ranked = KNOWLEDGE_SECTIONS.filter(
+    (section) => section.id !== "overview",
+  )
     .map((section) => ({
       section,
       score: scoreSection(query, section),
     }))
+    .filter((item) => item.score > 0)
     .sort((left, right) => right.score - left.score);
 
-  const selected = ranked
-    .filter((item) => item.score > 0)
-    .slice(0, limit)
-    .map((item) => item.section);
-
-  if (selected.length === 0) {
-    selected.push(
-      KNOWLEDGE_SECTIONS.find((section) => section.id === "renter")!,
-      KNOWLEDGE_SECTIONS.find((section) => section.id === "peerhost-access")!,
-      KNOWLEDGE_SECTIONS.find((section) => section.id === "company")!,
-    );
-  }
-
-  return overview ? [overview, ...selected] : selected;
+  return ranked.slice(0, limit).map((item) => item.section);
 }
 
 function formatSection(section: KnowledgeSection) {
@@ -256,27 +377,154 @@ function formatSection(section: KnowledgeSection) {
 
 export function buildProjectKnowledgeContext(messages: ChatLikeMessage[]) {
   const latestUserMessage = getLatestUserMessage(messages);
-  const sections = selectKnowledgeSections(latestUserMessage, 5);
+  const sections = selectKnowledgeSections(latestUserMessage, 4);
+
+  const contextSections =
+    sections.length > 0
+      ? sections
+      : [
+          KNOWLEDGE_SECTIONS.find((s) => s.id === "overview")!,
+          KNOWLEDGE_SECTIONS.find((s) => s.id === "renter")!,
+          KNOWLEDGE_SECTIONS.find((s) => s.id === "bookings-payments")!,
+        ];
 
   return [
-    "Use the following AutoRent project knowledge as the source of truth for product-specific answers.",
+    "Use the following AutoRent project knowledge as the source of truth for platform-specific answers.",
     "If a detail is not confirmed below, say it is not confirmed in the current codebase.",
-    "When the user asks for steps, answer in numbered steps.",
-    "When the user asks about roles, separate renter, peer host, and company clearly.",
+    "When suggesting vehicles, suggest common categories available in Ethiopia (SUVs, compact sedans, vans).",
+    "Keep answers friendly, conversational, concise, and formatted clearly.",
     "",
-    ...sections.map(formatSection),
+    ...contextSections.map(formatSection),
   ].join("\n");
 }
 
 export function buildProjectFallbackReply(messages: ChatLikeMessage[]) {
-  const latestUserMessage = getLatestUserMessage(messages);
-  const sections = selectKnowledgeSections(latestUserMessage, 3);
+  const latestUserMessage = getLatestUserMessage(messages).trim();
 
+  // 1. Casual Greetings
+  if (isGreeting(latestUserMessage) || !latestUserMessage) {
+    return [
+      "Hello! Welcome to AutoRent. I'm your virtual rental assistant.",
+      "",
+      "How can I help you today?",
+      "• Recommend the right car for your trip (SUVs, budget sedans, airport pickups)",
+      "• Guide you through renting and booking a car",
+      "• Explain driver's license and identity verification",
+      "• Help you become a Peer Host and earn with your vehicle",
+      "• Guide company fleet registration and payouts",
+      "",
+      "Feel free to ask a question or select one of the suggested prompts below!",
+    ].join("\n");
+  }
+
+  // 2. Off-topic questions
+  if (isOffTopic(latestUserMessage)) {
+    return [
+      "I am AutoRent Assistant, dedicated to helping with vehicle rentals, bookings, and host onboarding on the AutoRent platform.",
+      "",
+      `I can't answer general knowledge questions like "${latestUserMessage}".`,
+      "",
+      "However, I would be delighted to help you find a rental car, guide you through booking a trip, or help you list your vehicle as a host. What kind of car or trip do you have in mind?",
+    ].join("\n");
+  }
+
+  // 3. Car Recommendations & Categories
+  const carCheck = isCarRecommendationRequest(latestUserMessage);
+  if (carCheck.isMatch) {
+    if (carCheck.category === "suv") {
+      return [
+        "Looking for family-friendly SUVs? Here are top options on AutoRent:",
+        "",
+        "• Toyota RAV4 & Hyundai Tucson: Great fuel economy, high ride height, and comfortable 5-passenger seating with generous luggage space.",
+        "• Toyota Land Cruiser / Prado: Ideal for rough roads, country trips, or larger families needing robust 4WD capability.",
+        "",
+        "Tip: Check the 'Features' tag on listings for AWD, child seat support, and Bluetooth. You can filter and book available SUVs on our Explore Cars page!",
+      ].join("\n");
+    }
+
+    if (carCheck.category === "budget") {
+      return [
+        "Looking for the best budget-friendly options? Here is what we recommend:",
+        "",
+        "• Compact Sedans (Toyota Corolla, Suzuki Dzire, Hyundai Elantra): Excellent fuel efficiency, easy city parking, and the most affordable daily rental rates.",
+        "• Cost-Saving Tip: Book for 3+ days to optimize the daily rate, and choose self-drive if you have a verified driver's license.",
+        "",
+        "Visit our Explore Cars page and sort by price to discover the lowest rates available in your city!",
+      ].join("\n");
+    }
+
+    if (carCheck.category === "airport") {
+      return [
+        "Need a reliable airport pickup car?",
+        "",
+        "• Comfort & Luggage: We recommend mid-size sedans (Toyota Camry, Corolla) or compact SUVs with ample trunk space for your suitcases.",
+        "• Flexible Pickup: You can set the airport or your hotel as the pickup address during booking.",
+        "• Chauffeur / With-Driver Option: If you prefer not to drive after your flight, choose a listing that includes driver service.",
+        "",
+        "Browse available vehicles now to schedule your pickup time in advance!",
+      ].join("\n");
+    }
+
+    if (carCheck.category === "luxury") {
+      return [
+        "Looking for premium or executive luxury cars?",
+        "",
+        "• Executive Sedans (Mercedes-Benz C/E Class, BMW, Audi): Perfect for business meetings, diplomatic transport, or VIP events.",
+        "• Luxury SUVs (Land Cruiser V8, Range Rover): Exceptional road presence and premium interior comfort.",
+        "",
+        "All luxury bookings include full verification and dedicated host communication.",
+      ].join("\n");
+    }
+
+    if (carCheck.category === "van") {
+      return [
+        "Traveling with a group or large family? Here are your best options:",
+        "",
+        "• Passenger Vans (Toyota HiAce, Hyundai H-1): Seats 7 to 12 passengers comfortably with dedicated luggage space.",
+        "• Minivans & MPVs: Versatile folding seats suitable for airport group transfers and road trips.",
+        "",
+        "Filter by seat count on the Explore Cars page to find the right capacity for your party!",
+      ].join("\n");
+    }
+
+    if (carCheck.category === "general") {
+      return [
+        "AutoRent features a wide range of verified vehicles to suit any trip:",
+        "",
+        "• Family & Group: Spacious SUVs and passenger vans with generous luggage room.",
+        "• City & Budget: Economical sedans (Toyota Corolla, Suzuki Dzire) with high fuel efficiency.",
+        "• Business & Luxury: Premium executive sedans and luxury SUVs.",
+        "",
+        "Browse all active listings with real-time availability and prices on our Explore Cars page!",
+      ].join("\n");
+    }
+  }
+
+  // 4. Specific Platform Knowledge Matches
+  const matchedSections = selectKnowledgeSections(latestUserMessage, 2);
+
+  if (matchedSections.length > 0) {
+    const formatted = matchedSections.map((s) => s.content).join("\n\n");
+    return [
+      `Here is the relevant information for your question:`,
+      "",
+      formatted,
+      "",
+      "Need more details on bookings, verification, hosting, or payments? Just let me know!",
+    ].join("\n");
+  }
+
+  // 5. General Fallback
   return [
-    "Here is the relevant AutoRent guidance from the current project setup:",
+    "I'm here to help you get the most out of AutoRent!",
     "",
-    ...sections.map(formatSection),
+    "You can ask me about:",
+    "• Finding and booking cars (SUVs, budget cars, airport pickups)",
+    "• Driver's license & identity verification (Self-drive vs. with-driver)",
+    "• Becoming a Peer Host and listing your car",
+    "• Registering a commercial Company fleet",
+    "• Payments via Chapa and wallet withdrawals",
     "",
-    "Ask about a specific flow like renter signup, peer-host approval, company onboarding, booking commission, wallet payout, or email notifications if you want a narrower answer.",
+    "Tell me what kind of vehicle or trip you are planning, and I'll guide you!",
   ].join("\n");
 }

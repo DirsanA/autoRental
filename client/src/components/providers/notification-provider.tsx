@@ -66,18 +66,20 @@ export function NotificationProvider({
    * Manual refresh via HTTP (used as fallback)
    */
   const refreshBadgeCounts = useCallback(async () => {
+    if (!adminId) return;
     try {
       const counts = await getSidebarBadgeCounts();
       setSidebarCounts(counts);
     } catch (error) {
-      console.error("[NotificationProvider] Failed to refresh counts:", error);
+      console.warn("[NotificationProvider] Failed to refresh counts:", error);
     }
-  }, [setSidebarCounts]);
+  }, [adminId, setSidebarCounts]);
 
   /**
    * Start HTTP polling fallback
    */
   const startPolling = useCallback(() => {
+    if (!adminId) return;
     if (pollingIntervalRef.current) return; // Already polling
     
     console.log("[NotificationProvider] Starting HTTP polling fallback");
@@ -92,7 +94,7 @@ export function NotificationProvider({
       refreshBadgeCounts();
       fetchNotifications(true);
     }, 30000);
-  }, [refreshBadgeCounts, fetchNotifications]);
+  }, [adminId, refreshBadgeCounts, fetchNotifications]);
 
   /**
    * Stop HTTP polling
@@ -181,8 +183,7 @@ export function NotificationProvider({
    */
   useEffect(() => {
     if (!adminId && !userId) {
-      // No identity, use HTTP polling as fallback if needed
-      startPolling();
+      // Guest: no notifications to track
       return;
     }
 
@@ -220,8 +221,10 @@ export function NotificationProvider({
       setIsConnected(false);
       setTransport(null);
       
-      // Start HTTP polling as fallback
-      startPolling();
+      // Start HTTP polling as fallback for admin only
+      if (adminId) {
+        startPolling();
+      }
     });
 
     // Listen for badge count updates
@@ -262,8 +265,10 @@ export function NotificationProvider({
     // Listen for status changes
     socket.on("v1:entity:status-changed", (data?: any) => {
       console.log("[NotificationProvider] Entity status changed, refreshing...");
-      refreshBadgeCounts();
-      handleAdminInboxUpdate();
+      if (adminId) {
+        refreshBadgeCounts();
+        handleAdminInboxUpdate();
+      }
       
       // Dispatch global event
       window.dispatchEvent(new CustomEvent("admin-data-refresh", { 
@@ -273,7 +278,7 @@ export function NotificationProvider({
 
     // Connection error
     socket.on("connect_error", (error) => {
-      console.error("[NotificationProvider] WebSocket connection error:", error);
+      console.warn("[NotificationProvider] WebSocket connection error:", error.message || error);
       // Will automatically try polling transport then give up
     });
 
@@ -293,17 +298,6 @@ export function NotificationProvider({
     stopPolling,
     userId,
   ]);
-
-  // If no identity provided, just use polling
-  useEffect(() => {
-    if (!adminId && !userId && !pollingIntervalRef.current) {
-      startPolling();
-    }
-    
-    return () => {
-      stopPolling();
-    };
-  }, [adminId, startPolling, stopPolling]);
 
   const value: NotificationContextType = {
     isConnected,

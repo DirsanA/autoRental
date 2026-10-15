@@ -162,7 +162,7 @@ function ChatMessageBubble({
     >
       <div
         className={cn(
-          "relative shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6",
+          "relative shadow-sm px-4 py-3 rounded-3xl max-w-[88%] text-sm leading-6 whitespace-pre-wrap",
           message.role === "user"
             ? "rounded-br-md bg-slate-900 text-white dark:bg-white dark:text-slate-900"
             : "rounded-bl-md bg-muted text-foreground",

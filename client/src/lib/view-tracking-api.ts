@@ -80,12 +80,18 @@ export async function getSidebarBadgeCounts(): Promise<SidebarBadgeCounts> {
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      return {
+        users: 0,
+        p2pHosts: 0,
+        companies: 0,
+        vehicles: 0,
+        verifications: 0,
+      };
     }
 
     return await response.json();
   } catch (error) {
-    console.error("[ViewTracking] Failed to get sidebar counts:", error);
+    console.warn("[ViewTracking] Failed to get sidebar counts:", error);
     // Return zeros on error (don't show badges if we can't determine)
     return {
       users: 0,
@@ -117,13 +123,13 @@ export async function getViewedIds(
     );
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      return [];
     }
 
     const data = await response.json();
     return data.viewedIds || [];
   } catch (error) {
-    console.error("[ViewTracking] Failed to get viewed IDs:", error);
+    console.warn("[ViewTracking] Failed to get viewed IDs:", error);
     return [];
   }
 }
