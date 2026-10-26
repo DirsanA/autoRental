@@ -41,14 +41,10 @@ function useTypingAnimation(
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    if (!isTyping) {
-      setDisplayedText(fullText);
-      return;
-    }
+    if (!isTyping) return;
 
     wordsRef.current = fullText.split(/(\s+)/);
     currentIndexRef.current = 0;
-    setDisplayedText("");
 
     const wordDelay = 1000 / wordsPerSecond;
 
@@ -118,7 +114,18 @@ async function fetchAssistantReply(
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");
-    throw new Error(text || `Request failed with status ${res.status}`);
+    let serverMessage = "";
+    try {
+      const parsed = JSON.parse(text) as { error?: string };
+      serverMessage = parsed.error?.trim() ?? "";
+    } catch {
+      serverMessage = "";
+    }
+
+    throw new Error(
+      serverMessage ||
+        "The assistant is temporarily unavailable. Please try again in a moment.",
+    );
   }
 
   const data = (await res.json()) as ChatApiResponse;
@@ -272,9 +279,11 @@ export function LandingChatbot() {
         }
 
         const message =
-          error instanceof Error
-            ? error.message
-            : "I could not reach the assistant service right now. Please try again in a moment.";
+          error instanceof TypeError
+            ? "I could not reach the assistant. Please check your connection and try again."
+            : error instanceof Error
+              ? error.message
+              : "I could not reach the assistant service right now. Please try again in a moment.";
         const errorMessageId = getNextMessageId();
         setMessages((current) => [
           ...current,

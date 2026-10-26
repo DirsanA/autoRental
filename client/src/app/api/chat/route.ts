@@ -13,6 +13,17 @@ export const runtime = "nodejs";
 const DEFAULT_GEMINI_MODEL = "gemini-3.5-flash-lite";
 const DEFAULT_GROQ_MODEL = "llama-3.1-8b-instant";
 
+const GEMINI_FALLBACK_MODELS = [
+  "gemini-3-flash-preview",
+  "gemini-3.1-flash-lite",
+  "gemini-flash-lite-latest",
+];
+
+const GEMINI_REQUEST_TIMEOUT_MS = 25000;
+const GEMINI_TOTAL_TIMEOUT_MS = 45000;
+const GEMINI_RETRY_DELAY_MS = 800;
+const RETRYABLE_STATUS_CODES = new Set([408, 425, 429, 500, 502, 503, 504]);
+
 const ASSISTANT_SYSTEM_PROMPT =
   "You are AutoRent Assistant for the AutoRental platform. Help with vehicle recommendations and platform questions about bookings, renter signup, peer host applications, company registration, verification, payments, wallets, and admin approvals. Use the provided project knowledge as your source of truth for app-specific details. If something is not confirmed in the project knowledge, say so clearly. Keep answers concise, accurate, practical, and well structured.";
 
@@ -125,6 +136,22 @@ function httpsPostJson(
   return new Promise((resolve, reject) => {
     const urlObj = new URL(url);
     const postData = JSON.stringify(bodyObj);
+    let settled = false;
+    let timer: NodeJS.Timeout | null = null;
+
+    function finishResolve(value: { status: number; data: string }) {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      resolve(value);
+    }
+
+    function finishReject(error: Error) {
+      if (settled) return;
+      settled = true;
+      if (timer) clearTimeout(timer);
+      reject(error);
+    }
 
     const req = https.request(
       urlObj,
@@ -134,7 +161,6 @@ function httpsPostJson(
           "Content-Type": "application/json",
           "Content-Length": Buffer.byteLength(postData),
         },
-        timeout: timeoutMs,
       },
       (res) => {
         let responseData = "";
@@ -142,18 +168,31 @@ function httpsPostJson(
           responseData += chunk;
         });
         res.on("end", () => {
-          resolve({ status: res.statusCode || 200, data: responseData });
+          finishResolve({
+            status: res.statusCode || 200,
+            data: responseData,
+          });
         });
+        res.on("error", (err) => finishReject(err));
       },
     );
 
+    timer = setTimeout(() => {
+      req.destroy();
+      finishReject(
+        new Error(`HTTPS request timed out after ${timeoutMs}ms`),
+      );
+    }, timeoutMs);
+
     req.on("timeout", () => {
       req.destroy();
-      reject(new Error(`HTTPS request timed out after ${timeoutMs}ms`));
+      finishReject(
+        new Error(`HTTPS request timed out after ${timeoutMs}ms`),
+      );
     });
 
     req.on("error", (err) => {
-      reject(err);
+      finishReject(err);
     });
 
     req.write(postData);
@@ -161,11 +200,25 @@ function httpsPostJson(
   });
 }
 
+class GeminiHttpError extends Error {
+  constructor(
+    message: string,
+    readonly status: number,
+  ) {
+    super(message);
+    this.name = "GeminiHttpError";
+  }
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 async function callGemini(
   apiKey: string,
   model: string,
   messages: ChatMessage[],
-): Promise<string> {
+): Promise<{ content: string; model: string }> {
   const systemContext = `${ASSISTANT_SYSTEM_PROMPT}\n\n${buildProjectKnowledgeContext(messages)}`;
 
   const contents = [
@@ -190,43 +243,90 @@ async function callGemini(
   ];
 
   const primaryModel = model || DEFAULT_GEMINI_MODEL;
-  const candidateModels = [primaryModel, "gemini-3.5-flash-lite", "gemini-3.8-flash"].filter(
+  const candidateModels = [primaryModel, ...GEMINI_FALLBACK_MODELS].filter(
     (m, idx, arr) => arr.indexOf(m) === idx,
   );
 
+  const deadline = Date.now() + GEMINI_TOTAL_TIMEOUT_MS;
   let lastError: Error | null = null;
 
-  for (const m of candidateModels) {
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${m}:generateContent?key=${apiKey}`;
-      const response = await httpsPostJson(url, {
-        contents,
-        generationConfig: {
-          temperature: 0.4,
-          maxOutputTokens: 800,
-        },
-      });
+  for (const candidate of candidateModels) {
+    const maxAttempts = candidate === primaryModel ? 2 : 1;
 
-      if (response.status < 200 || response.status >= 300) {
-        throw new Error(`Gemini (${m}) HTTP ${response.status}: ${response.data}`);
+    for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+      const remainingMs = deadline - Date.now();
+      if (remainingMs <= 1000) break;
+
+      const timeoutMs = Math.min(GEMINI_REQUEST_TIMEOUT_MS, remainingMs);
+
+      try {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${candidate}:generateContent?key=${apiKey}`;
+        const response = await httpsPostJson(
+          url,
+          {
+            contents,
+            generationConfig: {
+              temperature: 0.4,
+              maxOutputTokens: 800,
+            },
+          },
+          timeoutMs,
+        );
+
+        if (response.status < 200 || response.status >= 300) {
+          throw new GeminiHttpError(
+            `Gemini (${candidate}) HTTP ${response.status}: ${response.data}`,
+            response.status,
+          );
+        }
+
+        const data = JSON.parse(response.data) as {
+          candidates?: Array<{
+            content?: {
+              parts?: Array<{ text?: string; thought?: boolean }>;
+            };
+          }>;
+        };
+
+        const text = (data.candidates?.[0]?.content?.parts ?? [])
+          .filter((part) => part.thought !== true && part.text?.trim())
+          .map((part) => part.text)
+          .join("")
+          .trim();
+
+        if (!text) {
+          throw new Error(`Gemini (${candidate}) returned empty candidate content.`);
+        }
+
+        return { content: text, model: candidate };
+      } catch (err) {
+        lastError = err instanceof Error ? err : new Error(String(err));
+
+        const isTimeout = /timed out|timeout/i.test(lastError.message);
+        const isNonRetryableStatus =
+          err instanceof GeminiHttpError &&
+          !RETRYABLE_STATUS_CODES.has(err.status);
+        const canRetry =
+          attempt < maxAttempts &&
+          !isTimeout &&
+          !isNonRetryableStatus &&
+          Date.now() + GEMINI_RETRY_DELAY_MS < deadline;
+
+        console.warn(
+          `[chat] Gemini (${candidate}) attempt ${attempt}/${maxAttempts} failed:`,
+          lastError.message,
+        );
+
+        if (canRetry) {
+          await sleep(GEMINI_RETRY_DELAY_MS);
+          continue;
+        }
+
+        break;
       }
-
-      const data = JSON.parse(response.data) as {
-        candidates?: Array<{
-          content?: { parts?: Array<{ text?: string }> };
-        }>;
-      };
-
-      const text = data.candidates?.[0]?.content?.parts?.[0]?.text?.trim();
-      if (!text) {
-        throw new Error(`Gemini (${m}) returned empty candidate content.`);
-      }
-
-      return text;
-    } catch (err) {
-      lastError = err instanceof Error ? err : new Error(String(err));
-      console.warn(`[chat] Gemini (${m}) failed, trying next candidate if available:`, lastError.message);
     }
+
+    if (Date.now() >= deadline) break;
   }
 
   throw lastError || new Error("Gemini call failed.");
@@ -307,11 +407,11 @@ export async function POST(request: Request) {
   // 1. Try Gemini if configured
   if (geminiApiKey) {
     try {
-      const content = await callGemini(geminiApiKey, geminiModel, messages);
+      const result = await callGemini(geminiApiKey, geminiModel, messages);
       return NextResponse.json({
-        content,
+        content: result.content,
         provider: "gemini",
-        model: geminiModel,
+        model: result.model,
       });
     } catch (geminiError) {
       console.warn(
@@ -339,8 +439,17 @@ export async function POST(request: Request) {
   }
 
   // 3. Graceful Fallback
+  let fallbackContent: string;
+  try {
+    fallbackContent = buildProjectFallbackReply(messages);
+  } catch (fallbackError) {
+    console.error("[chat] Fallback reply failed:", fallbackError);
+    fallbackContent =
+      "I'm having trouble reaching the assistant right now. Please try again in a moment, or ask about vehicle categories, bookings, or becoming a host.";
+  }
+
   return NextResponse.json({
-    content: buildProjectFallbackReply(messages),
+    content: fallbackContent,
     fallback: true,
     reason:
       geminiApiKey || groqApiKey
